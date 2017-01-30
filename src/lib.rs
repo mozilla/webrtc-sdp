@@ -10,6 +10,39 @@ enum SdpParserResult {
                         line: String },
 }
 
+struct SdpAttribute {
+    name: String,
+    value: String
+}
+
+struct SdpBandwidth {
+    bwtype: String,
+    bandwidth: u64
+}
+
+struct SdpConnection {
+    nettype: String, // TODO replace with struct or enum?
+    addrtype: String, // TODO replace with enum
+    unicast_addr: String // TODO store the parsed addr
+}
+
+enum SdpMediaValue {
+    SdpMediaAudio,
+    SdpMediaVideo,
+    SdpMediaApplication
+}
+
+impl fmt::Display for SdpMediaValue {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let printable = match *self {
+            SdpMediaValue::SdpMediaAudio       => "Audio",
+            SdpMediaValue::SdpMediaVideo       => "Video",
+            SdpMediaValue::SdpMediaApplication => "Application"
+        };
+        write!(f, "{}", printable)
+    }
+}
+
 enum SdpProtocolValue {
     SdpProtoUdpTlsRtpSavpf,
     SdpProtoTcpTlsRtpSavpf,
@@ -31,27 +64,25 @@ impl fmt::Display for SdpProtocolValue {
     }
 }
 
-struct SdpAttribute {
-    name: String,
-    value: String
+enum SdpFormatList {
+    SdpFormatIntegers {list: Vec<u32>},
+    SdpFormatStrings {list: Vec<String>}
 }
 
-struct SdpBandwidth {
-    bwtype: String,
-    bandwidth: u64
-}
-
-struct SdpConnection {
-    nettype: String, // TODO replace with struct or enum?
-    addrtype: String, // TODO replace with enum
-    unicast_addr: String // TODO store the parsed addr
+impl fmt::Display for SdpFormatList {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            SdpFormatList::SdpFormatIntegers { list: ref x } => write!(f, "{:?}", x),
+            SdpFormatList::SdpFormatStrings { list: ref x } => write!(f, "{:?}", x)
+        }
+    }
 }
 
 struct SdpMedia {
-    media: String, // TODO replace with enum
+    media: SdpMediaValue,
     port: u32,
     proto: SdpProtocolValue,
-    formats: Vec<u32>
+    formats: SdpFormatList
 }
 
 struct SdpOrigin {
@@ -323,7 +354,19 @@ fn parse_timing(value: &str) -> Result<SdpLine, SdpParserResult> {
     return Result::Ok(l)
 }
 
-fn parse_protocol(value: &str) -> Result<SdpProtocolValue, SdpParserResult> {
+fn parse_media_token(value: &str) -> Result<SdpMediaValue, SdpParserResult> {
+    let media = match value {
+        "audio"       => SdpMediaValue::SdpMediaAudio,
+        "video"       => SdpMediaValue::SdpMediaVideo,
+        "application" => SdpMediaValue::SdpMediaApplication,
+        _ => return Result::Err(SdpParserResult::ParserUnsupported {
+              message: "unsupported media value".to_string(),
+              line: value.to_string() }),
+    };
+    Result::Ok(media)
+}
+
+fn parse_protocol_token(value: &str) -> Result<SdpProtocolValue, SdpParserResult> {
     let proto = match value {
         "UDP/TLS/RTP/SAVPF" => SdpProtocolValue::SdpProtoUdpTlsRtpSavpf,
         "TCP/TLS/RTP/SAVPF" => SdpProtocolValue::SdpProtoTcpTlsRtpSavpf,
@@ -344,12 +387,10 @@ fn parse_media(value: &str) -> Result<SdpLine, SdpParserResult> {
             message: "media attribute must have at least four tokens".to_string(),
             line: value.to_string() });
     }
-    let media = mv[0];
-    match media {
-        "audio"|"video"|"application" => (),
-        _ => return Result::Err(SdpParserResult::ParserLineError {
-            message: "unsupported media token in media line".to_string(),
-            line: value.to_string() }),
+    let media_str = mv[0];
+    let media = match parse_media_token(media_str) {
+        Ok(n) => n,
+        Err(e) => { return Result::Err(e) }
     };
     let port = match mv[1].parse::<u32>() {
         Ok(n) => n,
@@ -363,30 +404,21 @@ fn parse_media(value: &str) -> Result<SdpLine, SdpParserResult> {
             line: value.to_string() })
     }
     let proto_str = mv[2];
-    let proto = match parse_protocol(proto_str) {
+    let proto = match parse_protocol_token(proto_str) {
         Ok(n) => n,
         Err(e) => { return Result::Err(e) }
     };
-    /*
-    match proto {
-        // TODO which proto values do we want/need to support?
-        "UDP/TLS/RTP/SAVPF" | "DTLS/SCTP" => (),
-        _ => return Result::Err(SdpParserResult::ParserLineError {
-            message: "unsupported proto token in media line".to_string(),
-            line: value.to_string() }),
-    };
-    */
     let fmt_slice: &[&str] = &mv[3..];
-    let mut fmt: Vec<u32> = vec![];
-    for num in fmt_slice {
-        let fmt_num = match num.parse::<u32>() {
-            Ok(n) => (n),
-            Err(_) => return Result::Err(SdpParserResult::ParserLineError {
-                message: "failed to parse format number in media line".to_string(),
-                line: value.to_string() }),
-        };
-        match media {
-            "audio" | "video" => {
+    let fmt = match media {
+        SdpMediaValue::SdpMediaAudio | SdpMediaValue::SdpMediaVideo => {
+            let mut fmt_vec: Vec<u32> = vec![];
+            for num in fmt_slice {
+                let fmt_num = match num.parse::<u32>() {
+                    Ok(n) => (n),
+                    Err(_) => return Result::Err(SdpParserResult::ParserLineError {
+                        message: "failed to parse format number in media line".to_string(),
+                        line: value.to_string() }),
+                };
                 match fmt_num {
                     0 => (),           // PCMU
                     8 => (),           // PCMA
@@ -396,17 +428,25 @@ fn parse_media(value: &str) -> Result<SdpLine, SdpParserResult> {
                     _ => return Result::Err(SdpParserResult::ParserLineError {
                           message: "format number in media line is out of range".to_string(),
                           line: value.to_string() }),
-                }
-            },
-            _ => (),
+                };
+                fmt_vec.push(fmt_num);
+            };
+            SdpFormatList::SdpFormatIntegers { list: fmt_vec }
+        },
+        SdpMediaValue::SdpMediaApplication => {
+            let mut fmt_vec: Vec<String> = vec![];
+            // TODO enforce length == 1 and content 'webrtc-datachannel' only?
+            for token in fmt_slice {
+                fmt_vec.push(String::from(*token));
+            }
+            SdpFormatList::SdpFormatStrings { list: fmt_vec }
         }
-        fmt.push(fmt_num);
     };
-    let m = SdpMedia { media: String::from(media),
+    let m = SdpMedia { media: media,
                        port: port,
                        proto: proto,
                        formats: fmt };
-    println!("media: {}, {}, {}, {:?}",
+    println!("media: {}, {}, {}, {}",
              m.media, m.port, m.proto, m.formats);
     let l = SdpLine::Media { media: m };
     return Result::Ok(l)
