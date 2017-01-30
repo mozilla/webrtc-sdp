@@ -1,4 +1,5 @@
 use std::str::FromStr;
+use std::fmt;
 //use std::num::ParseIntError;
 
 enum SdpParserResult {
@@ -7,6 +8,27 @@ enum SdpParserResult {
                         line: String },
     ParserUnsupported { message: String,
                         line: String },
+}
+
+enum SdpProtocolValue {
+    SdpProtoUdpTlsRtpSavpf,
+    SdpProtoTcpTlsRtpSavpf,
+    SdpProtoDtlsSctp,
+    SdpProtoUdpDtlsSctp,
+    SdpProtoTcpDtlsSctp
+}
+
+impl fmt::Display for SdpProtocolValue {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let printable = match *self {
+            SdpProtocolValue::SdpProtoUdpTlsRtpSavpf => "Udp/Tls/Rtp/Savpf",
+            SdpProtocolValue::SdpProtoTcpTlsRtpSavpf => "Tcp/Tls/Rtp/Savpf",
+            SdpProtocolValue::SdpProtoDtlsSctp       => "Dtls/Sctp",
+            SdpProtocolValue::SdpProtoUdpDtlsSctp    => "Udp/Dtls/Sctp",
+            SdpProtocolValue::SdpProtoTcpDtlsSctp    => "Tcp/Dtls/Sctp"
+        };
+        write!(f, "{}", printable)
+    }
 }
 
 struct SdpAttribute {
@@ -28,7 +50,7 @@ struct SdpConnection {
 struct SdpMedia {
     media: String, // TODO replace with enum
     port: u32,
-    proto: String, // TODO replace with enum
+    proto: SdpProtocolValue,
     formats: Vec<u32>
 }
 
@@ -301,6 +323,20 @@ fn parse_timing(value: &str) -> Result<SdpLine, SdpParserResult> {
     return Result::Ok(l)
 }
 
+fn parse_protocol(value: &str) -> Result<SdpProtocolValue, SdpParserResult> {
+    let proto = match value {
+        "UDP/TLS/RTP/SAVPF" => SdpProtocolValue::SdpProtoUdpTlsRtpSavpf,
+        "TCP/TLS/RTP/SAVPF" => SdpProtocolValue::SdpProtoTcpTlsRtpSavpf,
+        "DTLS/SCTP"         => SdpProtocolValue::SdpProtoDtlsSctp,
+        "UDP/DTLS/SCTP"     => SdpProtocolValue::SdpProtoUdpDtlsSctp,
+        "TCP/DTLS/SCTP"     => SdpProtocolValue::SdpProtoTcpDtlsSctp,
+        _ => return Result::Err(SdpParserResult::ParserUnsupported {
+              message: "unsupported protocol value".to_string(),
+              line: value.to_string() }),
+    };
+    Result::Ok(proto)
+}
+
 fn parse_media(value: &str) -> Result<SdpLine, SdpParserResult> {
     let mv: Vec<&str> = value.split_whitespace().collect();
     if mv.len() < 4 {
@@ -326,7 +362,12 @@ fn parse_media(value: &str) -> Result<SdpLine, SdpParserResult> {
             message: "media port token is too big".to_string(),
             line: value.to_string() })
     }
-    let proto = mv[2];
+    let proto_str = mv[2];
+    let proto = match parse_protocol(proto_str) {
+        Ok(n) => n,
+        Err(e) => { return Result::Err(e) }
+    };
+    /*
     match proto {
         // TODO which proto values do we want/need to support?
         "UDP/TLS/RTP/SAVPF" | "DTLS/SCTP" => (),
@@ -334,6 +375,7 @@ fn parse_media(value: &str) -> Result<SdpLine, SdpParserResult> {
             message: "unsupported proto token in media line".to_string(),
             line: value.to_string() }),
     };
+    */
     let fmt_slice: &[&str] = &mv[3..];
     let mut fmt: Vec<u32> = vec![];
     for num in fmt_slice {
@@ -361,7 +403,7 @@ fn parse_media(value: &str) -> Result<SdpLine, SdpParserResult> {
     };
     let m = SdpMedia { media: String::from(media),
                        port: port,
-                       proto: String::from(proto),
+                       proto: proto,
                        formats: fmt };
     println!("media: {}, {}, {}, {:?}",
              m.media, m.port, m.proto, m.formats);
@@ -456,6 +498,7 @@ fn parse_sdp_line(line: &str) -> SdpParserResult {
                     message: "unsupported sdp field".to_string(),
                     line: line.to_string() } }
     };
+    // TODO there must be a way to error right from the previous match
     match line {
         Ok(n) => { println!("parsed successfully") },
         Err(e) => { return e }

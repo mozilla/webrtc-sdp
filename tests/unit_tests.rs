@@ -280,8 +280,10 @@ fn media_video_works() {
 
 #[test]
 fn media_application_works() {
-    // FIXME use a real app m-line
-    assert_eq!(true, rsdparsa::parse_sdp("v=0\r\nm=application 9 UDP/TLS/RTP/SAVPF 126\r\n", true));
+    assert_eq!(true, rsdparsa::parse_sdp("v=0\r\nm=audio 9 UDP/TLS/RTP/SAVPF 109 9 0 8\r\n", true));
+    assert_eq!(true, rsdparsa::parse_sdp("v=0\r\nm=application 9 DTLS/SCTP 5000\r\n", true));
+    // FIXME
+    //assert_eq!(true, rsdparsa::parse_sdp("v=0\r\nm=application 9 UDP/DTLS/SCTP webrtc-datachannel\r\n", true));
 }
 
 #[test]
