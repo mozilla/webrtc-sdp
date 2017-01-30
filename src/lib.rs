@@ -391,6 +391,7 @@ fn parse_media(value: &str) -> Result<SdpLine, SdpParserResult> {
                     0 => (),           // PCMU
                     8 => (),           // PCMA
                     9 => (),           // G722
+                    13 => (),          // Comfort Noise
                     96 ... 127 => (),  // dynamic range
                     _ => return Result::Err(SdpParserResult::ParserLineError {
                           message: "format number in media line is out of range".to_string(),
@@ -430,10 +431,13 @@ fn parse_attribute(value: &str) -> Result<SdpLine, SdpParserResult> {
         "inactive" => (),
         "sendrecv" => (),
         "ssrc" => (),
+        "ssrc-group" => (),
         "rtpmap" => (),
         "fmtp" => (),
+        "rtcp" => (),
         "rtcp-fb" => (),
         "rtcp-mux" => (),
+        "rtcp-rsize" => (),
         "msid" => (),
         "msid-semantic" => (),
         "mid" => (),
@@ -449,7 +453,7 @@ fn parse_attribute(value: &str) -> Result<SdpLine, SdpParserResult> {
         "sctpmap" => (),
         _ => return Result::Err(SdpParserResult::ParserUnsupported {
               message: "unsupported attribute value".to_string(),
-              line: value.to_string() }),
+              line: name.to_string() }),
     }
     let a = SdpAttribute { name: String::from(name),
                            value: String::from(value) };
