@@ -219,7 +219,7 @@ fn parse_origin(value: &str) -> Result<SdpLine, SdpParserResult> {
     }
     let addrtype = ot[4];
     let unicast_addr = ot[5];
-    match addrtype {
+    match addrtype.to_uppercase().as_ref() {
         "IP4" => {
             match std::net::Ipv4Addr::from_str(unicast_addr) {
                 Ok(n) => n,
@@ -270,7 +270,7 @@ fn parse_connection(value: &str) -> Result<SdpLine, SdpParserResult> {
     }
     let addrtype = cv[1];
     let unicast_addr = cv[2];
-    match addrtype {
+    match addrtype.to_uppercase().as_ref() {
         "IP4" => {
             match std::net::Ipv4Addr::from_str(unicast_addr) {
                 Ok(n) => n,
@@ -308,7 +308,7 @@ fn parse_bandwidth(value: &str) -> Result<SdpLine, SdpParserResult> {
             line: value.to_string() });
     }
     let bwtype = bv[0]; // TODO check for supported values
-    match bwtype {
+    match bwtype.to_uppercase().as_ref() {
         "AS" | "TIAS" => (),
         _ => return Result::Err(SdpParserResult::ParserUnsupported {
               message: "unsupported bandwidth type value".to_string(),
@@ -355,7 +355,7 @@ fn parse_timing(value: &str) -> Result<SdpLine, SdpParserResult> {
 }
 
 fn parse_media_token(value: &str) -> Result<SdpMediaValue, SdpParserResult> {
-    let media = match value {
+    let media = match value.to_lowercase().as_ref() {
         "audio"       => SdpMediaValue::SdpMediaAudio,
         "video"       => SdpMediaValue::SdpMediaVideo,
         "application" => SdpMediaValue::SdpMediaApplication,
@@ -367,7 +367,7 @@ fn parse_media_token(value: &str) -> Result<SdpMediaValue, SdpParserResult> {
 }
 
 fn parse_protocol_token(value: &str) -> Result<SdpProtocolValue, SdpParserResult> {
-    let proto = match value {
+    let proto = match value.to_uppercase().as_ref() {
         "UDP/TLS/RTP/SAVPF" => SdpProtocolValue::SdpProtoUdpTlsRtpSavpf,
         "TCP/TLS/RTP/SAVPF" => SdpProtocolValue::SdpProtoTcpTlsRtpSavpf,
         "DTLS/SCTP"         => SdpProtocolValue::SdpProtoDtlsSctp,
@@ -464,7 +464,7 @@ fn parse_attribute(value: &str) -> Result<SdpLine, SdpParserResult> {
         name = aname;
         value = avalue;
     }
-    match name {
+    match name.to_lowercase().as_ref() {
         // TODO TODO TODO
         "recvonly" => (),
         "sendonly" => (),
@@ -522,7 +522,7 @@ fn parse_sdp_line(line: &str) -> SdpParserResult {
             message: "attribute value has zero length".to_string(),
             line: line.to_string() };
     }
-    let line = match name {
+    let line = match name.to_lowercase().as_ref() {
         "a" => { parse_attribute(value) },
         "b" => { parse_bandwidth(value) },
         "c" => { parse_connection(value) },
