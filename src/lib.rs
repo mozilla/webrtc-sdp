@@ -20,8 +20,18 @@ struct SdpBandwidth {
     bandwidth: u64
 }
 
+enum SdpNetType {
+    SdpNetTypeIn
+}
+
+impl fmt::Display for SdpNetType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "IN")
+    }
+}
+
 struct SdpConnection {
-    nettype: String, // TODO replace with struct or enum?
+    nettype: SdpNetType,
     addrtype: String, // TODO replace with enum
     unicast_addr: String // TODO store the parsed addr
 }
@@ -89,7 +99,7 @@ struct SdpOrigin {
     username: String,
     session_id: u64,
     session_version: u64,
-    nettype: String, // TODO replace with struct or enum?
+    nettype: SdpNetType,
     addrtype: String, // TODO replace with enum
     unicast_addr: String // TODO store the parsed addr
 }
@@ -191,6 +201,15 @@ fn parse_version(value: &str) -> Result<SdpLine, SdpParserResult> {
     return Result::Ok(l)
 }
 
+fn parse_nettype(value: &str) -> Result<SdpNetType, SdpParserResult> {
+    if value.to_uppercase() != String::from("IN") {
+        return Result::Err(SdpParserResult::ParserLineError {
+            message: "nettype needs to be IN".to_string(),
+            line: value.to_string() });
+    };
+    Result::Ok(SdpNetType::SdpNetTypeIn)
+}
+
 fn parse_origin(value: &str) -> Result<SdpLine, SdpParserResult> {
     let ot: Vec<&str> = value.split_whitespace().collect();
     if ot.len() != 6 {
@@ -211,12 +230,10 @@ fn parse_origin(value: &str) -> Result<SdpLine, SdpParserResult> {
             message: "failed to parse origin session version attribute".to_string(),
             line: value.to_string() })
     };
-    let nettype = ot[3];
-    if nettype != "IN" {
-        return Result::Err(SdpParserResult::ParserLineError {
-            message: "nettype in origin needs to be IN".to_string(),
-            line: value.to_string() });
-    }
+    let nettype = match parse_nettype(ot[3]) {
+        Ok(n) => n,
+        Err(e) => { return Result::Err(e) }
+    };
     let addrtype = ot[4];
     let unicast_addr = ot[5];
     match addrtype.to_uppercase().as_ref() {
@@ -243,7 +260,7 @@ fn parse_origin(value: &str) -> Result<SdpLine, SdpParserResult> {
     let o = SdpOrigin { username: String::from(username),
                         session_id: session_id,
                         session_version: session_version,
-                        nettype: String::from(nettype),
+                        nettype: nettype,
                         addrtype: String::from(addrtype),
                         unicast_addr: String::from(unicast_addr) };
     println!("origin: {}, {}, {}, {}, {}, {}",
@@ -262,12 +279,10 @@ fn parse_connection(value: &str) -> Result<SdpLine, SdpParserResult> {
     }
     // TODO this is exactly the same parser as the end of origin.
     //      Share it in a function?!
-    let nettype = cv[0];
-    if nettype != "IN" {
-        return Result::Err(SdpParserResult::ParserLineError {
-            message: "nettype in connections needs to be IN".to_string(),
-            line: value.to_string() });
-    }
+    let nettype = match parse_nettype(cv[0]) {
+        Ok(n) => n,
+        Err(e) => { return Result::Err(e) }
+    };
     let addrtype = cv[1];
     let unicast_addr = cv[2];
     match addrtype.to_uppercase().as_ref() {
@@ -291,7 +306,7 @@ fn parse_connection(value: &str) -> Result<SdpLine, SdpParserResult> {
             message: "address type in connection needs to be IP4 or IP6".to_string(),
             line: value.to_string() })
     }
-    let c = SdpConnection { nettype: String::from(nettype),
+    let c = SdpConnection { nettype: nettype,
                             addrtype: String::from(addrtype),
                             unicast_addr: String::from(unicast_addr) };
     println!("connection: {}, {}, {}",
