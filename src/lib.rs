@@ -30,9 +30,24 @@ impl fmt::Display for SdpNetType {
     }
 }
 
+enum SdpAddrType {
+    IP4,
+    IP6
+}
+
+impl fmt::Display for SdpAddrType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let printable = match *self {
+            SdpAddrType::IP4 => "Ip4",
+            SdpAddrType::IP6 => "Ip6"
+        };
+        write!(f, "{}", printable)
+    }
+}
+
 struct SdpConnection {
     nettype: SdpNetType,
-    addrtype: String, // TODO replace with enum
+    addrtype: SdpAddrType,
     unicast_addr: String // TODO store the parsed addr
 }
 
@@ -100,7 +115,7 @@ struct SdpOrigin {
     session_id: u64,
     session_version: u64,
     nettype: SdpNetType,
-    addrtype: String, // TODO replace with enum
+    addrtype: SdpAddrType,
     unicast_addr: String // TODO store the parsed addr
 }
 
@@ -210,6 +225,17 @@ fn parse_nettype(value: &str) -> Result<SdpNetType, SdpParserResult> {
     Result::Ok(SdpNetType::SdpNetTypeIn)
 }
 
+fn parse_addrtype(value: &str) -> Result<SdpAddrType, SdpParserResult> {
+    let addrtype = match value.to_uppercase().as_ref() {
+        "IP4" => SdpAddrType::IP4,
+        "IP6" => SdpAddrType::IP6,
+        _ => return Result::Err(SdpParserResult::ParserLineError {
+            message: "address type needs to be IP4 or IP6".to_string(),
+            line: value.to_string() })
+    };
+    Result::Ok(addrtype)
+}
+
 fn parse_origin(value: &str) -> Result<SdpLine, SdpParserResult> {
     let ot: Vec<&str> = value.split_whitespace().collect();
     if ot.len() != 6 {
@@ -234,10 +260,13 @@ fn parse_origin(value: &str) -> Result<SdpLine, SdpParserResult> {
         Ok(n) => n,
         Err(e) => { return Result::Err(e) }
     };
-    let addrtype = ot[4];
+    let addrtype = match parse_addrtype(ot[4]) {
+        Ok(n) => n,
+        Err(e) => { return Result::Err(e) }
+    };
     let unicast_addr = ot[5];
-    match addrtype.to_uppercase().as_ref() {
-        "IP4" => {
+    match addrtype {
+        SdpAddrType::IP4 => {
             match std::net::Ipv4Addr::from_str(unicast_addr) {
                 Ok(n) => n,
                 Err(_) => return Result::Err(SdpParserResult::ParserLineError {
@@ -245,23 +274,20 @@ fn parse_origin(value: &str) -> Result<SdpLine, SdpParserResult> {
                     line: value.to_string() })
             };
         },
-        "IP6" => {
+        SdpAddrType::IP6 => {
             match std::net::Ipv6Addr::from_str(unicast_addr) {
                 Ok(n) => n,
                 Err(_) => return Result::Err(SdpParserResult::ParserLineError {
                     message: "failed to parse origin unicast IP6 address attribute".to_string(),
                     line: value.to_string() })
             };
-        },
-        _ => return Result::Err(SdpParserResult::ParserLineError {
-            message: "address type in origin needs to be IP4 or IP6".to_string(),
-            line: value.to_string() })
+        }
     }
     let o = SdpOrigin { username: String::from(username),
                         session_id: session_id,
                         session_version: session_version,
                         nettype: nettype,
-                        addrtype: String::from(addrtype),
+                        addrtype: addrtype,
                         unicast_addr: String::from(unicast_addr) };
     println!("origin: {}, {}, {}, {}, {}, {}",
              o.username, o.session_id, o.session_version, o.nettype,
@@ -283,10 +309,13 @@ fn parse_connection(value: &str) -> Result<SdpLine, SdpParserResult> {
         Ok(n) => n,
         Err(e) => { return Result::Err(e) }
     };
-    let addrtype = cv[1];
+    let addrtype = match parse_addrtype(cv[1]) {
+        Ok(n) => n,
+        Err(e) => { return Result::Err(e) }
+    };
     let unicast_addr = cv[2];
-    match addrtype.to_uppercase().as_ref() {
-        "IP4" => {
+    match addrtype {
+        SdpAddrType::IP4 => {
             match std::net::Ipv4Addr::from_str(unicast_addr) {
                 Ok(n) => n,
                 Err(_) => return Result::Err(SdpParserResult::ParserLineError {
@@ -294,7 +323,7 @@ fn parse_connection(value: &str) -> Result<SdpLine, SdpParserResult> {
                     line: value.to_string() })
             };
         },
-        "IP6" => {
+        SdpAddrType::IP6 => {
             match std::net::Ipv6Addr::from_str(unicast_addr) {
                 Ok(n) => n,
                 Err(_) => return Result::Err(SdpParserResult::ParserLineError {
@@ -302,12 +331,9 @@ fn parse_connection(value: &str) -> Result<SdpLine, SdpParserResult> {
                     line: value.to_string() })
             };
         },
-        _ => return Result::Err(SdpParserResult::ParserLineError {
-            message: "address type in connection needs to be IP4 or IP6".to_string(),
-            line: value.to_string() })
     }
     let c = SdpConnection { nettype: nettype,
-                            addrtype: String::from(addrtype),
+                            addrtype: addrtype,
                             unicast_addr: String::from(unicast_addr) };
     println!("connection: {}, {}, {}",
              c.nettype, c.addrtype, c.unicast_addr);
@@ -402,8 +428,7 @@ fn parse_media(value: &str) -> Result<SdpLine, SdpParserResult> {
             message: "media attribute must have at least four tokens".to_string(),
             line: value.to_string() });
     }
-    let media_str = mv[0];
-    let media = match parse_media_token(media_str) {
+    let media = match parse_media_token(mv[0]) {
         Ok(n) => n,
         Err(e) => { return Result::Err(e) }
     };
@@ -418,8 +443,7 @@ fn parse_media(value: &str) -> Result<SdpLine, SdpParserResult> {
             message: "media port token is too big".to_string(),
             line: value.to_string() })
     }
-    let proto_str = mv[2];
-    let proto = match parse_protocol_token(proto_str) {
+    let proto = match parse_protocol_token(mv[2]) {
         Ok(n) => n,
         Err(e) => { return Result::Err(e) }
     };
