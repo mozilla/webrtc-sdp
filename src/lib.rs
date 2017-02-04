@@ -1,5 +1,6 @@
 use std::str::FromStr;
 use std::fmt;
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 //use std::num::ParseIntError;
 
 enum SdpParserResult {
@@ -21,7 +22,7 @@ struct SdpBandwidth {
 }
 
 enum SdpNetType {
-    SdpNetTypeIn
+    Internet
 }
 
 impl fmt::Display for SdpNetType {
@@ -48,57 +49,57 @@ impl fmt::Display for SdpAddrType {
 struct SdpConnection {
     nettype: SdpNetType,
     addrtype: SdpAddrType,
-    unicast_addr: String // TODO store the parsed addr
+    unicast_addr: IpAddr
 }
 
 enum SdpMediaValue {
-    SdpMediaAudio,
-    SdpMediaVideo,
-    SdpMediaApplication
+    Audio,
+    Video,
+    Application
 }
 
 impl fmt::Display for SdpMediaValue {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let printable = match *self {
-            SdpMediaValue::SdpMediaAudio       => "Audio",
-            SdpMediaValue::SdpMediaVideo       => "Video",
-            SdpMediaValue::SdpMediaApplication => "Application"
+            SdpMediaValue::Audio       => "Audio",
+            SdpMediaValue::Video       => "Video",
+            SdpMediaValue::Application => "Application"
         };
         write!(f, "{}", printable)
     }
 }
 
 enum SdpProtocolValue {
-    SdpProtoUdpTlsRtpSavpf,
-    SdpProtoTcpTlsRtpSavpf,
-    SdpProtoDtlsSctp,
-    SdpProtoUdpDtlsSctp,
-    SdpProtoTcpDtlsSctp
+    UdpTlsRtpSavpf,
+    TcpTlsRtpSavpf,
+    DtlsSctp,
+    UdpDtlsSctp,
+    TcpDtlsSctp
 }
 
 impl fmt::Display for SdpProtocolValue {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let printable = match *self {
-            SdpProtocolValue::SdpProtoUdpTlsRtpSavpf => "Udp/Tls/Rtp/Savpf",
-            SdpProtocolValue::SdpProtoTcpTlsRtpSavpf => "Tcp/Tls/Rtp/Savpf",
-            SdpProtocolValue::SdpProtoDtlsSctp       => "Dtls/Sctp",
-            SdpProtocolValue::SdpProtoUdpDtlsSctp    => "Udp/Dtls/Sctp",
-            SdpProtocolValue::SdpProtoTcpDtlsSctp    => "Tcp/Dtls/Sctp"
+            SdpProtocolValue::UdpTlsRtpSavpf => "Udp/Tls/Rtp/Savpf",
+            SdpProtocolValue::TcpTlsRtpSavpf => "Tcp/Tls/Rtp/Savpf",
+            SdpProtocolValue::DtlsSctp       => "Dtls/Sctp",
+            SdpProtocolValue::UdpDtlsSctp    => "Udp/Dtls/Sctp",
+            SdpProtocolValue::TcpDtlsSctp    => "Tcp/Dtls/Sctp"
         };
         write!(f, "{}", printable)
     }
 }
 
 enum SdpFormatList {
-    SdpFormatIntegers {list: Vec<u32>},
-    SdpFormatStrings {list: Vec<String>}
+    Integers {list: Vec<u32>},
+    Strings {list: Vec<String>}
 }
 
 impl fmt::Display for SdpFormatList {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            SdpFormatList::SdpFormatIntegers { list: ref x } => write!(f, "{:?}", x),
-            SdpFormatList::SdpFormatStrings { list: ref x } => write!(f, "{:?}", x)
+            SdpFormatList::Integers { list: ref x } => write!(f, "{:?}", x),
+            SdpFormatList::Strings { list: ref x } => write!(f, "{:?}", x)
         }
     }
 }
@@ -116,7 +117,7 @@ struct SdpOrigin {
     session_version: u64,
     nettype: SdpNetType,
     addrtype: SdpAddrType,
-    unicast_addr: String // TODO store the parsed addr
+    unicast_addr: IpAddr
 }
 
 struct SdpTiming {
@@ -222,18 +223,38 @@ fn parse_nettype(value: &str) -> Result<SdpNetType, SdpParserResult> {
             message: "nettype needs to be IN".to_string(),
             line: value.to_string() });
     };
-    Result::Ok(SdpNetType::SdpNetTypeIn)
+    Result::Ok(SdpNetType::Internet)
 }
 
 fn parse_addrtype(value: &str) -> Result<SdpAddrType, SdpParserResult> {
-    let addrtype = match value.to_uppercase().as_ref() {
+    Result::Ok(match value.to_uppercase().as_ref() {
         "IP4" => SdpAddrType::IP4,
         "IP6" => SdpAddrType::IP6,
         _ => return Result::Err(SdpParserResult::ParserLineError {
             message: "address type needs to be IP4 or IP6".to_string(),
             line: value.to_string() })
-    };
-    Result::Ok(addrtype)
+    })
+}
+
+fn parse_unicast_addr(addrtype: &SdpAddrType, value: &str) -> Result<IpAddr, SdpParserResult> {
+    Result::Ok(match addrtype {
+        &SdpAddrType::IP4 => {
+            IpAddr::V4(match Ipv4Addr::from_str(value) {
+                Ok(n) => n,
+                Err(_) => return Result::Err(SdpParserResult::ParserLineError {
+                    message: "failed to parse origin unicast IP4 address attribute".to_string(),
+                    line: value.to_string() })
+            })
+        },
+        &SdpAddrType::IP6 => {
+            IpAddr::V6(match Ipv6Addr::from_str(value) {
+                Ok(n) => n,
+                Err(_) => return Result::Err(SdpParserResult::ParserLineError {
+                    message: "failed to parse origin unicast IP6 address attribute".to_string(),
+                    line: value.to_string() })
+            })
+        }
+    })
 }
 
 fn parse_origin(value: &str) -> Result<SdpLine, SdpParserResult> {
@@ -264,31 +285,16 @@ fn parse_origin(value: &str) -> Result<SdpLine, SdpParserResult> {
         Ok(n) => n,
         Err(e) => { return Result::Err(e) }
     };
-    let unicast_addr = ot[5];
-    match addrtype {
-        SdpAddrType::IP4 => {
-            match std::net::Ipv4Addr::from_str(unicast_addr) {
-                Ok(n) => n,
-                Err(_) => return Result::Err(SdpParserResult::ParserLineError {
-                    message: "failed to parse origin unicast IP4 address attribute".to_string(),
-                    line: value.to_string() })
-            };
-        },
-        SdpAddrType::IP6 => {
-            match std::net::Ipv6Addr::from_str(unicast_addr) {
-                Ok(n) => n,
-                Err(_) => return Result::Err(SdpParserResult::ParserLineError {
-                    message: "failed to parse origin unicast IP6 address attribute".to_string(),
-                    line: value.to_string() })
-            };
-        }
-    }
+    let unicast_addr = match parse_unicast_addr(&addrtype, ot[5]) {
+        Ok(n) => n,
+        Err(e) => { return Result::Err(e) }
+    };
     let o = SdpOrigin { username: String::from(username),
                         session_id: session_id,
                         session_version: session_version,
                         nettype: nettype,
                         addrtype: addrtype,
-                        unicast_addr: String::from(unicast_addr) };
+                        unicast_addr: unicast_addr };
     println!("origin: {}, {}, {}, {}, {}, {}",
              o.username, o.session_id, o.session_version, o.nettype,
              o.addrtype, o.unicast_addr);
@@ -313,28 +319,13 @@ fn parse_connection(value: &str) -> Result<SdpLine, SdpParserResult> {
         Ok(n) => n,
         Err(e) => { return Result::Err(e) }
     };
-    let unicast_addr = cv[2];
-    match addrtype {
-        SdpAddrType::IP4 => {
-            match std::net::Ipv4Addr::from_str(unicast_addr) {
-                Ok(n) => n,
-                Err(_) => return Result::Err(SdpParserResult::ParserLineError {
-                    message: "failed to parse connection IP4 address attribute".to_string(),
-                    line: value.to_string() })
-            };
-        },
-        SdpAddrType::IP6 => {
-            match std::net::Ipv6Addr::from_str(unicast_addr) {
-                Ok(n) => n,
-                Err(_) => return Result::Err(SdpParserResult::ParserLineError {
-                    message: "failed to parse connection IP6 address attribute".to_string(),
-                    line: value.to_string() })
-            };
-        },
-    }
+    let unicast_addr = match parse_unicast_addr(&addrtype, cv[2]) {
+        Ok(n) => n,
+        Err(e) => { return Result::Err(e) }
+    };
     let c = SdpConnection { nettype: nettype,
                             addrtype: addrtype,
-                            unicast_addr: String::from(unicast_addr) };
+                            unicast_addr: unicast_addr };
     println!("connection: {}, {}, {}",
              c.nettype, c.addrtype, c.unicast_addr);
     let l = SdpLine::Connection { connection: c };
@@ -396,29 +387,27 @@ fn parse_timing(value: &str) -> Result<SdpLine, SdpParserResult> {
 }
 
 fn parse_media_token(value: &str) -> Result<SdpMediaValue, SdpParserResult> {
-    let media = match value.to_lowercase().as_ref() {
-        "audio"       => SdpMediaValue::SdpMediaAudio,
-        "video"       => SdpMediaValue::SdpMediaVideo,
-        "application" => SdpMediaValue::SdpMediaApplication,
+    Result::Ok(match value.to_lowercase().as_ref() {
+        "audio"       => SdpMediaValue::Audio,
+        "video"       => SdpMediaValue::Video,
+        "application" => SdpMediaValue::Application,
         _ => return Result::Err(SdpParserResult::ParserUnsupported {
               message: "unsupported media value".to_string(),
               line: value.to_string() }),
-    };
-    Result::Ok(media)
+    })
 }
 
 fn parse_protocol_token(value: &str) -> Result<SdpProtocolValue, SdpParserResult> {
-    let proto = match value.to_uppercase().as_ref() {
-        "UDP/TLS/RTP/SAVPF" => SdpProtocolValue::SdpProtoUdpTlsRtpSavpf,
-        "TCP/TLS/RTP/SAVPF" => SdpProtocolValue::SdpProtoTcpTlsRtpSavpf,
-        "DTLS/SCTP"         => SdpProtocolValue::SdpProtoDtlsSctp,
-        "UDP/DTLS/SCTP"     => SdpProtocolValue::SdpProtoUdpDtlsSctp,
-        "TCP/DTLS/SCTP"     => SdpProtocolValue::SdpProtoTcpDtlsSctp,
+    Result::Ok(match value.to_uppercase().as_ref() {
+        "UDP/TLS/RTP/SAVPF" => SdpProtocolValue::UdpTlsRtpSavpf,
+        "TCP/TLS/RTP/SAVPF" => SdpProtocolValue::TcpTlsRtpSavpf,
+        "DTLS/SCTP"         => SdpProtocolValue::DtlsSctp,
+        "UDP/DTLS/SCTP"     => SdpProtocolValue::UdpDtlsSctp,
+        "TCP/DTLS/SCTP"     => SdpProtocolValue::TcpDtlsSctp,
         _ => return Result::Err(SdpParserResult::ParserUnsupported {
               message: "unsupported protocol value".to_string(),
               line: value.to_string() }),
-    };
-    Result::Ok(proto)
+    })
 }
 
 fn parse_media(value: &str) -> Result<SdpLine, SdpParserResult> {
@@ -449,7 +438,7 @@ fn parse_media(value: &str) -> Result<SdpLine, SdpParserResult> {
     };
     let fmt_slice: &[&str] = &mv[3..];
     let fmt = match media {
-        SdpMediaValue::SdpMediaAudio | SdpMediaValue::SdpMediaVideo => {
+        SdpMediaValue::Audio | SdpMediaValue::Video => {
             let mut fmt_vec: Vec<u32> = vec![];
             for num in fmt_slice {
                 let fmt_num = match num.parse::<u32>() {
@@ -470,15 +459,15 @@ fn parse_media(value: &str) -> Result<SdpLine, SdpParserResult> {
                 };
                 fmt_vec.push(fmt_num);
             };
-            SdpFormatList::SdpFormatIntegers { list: fmt_vec }
+            SdpFormatList::Integers { list: fmt_vec }
         },
-        SdpMediaValue::SdpMediaApplication => {
+        SdpMediaValue::Application => {
             let mut fmt_vec: Vec<String> = vec![];
             // TODO enforce length == 1 and content 'webrtc-datachannel' only?
             for token in fmt_slice {
                 fmt_vec.push(String::from(*token));
             }
-            SdpFormatList::SdpFormatStrings { list: fmt_vec }
+            SdpFormatList::Strings { list: fmt_vec }
         }
     };
     let m = SdpMedia { media: media,
