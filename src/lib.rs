@@ -277,18 +277,9 @@ fn parse_origin(value: &str) -> Result<SdpLine, SdpParserResult> {
             message: "failed to parse origin session version attribute".to_string(),
             line: value.to_string() })
     };
-    let nettype = match parse_nettype(ot[3]) {
-        Ok(n) => n,
-        Err(e) => { return Result::Err(e) }
-    };
-    let addrtype = match parse_addrtype(ot[4]) {
-        Ok(n) => n,
-        Err(e) => { return Result::Err(e) }
-    };
-    let unicast_addr = match parse_unicast_addr(&addrtype, ot[5]) {
-        Ok(n) => n,
-        Err(e) => { return Result::Err(e) }
-    };
+    let nettype = try!(parse_nettype(ot[3]));
+    let addrtype = try!(parse_addrtype(ot[4]));
+    let unicast_addr = try!(parse_unicast_addr(&addrtype, ot[5]));
     let o = SdpOrigin { username: String::from(username),
                         session_id: session_id,
                         session_version: session_version,
@@ -311,18 +302,9 @@ fn parse_connection(value: &str) -> Result<SdpLine, SdpParserResult> {
     }
     // TODO this is exactly the same parser as the end of origin.
     //      Share it in a function?!
-    let nettype = match parse_nettype(cv[0]) {
-        Ok(n) => n,
-        Err(e) => { return Result::Err(e) }
-    };
-    let addrtype = match parse_addrtype(cv[1]) {
-        Ok(n) => n,
-        Err(e) => { return Result::Err(e) }
-    };
-    let unicast_addr = match parse_unicast_addr(&addrtype, cv[2]) {
-        Ok(n) => n,
-        Err(e) => { return Result::Err(e) }
-    };
+    let nettype = try!(parse_nettype(cv[0]));
+    let addrtype = try!(parse_addrtype(cv[1]));
+    let unicast_addr = try!(parse_unicast_addr(&addrtype, cv[2]));
     let c = SdpConnection { nettype: nettype,
                             addrtype: addrtype,
                             unicast_addr: unicast_addr };
@@ -417,10 +399,7 @@ fn parse_media(value: &str) -> Result<SdpLine, SdpParserResult> {
             message: "media attribute must have at least four tokens".to_string(),
             line: value.to_string() });
     }
-    let media = match parse_media_token(mv[0]) {
-        Ok(n) => n,
-        Err(e) => { return Result::Err(e) }
-    };
+    let media = try!(parse_media_token(mv[0]));
     let port = match mv[1].parse::<u32>() {
         Ok(n) => n,
         Err(_) => return Result::Err(SdpParserResult::ParserLineError {
@@ -432,10 +411,7 @@ fn parse_media(value: &str) -> Result<SdpLine, SdpParserResult> {
             message: "media port token is too big".to_string(),
             line: value.to_string() })
     }
-    let proto = match parse_protocol_token(mv[2]) {
-        Ok(n) => n,
-        Err(e) => { return Result::Err(e) }
-    };
+    let proto = try!(parse_protocol_token(mv[2]));
     let fmt_slice: &[&str] = &mv[3..];
     let fmt = match media {
         SdpMediaValue::Audio | SdpMediaValue::Video => {
@@ -550,6 +526,8 @@ fn parse_sdp_line(line: &str) -> SdpParserResult {
             message: "attribute value has zero length".to_string(),
             line: line.to_string() };
     }
+    // TODO once this function returns a Result<> this should simply be covered
+    // with a try!()
     let line = match name.to_lowercase().as_ref() {
         "a" => { parse_attribute(value) },
         "b" => { parse_bandwidth(value) },
