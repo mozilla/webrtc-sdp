@@ -1,7 +1,7 @@
 use std::str::FromStr;
 use std::fmt;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
-//use std::num::ParseIntError;
+use std::num::ParseIntError;
 
 enum SdpParserResult {
     ParsedSuccessfully,
@@ -9,6 +9,14 @@ enum SdpParserResult {
                         line: String },
     ParserUnsupported { message: String,
                         line: String },
+}
+
+impl From<ParseIntError> for SdpParserResult {
+    fn from(_: ParseIntError) -> SdpParserResult {
+        // TODO empty line error here makes no sense
+        SdpParserResult::ParserLineError { message: "failed to parse integer".to_string(),
+                                           line: "".to_string() }
+    }
 }
 
 struct SdpAttribute {
@@ -136,20 +144,6 @@ enum SdpLine {
     Timing {timing: SdpTiming}
 }
 
-/*
-TODO this would allow all .parse() calls to be called from within try!() instead
-of match() calls. But that requires that all functions return Result<res, error>
-instead of the simple SdpParserResult right now.
-
-https://ruudvanasseldonk.com/2015/06/17/exceptional-results-error-handling-in-csharp-and-rust
-
-impl From<ParseIntError> for SdpParserResult {
-    fn from(_: ParseIntError) -> SdpParserResult {
-        SdpParserResult::ParserError { message: "parse to convert integer".to_string() }
-    }
-}
-*/
-
 fn create_sdp_string(value: &str) -> SdpLine {
     return SdpLine::SdpString {string: String::from(value)}
 }
@@ -201,12 +195,7 @@ fn parse_session(value: &str) -> Result<SdpLine, SdpParserResult> {
 }
 
 fn parse_version(value: &str) -> Result<SdpLine, SdpParserResult> {
-    let ver = match value.parse::<u64>() {
-        Ok(n) => n,
-        Err(_) => return Result::Err(SdpParserResult::ParserLineError {
-            message: "failed to parse v field attribute".to_string(),
-            line: value.to_string() })
-    };
+    let ver = try!(value.parse::<u64>());
     if ver != 0 {
         return Result::Err(SdpParserResult::ParserLineError {
             message: "unsupported version in v field".to_string(),
@@ -242,7 +231,7 @@ fn parse_unicast_addr(addrtype: &SdpAddrType, value: &str) -> Result<IpAddr, Sdp
             IpAddr::V4(match Ipv4Addr::from_str(value) {
                 Ok(n) => n,
                 Err(_) => return Result::Err(SdpParserResult::ParserLineError {
-                    message: "failed to parse origin unicast IP4 address attribute".to_string(),
+                    message: "failed to parse unicast IP4 address attribute".to_string(),
                     line: value.to_string() })
             })
         },
@@ -250,7 +239,7 @@ fn parse_unicast_addr(addrtype: &SdpAddrType, value: &str) -> Result<IpAddr, Sdp
             IpAddr::V6(match Ipv6Addr::from_str(value) {
                 Ok(n) => n,
                 Err(_) => return Result::Err(SdpParserResult::ParserLineError {
-                    message: "failed to parse origin unicast IP6 address attribute".to_string(),
+                    message: "failed to parse unicast IP6 address attribute".to_string(),
                     line: value.to_string() })
             })
         }
@@ -265,18 +254,8 @@ fn parse_origin(value: &str) -> Result<SdpLine, SdpParserResult> {
             line: value.to_string() });
     }
     let username = ot[0];
-    let session_id = match ot[1].parse::<u64>() {
-        Ok(n) => n,
-        Err(_) => return Result::Err(SdpParserResult::ParserLineError {
-            message: "failed to parse origin session id attribute".to_string(),
-            line: value.to_string() })
-    };
-    let session_version = match ot[2].parse::<u64>() {
-        Ok(n) => n,
-        Err(_) => return Result::Err(SdpParserResult::ParserLineError {
-            message: "failed to parse origin session version attribute".to_string(),
-            line: value.to_string() })
-    };
+    let session_id = try!(ot[1].parse::<u64>());
+    let session_version = try!(ot[2].parse::<u64>());
     let nettype = try!(parse_nettype(ot[3]));
     let addrtype = try!(parse_addrtype(ot[4]));
     let unicast_addr = try!(parse_unicast_addr(&addrtype, ot[5]));
@@ -321,19 +300,14 @@ fn parse_bandwidth(value: &str) -> Result<SdpLine, SdpParserResult> {
             message: "bandwidth attribute must have two tokens".to_string(),
             line: value.to_string() });
     }
-    let bwtype = bv[0]; // TODO check for supported values
+    let bwtype = bv[0];
     match bwtype.to_uppercase().as_ref() {
         "AS" | "TIAS" => (),
         _ => return Result::Err(SdpParserResult::ParserUnsupported {
               message: "unsupported bandwidth type value".to_string(),
               line: value.to_string() }),
-    }
-    let bandwidth = match bv[1].parse::<u64>() {
-        Ok(n) => n,
-        Err(_) => return Result::Err(SdpParserResult::ParserLineError {
-            message: "failed to parse bandwidth number attribute".to_string(),
-            line: value.to_string() })
     };
+    let bandwidth = try!(bv[1].parse::<u64>());
     let b = SdpBandwidth { bwtype: String::from(bwtype),
                             bandwidth: bandwidth };
     println!("bandwidth: {}, {}",
@@ -349,18 +323,8 @@ fn parse_timing(value: &str) -> Result<SdpLine, SdpParserResult> {
             message: "timing attribute must have two tokens".to_string(),
             line: value.to_string() });
     }
-    let start_time = match tv[0].parse::<u64>() {
-        Ok(n) => n,
-        Err(_) => return Result::Err(SdpParserResult::ParserLineError {
-            message: "failed to parse timing start time attribute".to_string(),
-            line: value.to_string() })
-    };
-    let stop_time = match tv[1].parse::<u64>() {
-        Ok(n) => n,
-        Err(_) => return Result::Err(SdpParserResult::ParserLineError {
-            message: "failed to parse timing stop time attribute".to_string(),
-            line: value.to_string() })
-    };
+    let start_time = try!(tv[0].parse::<u64>());
+    let stop_time = try!(tv[1].parse::<u64>());
     let t = SdpTiming { start: start_time,
                         stop: stop_time };
     println!("timing: {}, {}", t.start, t.stop);
@@ -400,12 +364,7 @@ fn parse_media(value: &str) -> Result<SdpLine, SdpParserResult> {
             line: value.to_string() });
     }
     let media = try!(parse_media_token(mv[0]));
-    let port = match mv[1].parse::<u32>() {
-        Ok(n) => n,
-        Err(_) => return Result::Err(SdpParserResult::ParserLineError {
-            message: "failed to parse media port token".to_string(),
-            line: value.to_string() })
-    };
+    let port = try!(mv[1].parse::<u32>());
     if port > 65535 {
         return Result::Err(SdpParserResult::ParserLineError {
             message: "media port token is too big".to_string(),
@@ -417,12 +376,7 @@ fn parse_media(value: &str) -> Result<SdpLine, SdpParserResult> {
         SdpMediaValue::Audio | SdpMediaValue::Video => {
             let mut fmt_vec: Vec<u32> = vec![];
             for num in fmt_slice {
-                let fmt_num = match num.parse::<u32>() {
-                    Ok(n) => (n),
-                    Err(_) => return Result::Err(SdpParserResult::ParserLineError {
-                        message: "failed to parse format number in media line".to_string(),
-                        line: value.to_string() }),
-                };
+                let fmt_num = try!(num.parse::<u32>());
                 match fmt_num {
                     0 => (),           // PCMU
                     8 => (),           // PCMA
