@@ -19,8 +19,76 @@ impl From<ParseIntError> for SdpParserResult {
     }
 }
 
+enum SdpAttributeType {
+    // TODO consolidate these into groups
+    Candidate,
+    EndOfCandidates,
+    Extmap,
+    Fingerprint,
+    Fmtp,
+    Group,
+    IceOptions,
+    IcePwd,
+    IceUfrag,
+    Inactive,
+    Mid,
+    Msid,
+    MsidSemantic,
+    Rid,
+    Recvonly,
+    Rtcp,
+    RtcpFb,
+    RtcpMux,
+    RtcpRsize,
+    Rtpmap,
+    Sctpmap,
+    SctpPort,
+    Sendonly,
+    Sendrecv,
+    Setup,
+    Simulcast,
+    Ssrc,
+    SsrcGroup,
+}
+
+impl fmt::Display for SdpAttributeType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let printable = match *self {
+            SdpAttributeType::Candidate => "Candidate",
+            SdpAttributeType::EndOfCandidates => "End-Of-Candidates",
+            SdpAttributeType::Extmap => "Extmap",
+            SdpAttributeType::Fingerprint => "Fingerprint",
+            SdpAttributeType::Fmtp => "Fmtp",
+            SdpAttributeType::Group => "Group",
+            SdpAttributeType::IceOptions => "Ice-Options",
+            SdpAttributeType::IcePwd => "Ice-Pwd",
+            SdpAttributeType::IceUfrag => "Ice-Ufrag",
+            SdpAttributeType::Inactive => "Inactive",
+            SdpAttributeType::Mid => "Mid",
+            SdpAttributeType::Msid => "Msid",
+            SdpAttributeType::MsidSemantic => "Msid-Semantic",
+            SdpAttributeType::Rid => "Rid",
+            SdpAttributeType::Recvonly => "Recvonly",
+            SdpAttributeType::Rtcp => "Rtcp",
+            SdpAttributeType::RtcpFb => "Rtcp-Fb",
+            SdpAttributeType::RtcpMux => "Rtcp-Mux",
+            SdpAttributeType::RtcpRsize => "Rtcp-Rsize",
+            SdpAttributeType::Rtpmap => "Rtpmap",
+            SdpAttributeType::Sctpmap => "Sctpmap",
+            SdpAttributeType::SctpPort => "Sctp-Port",
+            SdpAttributeType::Sendonly => "Sendonly",
+            SdpAttributeType::Sendrecv => "Sendrecv",
+            SdpAttributeType::Setup => "Setup",
+            SdpAttributeType::Simulcast => "Simulcast",
+            SdpAttributeType::Ssrc => "Ssrc",
+            SdpAttributeType::SsrcGroup => "Ssrc-Group",
+        };
+        write!(f, "{}", printable)
+    }
+}
+
 struct SdpAttribute {
-    name: String,
+    name: SdpAttributeType,
     value: String
 }
 
@@ -422,40 +490,42 @@ fn parse_attribute(value: &str) -> Result<SdpLine, SdpParserResult> {
         name = aname;
         value = avalue;
     }
+    let mut attrtype;
     match name.to_lowercase().as_ref() {
         // TODO TODO TODO
-        "candidate" => (),
-        "end-of-candidates" => (),
-        "extmap" => (),
-        "fingerprint" => (),
-        "fmtp" => (),
-        "group" => (),
-        "ice-options" => (),
-        "ice-pwd" => (),
-        "ice-ufrag" => (),
-        "inactive" => (),
-        "mid" => (),
-        "msid" => (),
-        "msid-semantic" => (),
-        "rid" => (),
-        "recvonly" => (),
-        "rtcp" => (),
-        "rtcp-fb" => (),
-        "rtcp-mux" => (),
-        "rtcp-rsize" => (),
-        "rtpmap" => (),
-        "sctpmap" => (),
-        "sctp-port" => (),
-        "sendonly" => (),
-        "sendrecv" => (),
-        "setup" => (),
-        "ssrc" => (),
-        "ssrc-group" => (),
+        "candidate" => { attrtype = SdpAttributeType::Candidate; },
+        "end-of-candidates" => { attrtype = SdpAttributeType::EndOfCandidates; },
+        "extmap" => { attrtype = SdpAttributeType::Extmap; },
+        "fingerprint" => { attrtype = SdpAttributeType::Fingerprint; },
+        "fmtp" => { attrtype = SdpAttributeType::Fmtp; },
+        "group" => { attrtype = SdpAttributeType::Group; },
+        "ice-options" => { attrtype = SdpAttributeType::IceOptions; },
+        "ice-pwd" => { attrtype = SdpAttributeType::IcePwd; },
+        "ice-ufrag" => { attrtype = SdpAttributeType::IceUfrag; },
+        "inactive" => { attrtype = SdpAttributeType::Inactive; },
+        "mid" => { attrtype = SdpAttributeType::Mid; },
+        "msid" => { attrtype = SdpAttributeType::Msid; },
+        "msid-semantic" => { attrtype = SdpAttributeType::MsidSemantic; },
+        "rid" => { attrtype = SdpAttributeType::Rid; },
+        "recvonly" => { attrtype = SdpAttributeType::Recvonly; },
+        "rtcp" => { attrtype = SdpAttributeType::Rtcp; },
+        "rtcp-fb" => { attrtype = SdpAttributeType::RtcpFb; },
+        "rtcp-mux" => { attrtype = SdpAttributeType::RtcpMux; },
+        "rtcp-rsize" => { attrtype = SdpAttributeType::RtcpRsize; },
+        "rtpmap" => { attrtype = SdpAttributeType::Rtpmap; },
+        "sctpmap" => { attrtype = SdpAttributeType::Sctpmap; },
+        "sctp-port" => { attrtype = SdpAttributeType::SctpPort; },
+        "sendonly" => { attrtype = SdpAttributeType::Sendonly; },
+        "sendrecv" => { attrtype = SdpAttributeType::Sendrecv; },
+        "setup" => { attrtype = SdpAttributeType::Setup; },
+        "simulcast" => { attrtype = SdpAttributeType::Simulcast; },
+        "ssrc" => { attrtype = SdpAttributeType::Ssrc; },
+        "ssrc-group" => { attrtype = SdpAttributeType::SsrcGroup; },
         _ => return Result::Err(SdpParserResult::ParserUnsupported {
               message: "unsupported attribute value".to_string(),
               line: name.to_string() }),
     }
-    let a = SdpAttribute { name: String::from(name),
+    let a = SdpAttribute { name: attrtype,
                            value: String::from(value) };
     println!("attribute: {}, {}", 
              a.name, a.value);
