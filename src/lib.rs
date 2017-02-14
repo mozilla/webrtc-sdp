@@ -180,7 +180,7 @@ impl fmt::Display for SdpFormatList {
     }
 }
 
-struct SdpMedia {
+struct SdpMediaLine {
     media: SdpMediaValue,
     port: u32,
     proto: SdpProtocolValue,
@@ -205,11 +205,36 @@ enum SdpLine {
     Attribute {attribute: SdpAttribute},
     Bandwidth {bandwidth: SdpBandwidth},
     Connection {connection: SdpConnection},
-    Media {media: SdpMedia},
+    Media {media: SdpMediaLine},
     Origin {origin: SdpOrigin},
     SdpString {string: String},
     SdpUInt {uint: u64},
     Timing {timing: SdpTiming}
+}
+
+struct SdpMedia {
+    media: SdpLine,
+    information: Option<String>,
+    connection: SdpConnection,
+    bandwidth: Option<SdpBandwidth>,
+    key: Option<String>,
+    attribute: Option<SdpAttribute>
+}
+
+struct SdpSession {
+    version: u64,
+    origin: SdpOrigin,
+    session: String,
+    information: Option<String>,
+    uri: Option<String>,
+    email: Option<String>,
+    phone: Option<String>,
+    connection: Option<SdpConnection>,
+    bandwidth: Option<SdpBandwidth>,
+    timing: SdpTiming,
+    key: Option<String>,
+    attribute: Option<SdpAttribute>,
+    media: SdpMedia
 }
 
 fn create_sdp_string(value: &str) -> SdpLine {
@@ -468,10 +493,10 @@ fn parse_media(value: &str) -> Result<SdpLine, SdpParserResult> {
             SdpFormatList::Strings { list: fmt_vec }
         }
     };
-    let m = SdpMedia { media: media,
-                       port: port,
-                       proto: proto,
-                       formats: fmt };
+    let m = SdpMediaLine { media: media,
+                           port: port,
+                           proto: proto,
+                           formats: fmt };
     println!("media: {}, {}, {}, {}",
              m.media, m.port, m.proto, m.formats);
     let l = SdpLine::Media { media: m };
