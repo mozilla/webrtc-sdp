@@ -4,7 +4,6 @@ use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::num::ParseIntError;
 
 enum SdpParserResult {
-    ParsedSuccessfully,
     ParserLineError   { message: String,
                         line: String },
     ParserUnsupported { message: String,
@@ -558,28 +557,26 @@ fn parse_attribute(value: &str) -> Result<SdpLine, SdpParserResult> {
     return Result::Ok(l)
 }
 
-fn parse_sdp_line(line: &str) -> SdpParserResult {
+fn parse_sdp_line(line: &str) -> Result<SdpLine, SdpParserResult> {
     let v: Vec<&str> = line.splitn(2, '=').collect();
     if v.len() < 2 {
-        return SdpParserResult::ParserLineError {
+        return Result::Err(SdpParserResult::ParserLineError {
             message: "failed to split field and attribute".to_string(),
-            line: line.to_string() };
+            line: line.to_string() });
     };
     let name = v[0].trim();
     if name.is_empty() || name.len() > 1 {
-        return SdpParserResult::ParserLineError {
+        return Result::Err(SdpParserResult::ParserLineError {
             message: "field name empty or too long".to_string(),
-            line: line.to_string() };
+            line: line.to_string() });
     };
     let value = v[1].trim();
     if value.len() == 0 {
-        return SdpParserResult::ParserLineError {
+        return Result::Err(SdpParserResult::ParserLineError {
             message: "attribute value has zero length".to_string(),
-            line: line.to_string() };
+            line: line.to_string() });
     }
-    // TODO once this function returns a Result<> this should simply be covered
-    // with a try!()
-    let line = match name.to_lowercase().as_ref() {
+    match name.to_lowercase().as_ref() {
         "a" => { parse_attribute(value) },
         "b" => { parse_bandwidth(value) },
         "c" => { parse_connection(value) },
@@ -595,16 +592,10 @@ fn parse_sdp_line(line: &str) -> SdpParserResult {
         "u" => { parse_uri(value) },
         "v" => { parse_version(value) },
         "z" => { parse_zone(value) },
-        _   => { return SdpParserResult::ParserLineError {
+        _   => { return Result::Err(SdpParserResult::ParserLineError {
                     message: "unsupported sdp field".to_string(),
-                    line: line.to_string() } }
-    };
-    // TODO there must be a way to error right from the previous match
-    match line {
-        Ok(n) => { println!("parsed successfully") },
-        Err(e) => { return e }
+                    line: line.to_string() }) }
     }
-    return SdpParserResult::ParsedSuccessfully
 }
 
 pub fn parse_sdp(sdp: &str, fail_on_warning: bool) -> bool {
@@ -612,28 +603,31 @@ pub fn parse_sdp(sdp: &str, fail_on_warning: bool) -> bool {
         return false;
     }
     let lines = sdp.lines();
-    let mut v: Vec<SdpParserResult> = Vec::new();
+    let mut errors: Vec<SdpParserResult> = Vec::new();
+    let mut sdp_lines: Vec<SdpLine> = Vec::new();
     for line in lines {
-        let result = parse_sdp_line(line);
-        match result {
-            SdpParserResult::ParsedSuccessfully => (),
-            // FIXME is this really a good way to accomplish this?
-            SdpParserResult::ParserLineError { message: x, line: y } =>
-                { v.push(SdpParserResult::ParserLineError { message: x, line: y}) }
-            SdpParserResult::ParserUnsupported { message: x, line: y } =>
-                {
-                    if fail_on_warning {
-                        v.push(SdpParserResult::ParserUnsupported { message: x, line: y});
-                    } else {
-                        println!("Warning unsupported value encountered: {}\n in line {}", x, y);
-                    }
+        match parse_sdp_line(line) {
+            Ok(n) => { sdp_lines.push(n); },
+            Err(e) => {
+                match e {
+                    // FIXME is this really a good way to accomplish this?
+                    SdpParserResult::ParserLineError { message: x, line: y } =>
+                        { errors.push(SdpParserResult::ParserLineError { message: x, line: y}) }
+                    SdpParserResult::ParserUnsupported { message: x, line: y } =>
+                        {
+                            if fail_on_warning {
+                                errors.push(SdpParserResult::ParserUnsupported { message: x, line: y});
+                            } else {
+                                println!("Warning unsupported value encountered: {}\n in line {}", x, y);
+                            }
+                        }
                 }
+            }
         };
     };
-    if v.len() > 0 {
-        while let Some(x) = v.pop() {
+    if errors.len() > 0 {
+        while let Some(x) = errors.pop() {
             match x {
-                SdpParserResult::ParsedSuccessfully => {}, // TODO should we fail here?
                 SdpParserResult::ParserLineError { message: msg, line: l} =>
                     { println!("Parser error: {}\n  in line: {}", msg, l) }
                 SdpParserResult::ParserUnsupported { message: msg, line: l} =>
