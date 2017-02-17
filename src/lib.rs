@@ -604,6 +604,7 @@ pub fn parse_sdp(sdp: &str, fail_on_warning: bool) -> bool {
     }
     let lines = sdp.lines();
     let mut errors: Vec<SdpParserResult> = Vec::new();
+    let mut warnings: Vec<SdpParserResult> = Vec::new();
     let mut sdp_lines: Vec<SdpLine> = Vec::new();
     for line in lines {
         match parse_sdp_line(line) {
@@ -615,14 +616,25 @@ pub fn parse_sdp(sdp: &str, fail_on_warning: bool) -> bool {
                         { errors.push(SdpParserResult::ParserLineError { message: x, line: y}) }
                     SdpParserResult::ParserUnsupported { message: x, line: y } =>
                         {
-                            if fail_on_warning {
-                                errors.push(SdpParserResult::ParserUnsupported { message: x, line: y});
-                            } else {
-                                println!("Warning unsupported value encountered: {}\n in line {}", x, y);
-                            }
+                            println!("Warning unsupported value encountered: {}\n in line {}", x, y);
+                            warnings.push(SdpParserResult::ParserUnsupported { message: x, line: y});
                         }
                 }
             }
+        };
+    };
+    let mut ret: bool = true;
+    if warnings.len() > 0 {
+        while let Some(x) = errors.pop() {
+            match x {
+                SdpParserResult::ParserLineError { message: msg, line: l} =>
+                    { println!("Parser error: {}\n  in line: {}", msg, l) }
+                SdpParserResult::ParserUnsupported { message: msg, line: l} =>
+                    { println!("Parser unknown: {}\n  in line: {}", msg, l) }
+            };
+        };
+        if fail_on_warning {
+            ret = false;
         };
     };
     if errors.len() > 0 {
@@ -632,9 +644,9 @@ pub fn parse_sdp(sdp: &str, fail_on_warning: bool) -> bool {
                     { println!("Parser error: {}\n  in line: {}", msg, l) }
                 SdpParserResult::ParserUnsupported { message: msg, line: l} =>
                     { println!("Parser unknown: {}\n  in line: {}", msg, l) }
-            }
-        }
-        return false;
+            };
+        };
+        ret = false;
     };
-    true
+    ret
 }
