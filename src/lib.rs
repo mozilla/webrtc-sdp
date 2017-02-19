@@ -201,14 +201,21 @@ struct SdpTiming {
 }
 
 enum SdpLine {
-    Attribute {attribute: SdpAttribute},
-    Bandwidth {bandwidth: SdpBandwidth},
-    Connection {connection: SdpConnection},
-    Media {media: SdpMediaLine},
-    Origin {origin: SdpOrigin},
-    SdpString {string: String},
-    SdpUInt {uint: u64},
-    Timing {timing: SdpTiming}
+    Attribute {value: SdpAttribute},
+    Bandwidth {value: SdpBandwidth},
+    Connection {value: SdpConnection},
+    Email {value: String},
+    Information {value: String},
+    Key {value: String},
+    Media {value: SdpMediaLine},
+    Phone {value: String},
+    Origin {value: SdpOrigin},
+    Repeat {value: String},
+    Session {value: String},
+    Timing {value: SdpTiming},
+    Uri {value: String},
+    Version {value: u64},
+    Zone {value: String}
 }
 
 struct SdpMedia {
@@ -236,54 +243,50 @@ struct SdpSession {
     media: SdpMedia
 }
 
-fn create_sdp_string(value: &str) -> SdpLine {
-    return SdpLine::SdpString {string: String::from(value)}
-}
-
 fn parse_repeat(value: &str) -> Result<SdpLine, SdpParserResult> {
     // TODO implement this if it's ever needed
     println!("repeat: {}", value);
-    return Result::Ok(create_sdp_string(value))
+    Result::Ok(SdpLine::Repeat{value: String::from(value)})
 }
 
 fn parse_zone(value: &str) -> Result<SdpLine, SdpParserResult> {
     // TODO implement this if it's ever needed
     println!("zone: {}", value);
-    return Result::Ok(create_sdp_string(value))
+    Result::Ok(SdpLine::Zone {value: String::from(value)})
 }
 
 fn parse_key(value: &str) -> Result<SdpLine, SdpParserResult> {
     // TODO implement this if it's ever needed
     println!("key: {}", value);
-    return Result::Ok(create_sdp_string(value))
+    Result::Ok(SdpLine::Key {value: String::from(value)})
 }
 
 fn parse_information(value: &str) -> Result<SdpLine, SdpParserResult> {
     println!("information: {}", value);
-    return Result::Ok(create_sdp_string(value))
+    Result::Ok(SdpLine::Information {value: String::from(value)})
 }
 
 fn parse_uri(value: &str) -> Result<SdpLine, SdpParserResult> {
     // TODO check if this is really a URI
     println!("uri: {}", value);
-    return Result::Ok(create_sdp_string(value))
+    Result::Ok(SdpLine::Uri {value: String::from(value)})
 }
 
 fn parse_email(value: &str) -> Result<SdpLine, SdpParserResult> {
     // TODO check if this is really an email address
     println!("email: {}", value);
-    return Result::Ok(create_sdp_string(value))
+    Result::Ok(SdpLine::Email {value: String::from(value)})
 }
 
 fn parse_phone(value: &str) -> Result<SdpLine, SdpParserResult> {
     // TODO check if this is really a phone number
     println!("phone: {}", value);
-    return Result::Ok(create_sdp_string(value))
+    Result::Ok(SdpLine::Phone {value: String::from(value)})
 }
 
 fn parse_session(value: &str) -> Result<SdpLine, SdpParserResult> {
     println!("session: {}", value);
-    return Result::Ok(create_sdp_string(value))
+    Result::Ok(SdpLine::Session {value: String::from(value)})
 }
 
 fn parse_version(value: &str) -> Result<SdpLine, SdpParserResult> {
@@ -294,8 +297,7 @@ fn parse_version(value: &str) -> Result<SdpLine, SdpParserResult> {
             line: value.to_string() });
     };
     println!("version: {}", ver);
-    let l = SdpLine::SdpUInt {uint: ver };
-    return Result::Ok(l)
+    Result::Ok(SdpLine::Version { value: ver })
 }
 
 fn parse_nettype(value: &str) -> Result<SdpNetType, SdpParserResult> {
@@ -360,8 +362,7 @@ fn parse_origin(value: &str) -> Result<SdpLine, SdpParserResult> {
     println!("origin: {}, {}, {}, {}, {}, {}",
              o.username, o.session_id, o.session_version, o.nettype,
              o.addrtype, o.unicast_addr);
-    let l = SdpLine::Origin { origin: o };
-    return Result::Ok(l)
+    Result::Ok(SdpLine::Origin { value: o })
 }
 
 fn parse_connection(value: &str) -> Result<SdpLine, SdpParserResult> {
@@ -381,8 +382,7 @@ fn parse_connection(value: &str) -> Result<SdpLine, SdpParserResult> {
                             unicast_addr: unicast_addr };
     println!("connection: {}, {}, {}",
              c.nettype, c.addrtype, c.unicast_addr);
-    let l = SdpLine::Connection { connection: c };
-    return Result::Ok(l)
+    Result::Ok(SdpLine::Connection { value: c })
 }
 
 fn parse_bandwidth(value: &str) -> Result<SdpLine, SdpParserResult> {
@@ -404,8 +404,7 @@ fn parse_bandwidth(value: &str) -> Result<SdpLine, SdpParserResult> {
                             bandwidth: bandwidth };
     println!("bandwidth: {}, {}",
              b.bwtype, b.bandwidth);
-    let l = SdpLine::Bandwidth { bandwidth: b };
-    return Result::Ok(l)
+    Result::Ok(SdpLine::Bandwidth { value: b })
 }
 
 fn parse_timing(value: &str) -> Result<SdpLine, SdpParserResult> {
@@ -420,8 +419,7 @@ fn parse_timing(value: &str) -> Result<SdpLine, SdpParserResult> {
     let t = SdpTiming { start: start_time,
                         stop: stop_time };
     println!("timing: {}, {}", t.start, t.stop);
-    let l = SdpLine::Timing {timing: t};
-    return Result::Ok(l)
+    Result::Ok(SdpLine::Timing { value: t })
 }
 
 fn parse_media_token(value: &str) -> Result<SdpMediaValue, SdpParserResult> {
@@ -498,8 +496,7 @@ fn parse_media(value: &str) -> Result<SdpLine, SdpParserResult> {
                            formats: fmt };
     println!("media: {}, {}, {}, {}",
              m.media, m.port, m.proto, m.formats);
-    let l = SdpLine::Media { media: m };
-    return Result::Ok(l)
+    Result::Ok(SdpLine::Media { value: m })
 }
 
 fn parse_attribute(value: &str) -> Result<SdpLine, SdpParserResult> {
@@ -553,8 +550,7 @@ fn parse_attribute(value: &str) -> Result<SdpLine, SdpParserResult> {
                            value: String::from(value) };
     println!("attribute: {}, {}", 
              a.name, a.value);
-    let l = SdpLine::Attribute { attribute: a };
-    return Result::Ok(l)
+    Result::Ok(SdpLine::Attribute { value: a })
 }
 
 fn parse_sdp_line(line: &str) -> Result<SdpLine, SdpParserResult> {
@@ -596,6 +592,52 @@ fn parse_sdp_line(line: &str) -> Result<SdpLine, SdpParserResult> {
                     message: "unsupported sdp field".to_string(),
                     line: line.to_string() }) }
     }
+}
+
+fn parse_sdp_vector(lines: Vec<SdpLine>) -> Result<SdpSession, SdpParserResult> {
+    if lines.len() < 5 {
+        return Result::Err(SdpParserResult::ParserLineError {
+            message: "SDP neeeds at least 5 lines".to_string(),
+            line: "".to_string() })
+    }
+    /*
+    version: u64,
+    origin: SdpOrigin,
+    session: String,
+    information: Option<String>,
+    uri: Option<String>,
+    email: Option<String>,
+    phone: Option<String>,
+    connection: Option<SdpConnection>,
+    bandwidth: Option<SdpBandwidth>,
+    timing: SdpTiming,
+    key: Option<String>,
+    attribute: Option<SdpAttribute>,
+    media: SdpMedia
+    */
+    match lines[0] {
+        SdpLine::Version{..} => (),
+        _ => return Result::Err(SdpParserResult::ParserLineError {
+            message: "first line needs to be version number".to_string(),
+            line: "".to_string() })
+    };
+    match lines[1] {
+        SdpLine::Origin{..} => (),
+        _ => return Result::Err(SdpParserResult::ParserLineError {
+            message: "second line needs to be origin".to_string(),
+            line: "".to_string() })
+    };
+    match lines[2] {
+        SdpLine::Session{..} => (),
+        _ => return Result::Err(SdpParserResult::ParserLineError {
+            message: "third line needs to be session".to_string(),
+            line: "".to_string() })
+    };
+    for line in &lines {
+    }
+    Result::Err(SdpParserResult::ParserLineError {
+        message: "foo".to_string(),
+        line: "bar".to_string() })
 }
 
 pub fn parse_sdp(sdp: &str, fail_on_warning: bool) -> bool {
