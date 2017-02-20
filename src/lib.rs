@@ -3,11 +3,14 @@ use std::fmt;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::num::ParseIntError;
 
+#[derive(Debug)]
 enum SdpParserResult {
     ParserLineError   { message: String,
                         line: String },
     ParserUnsupported { message: String,
                         line: String },
+    ParserSequence    { message: String,
+                        line: Option<String> },
 }
 
 impl From<ParseIntError> for SdpParserResult {
@@ -238,6 +241,8 @@ struct SdpSession {
     connection: Option<SdpConnection>,
     bandwidth: Option<SdpBandwidth>,
     timing: SdpTiming,
+    repeat: Option<String>,
+    zone: Option<String>,
     key: Option<String>,
     attribute: Option<SdpAttribute>,
     media: SdpMedia
@@ -554,6 +559,11 @@ fn parse_attribute(value: &str) -> Result<SdpLine, SdpParserResult> {
 }
 
 fn parse_sdp_line(line: &str) -> Result<SdpLine, SdpParserResult> {
+    if line.find('=') == None {
+        return Result::Err(SdpParserResult::ParserLineError {
+            message: "missing = character in line".to_string(),
+            line: line.to_string() });
+    }
     let v: Vec<&str> = line.splitn(2, '=').collect();
     if v.len() < 2 {
         return Result::Err(SdpParserResult::ParserLineError {
@@ -594,11 +604,28 @@ fn parse_sdp_line(line: &str) -> Result<SdpLine, SdpParserResult> {
     }
 }
 
-fn parse_sdp_vector(lines: Vec<SdpLine>) -> Result<SdpSession, SdpParserResult> {
+fn parse_media_vector(lines: Vec<SdpLine>) -> Result<SdpMedia, SdpParserResult> {
+    Result::Err(SdpParserResult::ParserLineError {
+        message: "foo".to_string(),
+        line: "bar".to_string() })
+}
+
+fn find_next_media_line(lines: &Vec<SdpLine>) -> Result<usize, &'static str> {
+    for (i, line) in lines.iter().enumerate() {
+        match line {
+            &SdpLine::Media{..} => return Result::Ok(i),
+            _ => ()
+        }
+    }
+    Err("No media line found")
+}
+
+fn parse_sdp_vector(lines: &Vec<SdpLine>) -> Result<SdpSession, SdpParserResult> {
+    println!("Hello world {}", lines.len());
     if lines.len() < 5 {
-        return Result::Err(SdpParserResult::ParserLineError {
+        return Result::Err(SdpParserResult::ParserSequence {
             message: "SDP neeeds at least 5 lines".to_string(),
-            line: "".to_string() })
+            line: None })
     }
     /*
     version: u64,
@@ -611,29 +638,37 @@ fn parse_sdp_vector(lines: Vec<SdpLine>) -> Result<SdpSession, SdpParserResult> 
     connection: Option<SdpConnection>,
     bandwidth: Option<SdpBandwidth>,
     timing: SdpTiming,
+    repeat: Option<String>,
+    zone: Option<String>,
     key: Option<String>,
     attribute: Option<SdpAttribute>,
     media: SdpMedia
     */
+    // TODO are these mataches really the only way to verify the types?
     match lines[0] {
         SdpLine::Version{..} => (),
-        _ => return Result::Err(SdpParserResult::ParserLineError {
+        _ => return Result::Err(SdpParserResult::ParserSequence {
             message: "first line needs to be version number".to_string(),
-            line: "".to_string() })
+            line: None })
     };
     match lines[1] {
         SdpLine::Origin{..} => (),
-        _ => return Result::Err(SdpParserResult::ParserLineError {
+        _ => return Result::Err(SdpParserResult::ParserSequence {
             message: "second line needs to be origin".to_string(),
-            line: "".to_string() })
+            line: None })
     };
     match lines[2] {
         SdpLine::Session{..} => (),
-        _ => return Result::Err(SdpParserResult::ParserLineError {
+        _ => return Result::Err(SdpParserResult::ParserSequence {
             message: "third line needs to be session".to_string(),
-            line: "".to_string() })
+            line: None })
     };
-    for line in &lines {
+    let m = find_next_media_line(&lines);
+    match m {
+        Err(_) => return Result::Err(SdpParserResult::ParserSequence {
+            message: "missing media section".to_string(),
+            line: None }),
+        Ok(_) => ()
     }
     Result::Err(SdpParserResult::ParserLineError {
         message: "foo".to_string(),
@@ -655,24 +690,30 @@ pub fn parse_sdp(sdp: &str, fail_on_warning: bool) -> bool {
                 match e {
                     // FIXME is this really a good way to accomplish this?
                     SdpParserResult::ParserLineError { message: x, line: y } =>
-                        { errors.push(SdpParserResult::ParserLineError { message: x, line: y}) }
+                        { errors.push(SdpParserResult::ParserLineError { message: x, line: y}) },
                     SdpParserResult::ParserUnsupported { message: x, line: y } =>
                         {
                             println!("Warning unsupported value encountered: {}\n in line {}", x, y);
                             warnings.push(SdpParserResult::ParserUnsupported { message: x, line: y});
-                        }
+                        },
+                    SdpParserResult::ParserSequence {message: x, line: y} =>
+                        { errors.push(SdpParserResult::ParserSequence { message: x, line: y})}
                 }
             }
         };
     };
+    // TODO check for errors ;-)
+    let sdp = parse_sdp_vector(&sdp_lines);
     let mut ret: bool = true;
     if warnings.len() > 0 {
         while let Some(x) = errors.pop() {
             match x {
                 SdpParserResult::ParserLineError { message: msg, line: l} =>
-                    { println!("Parser error: {}\n  in line: {}", msg, l) }
+                    { println!("Parser error: {}\n  in line: {}", msg, l) },
                 SdpParserResult::ParserUnsupported { message: msg, line: l} =>
-                    { println!("Parser unknown: {}\n  in line: {}", msg, l) }
+                    { println!("Parser unknown: {}\n  in line: {}", msg, l) },
+                SdpParserResult::ParserSequence { message: msg, ..} =>
+                    { println!("Parser sequence: {}", msg) }
             };
         };
         if fail_on_warning {
@@ -683,9 +724,11 @@ pub fn parse_sdp(sdp: &str, fail_on_warning: bool) -> bool {
         while let Some(x) = errors.pop() {
             match x {
                 SdpParserResult::ParserLineError { message: msg, line: l} =>
-                    { println!("Parser error: {}\n  in line: {}", msg, l) }
+                    { println!("Parser error: {}\n  in line: {}", msg, l) },
                 SdpParserResult::ParserUnsupported { message: msg, line: l} =>
-                    { println!("Parser unknown: {}\n  in line: {}", msg, l) }
+                    { println!("Parser unknown: {}\n  in line: {}", msg, l) },
+                SdpParserResult::ParserSequence { message: msg, ..} =>
+                    { println!("Parser sequence: {}", msg)}
             };
         };
         ret = false;
