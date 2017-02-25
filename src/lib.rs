@@ -759,6 +759,8 @@ fn parse_attribute(value: &str) -> Result<SdpLine, SdpParserResult> {
     Result::Ok(SdpLine::Attribute { value: a })
 }
 
+// TODO add missing unit tests
+
 fn parse_sdp_line(line: &str) -> Result<SdpLine, SdpParserResult> {
     if line.find('=') == None {
         return Result::Err(SdpParserResult::ParserLineError {
@@ -828,7 +830,7 @@ fn test_parse_sdp_line_empty_name() {
     assert!(parse_sdp_line("=abc").is_err());
 }
 
-fn parse_media_vector(lines: &Vec<SdpLine>) -> Result<SdpMedia, SdpParserResult> {
+fn parse_media_vector(lines: &[SdpLine]) -> Result<SdpMedia, SdpParserResult> {
     Result::Ok(SdpMedia{media: SdpMediaLine{media: SdpMediaValue::Audio,
                                             port: 0,
                                             proto: SdpProtocolValue::UdpTlsRtpSavpf,
@@ -844,18 +846,6 @@ fn parse_media_vector(lines: &Vec<SdpLine>) -> Result<SdpMedia, SdpParserResult>
                         key: None,
                         attribute: None})
 }
-
-/*
-fn find_next_media_line(lines: &Vec<SdpLine>) -> Result<usize, &'static str> {
-    for (i, line) in lines.iter().enumerate() {
-        match line {
-            &SdpLine::Media{..} => return Result::Ok(i),
-            _ => ()
-        }
-    }
-    Err("No media line found")
-}
-*/
 
 fn parse_sdp_vector(lines: &Vec<SdpLine>) -> Result<SdpSession, SdpParserResult> {
     if lines.len() < 5 {
@@ -901,13 +891,27 @@ fn parse_sdp_vector(lines: &Vec<SdpLine>) -> Result<SdpSession, SdpParserResult>
                                                };
                                                timing = Some(v.clone());
                                               },
+            &SdpLine::Media{value: ref v} => {match parse_media_vector(&lines[i..]) {
+                                                  Ok(n) => media = Some(n),
+                                                  Err(e) => return Result::Err(e),
+                                              }},
             // TODO replace this with all SdpLine's
             _ => ()
         }
     }
     if version.is_none() {
         return Result::Err(SdpParserResult::ParserSequence {
-            message: "Missing version number".to_string(),
+            message: "Missing version".to_string(),
+            line: None},);
+    }
+    if origin.is_none() {
+        return Result::Err(SdpParserResult::ParserSequence {
+            message: "Missing origin".to_string(),
+            line: None},);
+    }
+    if session.is_none() {
+        return Result::Err(SdpParserResult::ParserSequence {
+            message: "Missing session".to_string(),
             line: None},);
     }
     if timing.is_none() {
@@ -915,32 +919,11 @@ fn parse_sdp_vector(lines: &Vec<SdpLine>) -> Result<SdpSession, SdpParserResult>
             message: "Missing timing".to_string(),
             line: None},);
     }
-    match parse_media_vector(lines) {
-        Ok(n) => {media = Some(n);},
-        Err(e) => return Result::Err(e),
-    };
     if media.is_none() {
         return Result::Err(SdpParserResult::ParserSequence {
             message: "Missing media".to_string(),
             line: None},);
     }
-    /*
-    version: u64,
-    origin: SdpOrigin,
-    session: String,
-    information: Option<String>,
-    uri: Option<String>,
-    email: Option<String>,
-    phone: Option<String>,
-    connection: Option<SdpConnection>,
-    bandwidth: Option<SdpBandwidth>,
-    timing: SdpTiming,
-    repeat: Option<String>,
-    zone: Option<String>,
-    key: Option<String>,
-    attribute: Option<SdpAttribute>,
-    media: SdpMedia
-    */
     Result::Ok(SdpSession{version: version.unwrap(),
                           origin: origin.unwrap(),
                           session: session.unwrap(),
@@ -955,7 +938,7 @@ fn parse_sdp_vector(lines: &Vec<SdpLine>) -> Result<SdpSession, SdpParserResult>
                           zone: None,
                           key: None,
                           attribute: None,
-                          media: media.unwrap()
+                          media: media.unwrap(),
                           })
 }
 
