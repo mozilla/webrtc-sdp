@@ -233,7 +233,7 @@ struct SdpMedia {
     connection: SdpConnection,
     bandwidth: Option<SdpBandwidth>,
     key: Option<String>,
-    attribute: Option<SdpAttribute>
+    attribute: Vec<SdpAttribute>
 }
 
 struct SdpSession {
@@ -250,7 +250,7 @@ struct SdpSession {
     repeat: Option<String>,
     zone: Option<String>,
     key: Option<String>,
-    attribute: Option<SdpAttribute>,
+    attribute: Vec<SdpAttribute>,
     media: SdpMedia
 }
 
@@ -844,7 +844,7 @@ fn parse_media_vector(lines: &[SdpLine]) -> Result<SdpMedia, SdpParserResult> {
                                                  },
                         bandwidth: None,
                         key: None,
-                        attribute: None})
+                        attribute: Vec::new()})
 }
 
 fn parse_sdp_vector(lines: &Vec<SdpLine>) -> Result<SdpSession, SdpParserResult> {
@@ -937,7 +937,7 @@ fn parse_sdp_vector(lines: &Vec<SdpLine>) -> Result<SdpSession, SdpParserResult>
                           repeat: None,
                           zone: None,
                           key: None,
-                          attribute: None,
+                          attribute: attributes,
                           media: media.unwrap(),
                           })
 }
