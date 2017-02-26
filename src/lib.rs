@@ -10,7 +10,7 @@ enum SdpParserResult {
     ParserUnsupported { message: String,
                         line: String },
     ParserSequence    { message: String,
-                        line: Option<String> },
+                        line: Option<usize> },
 }
 
 impl From<ParseIntError> for SdpParserResult {
@@ -96,6 +96,7 @@ struct SdpAttribute {
     value: String
 }
 
+#[derive(Clone)]
 struct SdpBandwidth {
     bwtype: String,
     bandwidth: u64
@@ -875,28 +876,53 @@ fn parse_sdp_vector(lines: &Vec<SdpLine>) -> Result<SdpSession, SdpParserResult>
             message: "third line needs to be session".to_string(),
             line: None })
     };
-    let mut timing: Option<SdpTiming> = None;
     let mut attributes: Vec<SdpAttribute> = Vec::new();
+    let mut bandwidth: Option<SdpBandwidth> = None;
     let mut media: Option<SdpMedia> = None;
+    let mut timing: Option<SdpTiming> = None;
     for (i, line) in lines.iter().skip(3).enumerate() {
         match line {
             // TODO we probably need to check somewhere if these are legit
             // session level attributes
             &SdpLine::Attribute{value: ref v} => attributes.push(v.clone()),
-            &SdpLine::Timing{value: ref v} => {if timing.is_some() {
-                                                 return Result::Err(
-                                                     SdpParserResult::ParserSequence {
-                                                         message: "only one timing line at session level allowed".to_string(),
-                                                         line: None})
-                                               };
-                                               timing = Some(v.clone());
-                                              },
+            &SdpLine::Bandwidth{value: ref v} => {if bandwidth.is_some() {
+                                                      return Result::Err(
+                                                          SdpParserResult::ParserSequence {
+                                                              message: "only one bandwidth line at session level allowed".to_string(),
+                                                              line: Some(i)})
+                                                  };
+                                                  bandwidth = Some(v.clone());
+                                                 },
             &SdpLine::Media{value: ref v} => {match parse_media_vector(&lines[i..]) {
                                                   Ok(n) => media = Some(n),
                                                   Err(e) => return Result::Err(e),
                                               }},
-            // TODO replace this with all SdpLine's
-            _ => ()
+            &SdpLine::Origin{..} => return Result::Err(SdpParserResult::ParserSequence {
+                                                            message: "origin is only allowed in second line".to_string(),
+                                                            line: Some(i)}),
+            &SdpLine::Session{..} => return Result::Err(SdpParserResult::ParserSequence {
+                                                            message: "session is only allowed in third line".to_string(),
+                                                            line: Some(i)}),
+            &SdpLine::Timing{value: ref v} => {if timing.is_some() {
+                                                   return Result::Err(
+                                                       SdpParserResult::ParserSequence {
+                                                           message: "only one timing line at session level allowed".to_string(),
+                                                           line: Some(i)})
+                                               };
+                                               timing = Some(v.clone());
+                                              },
+            &SdpLine::Version{..} => return Result::Err(SdpParserResult::ParserSequence {
+                                                            message: "version is only allowed in first line".to_string(),
+                                                            line: Some(i)}),
+            // TODO does anyone really ever need these?
+            &SdpLine::Connection{..} => (),
+            &SdpLine::Email{..} => (),
+            &SdpLine::Information{..} => (),
+            &SdpLine::Key{..} => (),
+            &SdpLine::Phone{..} => (),
+            &SdpLine::Repeat{..} => (),
+            &SdpLine::Uri{..} => (),
+            &SdpLine::Zone{..} => (),
         }
     }
     if version.is_none() {
@@ -932,7 +958,7 @@ fn parse_sdp_vector(lines: &Vec<SdpLine>) -> Result<SdpSession, SdpParserResult>
                           email: None,
                           phone: None,
                           connection: None,
-                          bandwidth: None,
+                          bandwidth: bandwidth,
                           timing: timing.unwrap(),
                           repeat: None,
                           zone: None,
