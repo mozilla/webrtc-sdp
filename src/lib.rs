@@ -848,107 +848,90 @@ fn parse_media_vector(lines: &[SdpLine]) -> Result<SdpMedia, SdpParserResult> {
                         attribute: Vec::new()})
 }
 
-fn parse_sdp_vector(lines: &Vec<SdpLine>) -> Result<SdpSession, SdpParserResult> {
+fn verify_sdp_vector(lines: &Vec<SdpLine>) -> Result<(), SdpParserResult> {
     if lines.len() < 5 {
         return Result::Err(SdpParserResult::ParserSequence {
             message: "SDP neeeds at least 5 lines".to_string(),
             line: None })
     }
-    let mut version: Option<u64> = None;
     // TODO are these mataches really the only way to verify the types?
     match lines[0] {
-        SdpLine::Version{value: v} => {version = Some(v)},
+        SdpLine::Version{..} => (),
         _ => return Result::Err(SdpParserResult::ParserSequence {
             message: "first line needs to be version number".to_string(),
             line: None })
     };
-    let mut origin: Option<SdpOrigin> = None;
     match lines[1] {
-        SdpLine::Origin{value: ref v} => {origin = Some(v.clone())},
+        SdpLine::Origin{..} => (),
         _ => return Result::Err(SdpParserResult::ParserSequence {
             message: "second line needs to be origin".to_string(),
             line: None })
     };
-    let mut session: Option<String> = None;
     match lines[2] {
-        SdpLine::Session{value: ref v} => {session = Some(v.clone())},
+        SdpLine::Session{..} => (),
         _ => return Result::Err(SdpParserResult::ParserSequence {
             message: "third line needs to be session".to_string(),
             line: None })
+    };
+    let mut has_timing: bool = false;
+    for (i, line) in lines.iter().skip(3).enumerate() {
+        match *line {
+            SdpLine::Timing{..} => has_timing = true,
+            _ => (),
+        }
+    }
+    if !has_timing {
+        return Result::Err(SdpParserResult::ParserSequence {
+            message: "Missing timing".to_string(),
+            line: None},);
+    }
+    Result::Ok(())
+}
+
+fn parse_sdp_vector(lines: &Vec<SdpLine>) -> Result<SdpSession, SdpParserResult> {
+    try!(verify_sdp_vector(lines));
+    let version: Option<u64> = match lines[0] {
+        SdpLine::Version{value: v} => Some(v),
+        _ => None
+    };
+    let origin: Option<SdpOrigin> = match lines[1] {
+        SdpLine::Origin{value: ref v} => Some(v.clone()),
+        _ => None
+    };
+    let session: Option<String> = match lines[2] {
+        SdpLine::Session{value: ref v} => Some(v.clone()),
+        _ => None
     };
     let mut attributes: Vec<SdpAttribute> = Vec::new();
     let mut bandwidth: Option<SdpBandwidth> = None;
     let mut media: Option<SdpMedia> = None;
     let mut timing: Option<SdpTiming> = None;
     for (i, line) in lines.iter().skip(3).enumerate() {
-        match line {
+        match *line {
             // TODO we probably need to check somewhere if these are legit
             // session level attributes
-            &SdpLine::Attribute{value: ref v} => attributes.push(v.clone()),
-            &SdpLine::Bandwidth{value: ref v} => {if bandwidth.is_some() {
-                                                      return Result::Err(
-                                                          SdpParserResult::ParserSequence {
-                                                              message: "only one bandwidth line at session level allowed".to_string(),
-                                                              line: Some(i)})
-                                                  };
-                                                  bandwidth = Some(v.clone());
-                                                 },
-            &SdpLine::Media{value: ref v} => {match parse_media_vector(&lines[i..]) {
+            SdpLine::Attribute{value: ref v} => attributes.push(v.clone()),
+            SdpLine::Bandwidth{value: ref v} => bandwidth = Some(v.clone()),
+            SdpLine::Timing{value: ref v} => timing = Some(v.clone()),
+            SdpLine::Media{value: ref v} => {match parse_media_vector(&lines[i..]) {
                                                   Ok(n) => media = Some(n),
                                                   Err(e) => return Result::Err(e),
                                               }},
-            &SdpLine::Origin{..} => return Result::Err(SdpParserResult::ParserSequence {
-                                                            message: "origin is only allowed in second line".to_string(),
-                                                            line: Some(i)}),
-            &SdpLine::Session{..} => return Result::Err(SdpParserResult::ParserSequence {
-                                                            message: "session is only allowed in third line".to_string(),
-                                                            line: Some(i)}),
-            &SdpLine::Timing{value: ref v} => {if timing.is_some() {
-                                                   return Result::Err(
-                                                       SdpParserResult::ParserSequence {
-                                                           message: "only one timing line at session level allowed".to_string(),
-                                                           line: Some(i)})
-                                               };
-                                               timing = Some(v.clone());
-                                              },
-            &SdpLine::Version{..} => return Result::Err(SdpParserResult::ParserSequence {
-                                                            message: "version is only allowed in first line".to_string(),
+            SdpLine::Origin{..} |
+                SdpLine::Session{..} |
+                SdpLine::Version{..} => return Result::Err(SdpParserResult::ParserSequence {
+                                                            message: "internal parser error".to_string(),
                                                             line: Some(i)}),
             // TODO does anyone really ever need these?
-            &SdpLine::Connection{..} => (),
-            &SdpLine::Email{..} => (),
-            &SdpLine::Information{..} => (),
-            &SdpLine::Key{..} => (),
-            &SdpLine::Phone{..} => (),
-            &SdpLine::Repeat{..} => (),
-            &SdpLine::Uri{..} => (),
-            &SdpLine::Zone{..} => (),
+            SdpLine::Connection{..} => (),
+            SdpLine::Email{..} => (),
+            SdpLine::Information{..} => (),
+            SdpLine::Key{..} => (),
+            SdpLine::Phone{..} => (),
+            SdpLine::Repeat{..} => (),
+            SdpLine::Uri{..} => (),
+            SdpLine::Zone{..} => (),
         }
-    }
-    if version.is_none() {
-        return Result::Err(SdpParserResult::ParserSequence {
-            message: "Missing version".to_string(),
-            line: None},);
-    }
-    if origin.is_none() {
-        return Result::Err(SdpParserResult::ParserSequence {
-            message: "Missing origin".to_string(),
-            line: None},);
-    }
-    if session.is_none() {
-        return Result::Err(SdpParserResult::ParserSequence {
-            message: "Missing session".to_string(),
-            line: None},);
-    }
-    if timing.is_none() {
-        return Result::Err(SdpParserResult::ParserSequence {
-            message: "Missing timing".to_string(),
-            line: None},);
-    }
-    if media.is_none() {
-        return Result::Err(SdpParserResult::ParserSequence {
-            message: "Missing media".to_string(),
-            line: None},);
     }
     Result::Ok(SdpSession{version: version.unwrap(),
                           origin: origin.unwrap(),
