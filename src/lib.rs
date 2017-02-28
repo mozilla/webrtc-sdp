@@ -135,6 +135,7 @@ struct SdpConnection {
     unicast_addr: IpAddr
 }
 
+#[derive(Clone)]
 enum SdpMediaValue {
     Audio,
     Video,
@@ -152,6 +153,7 @@ impl fmt::Display for SdpMediaValue {
     }
 }
 
+#[derive(Clone)]
 enum SdpProtocolValue {
     UdpTlsRtpSavpf,
     TcpTlsRtpSavpf,
@@ -173,6 +175,7 @@ impl fmt::Display for SdpProtocolValue {
     }
 }
 
+#[derive(Clone)]
 enum SdpFormatList {
     Integers {list: Vec<u32>},
     Strings {list: Vec<String>}
@@ -187,6 +190,7 @@ impl fmt::Display for SdpFormatList {
     }
 }
 
+#[derive(Clone)]
 struct SdpMediaLine {
     media: SdpMediaValue,
     port: u32,
@@ -837,7 +841,38 @@ fn test_parse_sdp_line_empty_name() {
 }
 
 fn parse_media_vector(lines: &[SdpLine]) -> Result<Vec<SdpMedia>, SdpParserResult> {
-    Result::Ok(vec![SdpMedia{media: SdpMediaLine{media: SdpMediaValue::Audio,
+    let mut media_sections: Vec<SdpMedia> = Vec::new();
+    let mut media: Option<SdpMediaLine> = None;
+    let mut information: Option<String> = None;
+    let mut connection: Option<SdpConnection> = None;
+    let mut bandwidth: Vec<SdpBandwidth> = Vec::new();
+    let mut key: Option<String> = None;
+    let mut attributes: Vec<SdpAttribute> = Vec::new();
+    match lines[0] {
+        SdpLine::Media{value: ref v} => {media = Some(v.clone())},
+        _ => return Result::Err(SdpParserResult::ParserSequence {
+            message: "first line in media section needs to be a media line".to_string(),
+            line: None })
+    };
+    for (i, line) in lines.iter().enumerate().skip(1) {
+        match *line {
+            SdpLine::Information{value: ref v} => information = Some(v.clone()),
+            SdpLine::Connection{..} => (),
+            SdpLine::Bandwidth{value: ref v} => bandwidth.push(v.clone()),
+            SdpLine::Key{value: ref v} => key = Some(v.clone()),
+            SdpLine::Attribute{value: ref v} => attributes.push(v.clone()),
+            SdpLine::Media{..} => (),
+
+            SdpLine::Email{..} | SdpLine::Phone{..} | SdpLine::Origin{..} |
+                SdpLine::Repeat{..} | SdpLine::Session{..} |
+                SdpLine::Timing{..} | SdpLine::Uri{..} | SdpLine::Version{..} |
+                SdpLine::Zone{..} => return Result::Err(
+                    SdpParserResult::ParserSequence {
+                        message: "invalid type in media section".to_string(),
+                        line: None})
+        };
+    };
+    media_sections.push(SdpMedia{media: SdpMediaLine{media: SdpMediaValue::Audio,
                                             port: 0,
                                             proto: SdpProtocolValue::UdpTlsRtpSavpf,
                                             formats: SdpFormatList::Integers {list: vec![0]
@@ -850,7 +885,8 @@ fn parse_media_vector(lines: &[SdpLine]) -> Result<Vec<SdpMedia>, SdpParserResul
                                                  }),
                         bandwidth: Vec::new(),
                         key: None,
-                        attribute: Vec::new()}])
+                        attribute: Vec::new()});
+    Result::Ok(media_sections)
 }
 
 fn verify_sdp_vector(lines: &Vec<SdpLine>) -> Result<(), SdpParserResult> {
@@ -879,12 +915,14 @@ fn verify_sdp_vector(lines: &Vec<SdpLine>) -> Result<(), SdpParserResult> {
             line: None })
     };
     let mut has_timing: bool = false;
-    for (i, line) in lines.iter().skip(3).enumerate() {
+    for (i, line) in lines.iter().enumerate().skip(3) {
         match *line {
             SdpLine::Timing{..} => has_timing = true,
             _ => (),
         }
     }
+    // TODO according to RFC 4566 we are suppose to check if all lines appear
+    //      the right order
     if !has_timing {
         return Result::Err(SdpParserResult::ParserSequence {
             message: "Missing timing".to_string(),
@@ -895,6 +933,7 @@ fn verify_sdp_vector(lines: &Vec<SdpLine>) -> Result<(), SdpParserResult> {
 
 fn parse_sdp_vector(lines: &Vec<SdpLine>) -> Result<SdpSession, SdpParserResult> {
     try!(verify_sdp_vector(lines));
+
     let version: Option<u64> = match lines[0] {
         SdpLine::Version{value: v} => Some(v),
         _ => None
@@ -911,14 +950,14 @@ fn parse_sdp_vector(lines: &Vec<SdpLine>) -> Result<SdpSession, SdpParserResult>
     let mut bandwidth: Vec<SdpBandwidth> = Vec::new();
     let mut media: Vec<SdpMedia> = Vec::new();
     let mut timing: Option<SdpTiming> = None;
-    for (i, line) in lines.iter().skip(3).enumerate() {
+    for (i, line) in lines.iter().enumerate().skip(3) {
         match *line {
             // TODO we probably need to check somewhere if these are legit
             // session level attributes
-            SdpLine::Attribute{value: ref v} => attributes.push(v.clone()),
-            SdpLine::Bandwidth{value: ref v} => bandwidth.push(v.clone()),
-            SdpLine::Timing{value: ref v} => timing = Some(v.clone()),
-            SdpLine::Media{value: ref v} => {match parse_media_vector(&lines[i..]) {
+            SdpLine::Attribute{value: ref v} => {attributes.push(v.clone());},
+            SdpLine::Bandwidth{value: ref v} => {bandwidth.push(v.clone());},
+            SdpLine::Timing{value: ref v} => {timing = Some(v.clone());},
+            SdpLine::Media{..} => {match parse_media_vector(&lines[i..]) {
                                                   Ok(n) => media.extend(n),
                                                   Err(e) => return Result::Err(e),
                                               }},
@@ -928,14 +967,10 @@ fn parse_sdp_vector(lines: &Vec<SdpLine>) -> Result<SdpSession, SdpParserResult>
                                                             message: "internal parser error".to_string(),
                                                             line: Some(i)}),
             // TODO does anyone really ever need these?
-            SdpLine::Connection{..} => (),
-            SdpLine::Email{..} => (),
-            SdpLine::Information{..} => (),
-            SdpLine::Key{..} => (),
-            SdpLine::Phone{..} => (),
-            SdpLine::Repeat{..} => (),
-            SdpLine::Uri{..} => (),
-            SdpLine::Zone{..} => (),
+            SdpLine::Connection{..} | SdpLine::Email{..} |
+                SdpLine::Information{..} | SdpLine::Key{..} |
+                SdpLine::Phone{..} | SdpLine::Repeat{..} |
+                SdpLine::Uri{..} | SdpLine::Zone{..} => (),
         }
     }
     Result::Ok(SdpSession{version: version.unwrap(),
