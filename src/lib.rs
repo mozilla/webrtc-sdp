@@ -231,10 +231,10 @@ enum SdpLine {
 struct SdpMedia {
     media: SdpMediaLine,
     information: Option<String>,
-    connection: SdpConnection,
-    bandwidth: Option<SdpBandwidth>,
+    connection: Option<SdpConnection>,
+    bandwidth: Vec<SdpBandwidth>,
     key: Option<String>,
-    attribute: Vec<SdpAttribute>
+    attribute: Vec<SdpAttribute>,
 }
 
 struct SdpSession {
@@ -252,7 +252,7 @@ struct SdpSession {
     zone: Option<String>,
     key: Option<String>,
     attribute: Vec<SdpAttribute>,
-    media: SdpMedia
+    media: Vec<SdpMedia>,
 }
 
 fn parse_repeat(value: &str) -> Result<SdpLine, SdpParserResult> {
@@ -836,21 +836,21 @@ fn test_parse_sdp_line_empty_name() {
     assert!(parse_sdp_line("=abc").is_err());
 }
 
-fn parse_media_vector(lines: &[SdpLine]) -> Result<SdpMedia, SdpParserResult> {
-    Result::Ok(SdpMedia{media: SdpMediaLine{media: SdpMediaValue::Audio,
+fn parse_media_vector(lines: &[SdpLine]) -> Result<Vec<SdpMedia>, SdpParserResult> {
+    Result::Ok(vec![SdpMedia{media: SdpMediaLine{media: SdpMediaValue::Audio,
                                             port: 0,
                                             proto: SdpProtocolValue::UdpTlsRtpSavpf,
                                             formats: SdpFormatList::Integers {list: vec![0]
                                                                              }
                                            },
                         information: None,
-                        connection: SdpConnection{nettype: SdpNetType::Internet,
+                        connection: Some(SdpConnection{nettype: SdpNetType::Internet,
                                                   addrtype: SdpAddrType::IP4,
                                                   unicast_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))
-                                                 },
-                        bandwidth: None,
+                                                 }),
+                        bandwidth: Vec::new(),
                         key: None,
-                        attribute: Vec::new()})
+                        attribute: Vec::new()}])
 }
 
 fn verify_sdp_vector(lines: &Vec<SdpLine>) -> Result<(), SdpParserResult> {
@@ -909,7 +909,7 @@ fn parse_sdp_vector(lines: &Vec<SdpLine>) -> Result<SdpSession, SdpParserResult>
     };
     let mut attributes: Vec<SdpAttribute> = Vec::new();
     let mut bandwidth: Vec<SdpBandwidth> = Vec::new();
-    let mut media: Option<SdpMedia> = None;
+    let mut media: Vec<SdpMedia> = Vec::new();
     let mut timing: Option<SdpTiming> = None;
     for (i, line) in lines.iter().skip(3).enumerate() {
         match *line {
@@ -919,7 +919,7 @@ fn parse_sdp_vector(lines: &Vec<SdpLine>) -> Result<SdpSession, SdpParserResult>
             SdpLine::Bandwidth{value: ref v} => bandwidth.push(v.clone()),
             SdpLine::Timing{value: ref v} => timing = Some(v.clone()),
             SdpLine::Media{value: ref v} => {match parse_media_vector(&lines[i..]) {
-                                                  Ok(n) => media = Some(n),
+                                                  Ok(n) => media.extend(n),
                                                   Err(e) => return Result::Err(e),
                                               }},
             SdpLine::Origin{..} |
@@ -952,7 +952,7 @@ fn parse_sdp_vector(lines: &Vec<SdpLine>) -> Result<SdpSession, SdpParserResult>
                           zone: None,
                           key: None,
                           attribute: attributes,
-                          media: media.unwrap(),
+                          media: media,
                           })
 }
 
