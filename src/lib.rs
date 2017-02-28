@@ -246,7 +246,7 @@ struct SdpSession {
     email: Option<String>,
     phone: Option<String>,
     connection: Option<SdpConnection>,
-    bandwidth: Option<SdpBandwidth>,
+    bandwidth: Vec<SdpBandwidth>,
     timing: SdpTiming,
     repeat: Option<String>,
     zone: Option<String>,
@@ -809,6 +809,11 @@ fn parse_sdp_line(line: &str) -> Result<SdpLine, SdpParserResult> {
 }
 
 #[test]
+fn test_parse_sdp_line_works() {
+    assert!(parse_sdp_line("v=0").is_ok());
+}
+
+#[test]
 fn test_parse_sdp_line_empty_line() {
     assert!(parse_sdp_line("").is_err());
 }
@@ -903,7 +908,7 @@ fn parse_sdp_vector(lines: &Vec<SdpLine>) -> Result<SdpSession, SdpParserResult>
         _ => None
     };
     let mut attributes: Vec<SdpAttribute> = Vec::new();
-    let mut bandwidth: Option<SdpBandwidth> = None;
+    let mut bandwidth: Vec<SdpBandwidth> = Vec::new();
     let mut media: Option<SdpMedia> = None;
     let mut timing: Option<SdpTiming> = None;
     for (i, line) in lines.iter().skip(3).enumerate() {
@@ -911,7 +916,7 @@ fn parse_sdp_vector(lines: &Vec<SdpLine>) -> Result<SdpSession, SdpParserResult>
             // TODO we probably need to check somewhere if these are legit
             // session level attributes
             SdpLine::Attribute{value: ref v} => attributes.push(v.clone()),
-            SdpLine::Bandwidth{value: ref v} => bandwidth = Some(v.clone()),
+            SdpLine::Bandwidth{value: ref v} => bandwidth.push(v.clone()),
             SdpLine::Timing{value: ref v} => timing = Some(v.clone()),
             SdpLine::Media{value: ref v} => {match parse_media_vector(&lines[i..]) {
                                                   Ok(n) => media = Some(n),
