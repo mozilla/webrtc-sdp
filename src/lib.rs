@@ -129,6 +129,7 @@ impl fmt::Display for SdpAddrType {
     }
 }
 
+#[derive(Clone)]
 struct SdpConnection {
     nettype: SdpNetType,
     addrtype: SdpAddrType,
@@ -857,11 +858,24 @@ fn parse_media_vector(lines: &[SdpLine]) -> Result<Vec<SdpMedia>, SdpParserResul
     for (i, line) in lines.iter().enumerate().skip(1) {
         match *line {
             SdpLine::Information{value: ref v} => information = Some(v.clone()),
-            SdpLine::Connection{..} => (),
+            SdpLine::Connection{value: ref v} => connection = Some(v.clone()),
             SdpLine::Bandwidth{value: ref v} => bandwidth.push(v.clone()),
             SdpLine::Key{value: ref v} => key = Some(v.clone()),
             SdpLine::Attribute{value: ref v} => attributes.push(v.clone()),
-            SdpLine::Media{..} => (),
+            SdpLine::Media{value: ref v} => {
+                media_sections.push(SdpMedia{media: media.unwrap(),
+                                             information: information,
+                                             connection: connection,
+                                             bandwidth: bandwidth,
+                                             key: key,
+                                             attribute: attributes});
+                information = None;
+                connection = None;
+                bandwidth = Vec::new();
+                key = None;
+                attributes = Vec::new();
+                media = Some(v.clone());
+            },
 
             SdpLine::Email{..} | SdpLine::Phone{..} | SdpLine::Origin{..} |
                 SdpLine::Repeat{..} | SdpLine::Session{..} |
@@ -872,20 +886,12 @@ fn parse_media_vector(lines: &[SdpLine]) -> Result<Vec<SdpMedia>, SdpParserResul
                         line: None})
         };
     };
-    media_sections.push(SdpMedia{media: SdpMediaLine{media: SdpMediaValue::Audio,
-                                            port: 0,
-                                            proto: SdpProtocolValue::UdpTlsRtpSavpf,
-                                            formats: SdpFormatList::Integers {list: vec![0]
-                                                                             }
-                                           },
-                        information: None,
-                        connection: Some(SdpConnection{nettype: SdpNetType::Internet,
-                                                  addrtype: SdpAddrType::IP4,
-                                                  unicast_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))
-                                                 }),
-                        bandwidth: Vec::new(),
-                        key: None,
-                        attribute: Vec::new()});
+    media_sections.push(SdpMedia{media: media.unwrap(),
+                                 information: information,
+                                 connection: connection,
+                                 bandwidth: bandwidth,
+                                 key: key,
+                                 attribute: attributes});
     Result::Ok(media_sections)
 }
 
