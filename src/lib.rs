@@ -4,7 +4,7 @@ use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::num::ParseIntError;
 
 #[derive(Debug)]
-enum SdpParserResult {
+pub enum SdpParserResult {
     ParserLineError   { message: String,
                         line: String },
     ParserUnsupported { message: String,
@@ -242,7 +242,7 @@ struct SdpMedia {
     attribute: Vec<SdpAttribute>,
 }
 
-struct SdpSession {
+pub struct SdpSession {
     version: u64,
     origin: SdpOrigin,
     session: String,
@@ -855,7 +855,7 @@ fn parse_media_vector(lines: &[SdpLine]) -> Result<Vec<SdpMedia>, SdpParserResul
             message: "first line in media section needs to be a media line".to_string(),
             line: None })
     };
-    for (i, line) in lines.iter().enumerate().skip(1) {
+    for line in lines.iter().skip(1) {
         match *line {
             SdpLine::Information{value: ref v} => information = Some(v.clone()),
             SdpLine::Connection{value: ref v} => connection = Some(v.clone()),
@@ -958,8 +958,6 @@ fn parse_sdp_vector(lines: &Vec<SdpLine>) -> Result<SdpSession, SdpParserResult>
     let mut timing: Option<SdpTiming> = None;
     for (i, line) in lines.iter().enumerate().skip(3) {
         match *line {
-            // TODO we probably need to check somewhere if these are legit
-            // session level attributes
             SdpLine::Attribute{value: ref v} => {attributes.push(v.clone());},
             SdpLine::Bandwidth{value: ref v} => {bandwidth.push(v.clone());},
             SdpLine::Timing{value: ref v} => {timing = Some(v.clone());},
@@ -997,9 +995,14 @@ fn parse_sdp_vector(lines: &Vec<SdpLine>) -> Result<SdpSession, SdpParserResult>
                           })
 }
 
-pub fn parse_sdp(sdp: &str, fail_on_warning: bool) -> bool {
+pub fn parse_sdp(sdp: &str, fail_on_warning: bool) -> Result<SdpSession, SdpParserResult> {
     if sdp.is_empty() {
-        return false;
+        return Result::Err(SdpParserResult::ParserLineError{message: "empty SDP".to_string(),
+                                                            line: "".to_string()});
+    }
+    if sdp.len() < 62 {
+        return Result::Err(SdpParserResult::ParserLineError{message: "string to short to be valid SDP".to_string(),
+                                                            line: sdp.to_string()});
     }
     let lines = sdp.lines();
     let mut errors: Vec<SdpParserResult> = Vec::new();
@@ -1024,35 +1027,36 @@ pub fn parse_sdp(sdp: &str, fail_on_warning: bool) -> bool {
             }
         };
     };
-    match parse_sdp_vector(&sdp_lines) {
-        // FIXME return the sdp_session struct from this function
-        Ok(_) => (),
-        Err(e) => errors.push(e),
-    };
-    let mut ret: bool = true;
-    if warnings.len() > 0 {
-        for warning in warnings {
+    for warning in warnings {
+        if fail_on_warning {
+            return Result::Err(warning);
+        } else {
             match warning {
                 SdpParserResult::ParserUnsupported { message: msg, line: l} =>
                     { println!("Parser unknown: {}\n  in line: {}", msg, l) },
                 _ => panic!(),
             };
         };
-        if fail_on_warning {
-            ret = false;
+    };
+    for error in errors {
+        match error {
+            SdpParserResult::ParserLineError { message: msg, line: l} =>
+                { println!("Parser error: {}\n  in line: {}", msg, l) },
+            SdpParserResult::ParserSequence { message: msg, ..} =>
+                { println!("Parser sequence: {}", msg)}
+            _ => panic!(),
         };
     };
-    if errors.len() > 0 {
-        for error in errors {
-            match error {
-                SdpParserResult::ParserLineError { message: msg, line: l} =>
-                    { println!("Parser error: {}\n  in line: {}", msg, l) },
-                SdpParserResult::ParserSequence { message: msg, ..} =>
-                    { println!("Parser sequence: {}", msg)}
-                _ => panic!(),
-            };
-        };
-        ret = false;
-    };
-    ret
+    let session = try!(parse_sdp_vector(&sdp_lines));
+    Result::Ok(session)
+}
+
+#[test]
+fn test_parse_sdp_zero_length_string_fails() {
+    assert!(parse_sdp("", true).is_err());
+}
+
+#[test]
+fn test_parse_sdp_to_short_string() {
+    assert!(parse_sdp("fooooobarrrr", true).is_err());
 }
