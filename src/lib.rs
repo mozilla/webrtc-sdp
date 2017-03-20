@@ -841,6 +841,7 @@ fn test_parse_sdp_line_empty_name() {
     assert!(parse_sdp_line("=abc").is_err());
 }
 
+// TODO add uni tests here
 fn parse_media_vector(lines: &[SdpLine]) -> Result<Vec<SdpMedia>, SdpParserResult> {
     let mut media_sections: Vec<SdpMedia> = Vec::new();
     let mut media: Option<SdpMediaLine> = None;
@@ -895,6 +896,7 @@ fn parse_media_vector(lines: &[SdpLine]) -> Result<Vec<SdpMedia>, SdpParserResul
     Result::Ok(media_sections)
 }
 
+// TODO add unit tests
 fn verify_sdp_vector(lines: &Vec<SdpLine>) -> Result<(), SdpParserResult> {
     if lines.len() < 5 {
         return Result::Err(SdpParserResult::ParserSequence {
@@ -921,7 +923,7 @@ fn verify_sdp_vector(lines: &Vec<SdpLine>) -> Result<(), SdpParserResult> {
             line: None })
     };
     let mut has_timing: bool = false;
-    for (i, line) in lines.iter().enumerate().skip(3) {
+    for line in lines.iter().skip(3) {
         match *line {
             SdpLine::Timing{..} => has_timing = true,
             _ => (),
@@ -937,6 +939,7 @@ fn verify_sdp_vector(lines: &Vec<SdpLine>) -> Result<(), SdpParserResult> {
     Result::Ok(())
 }
 
+// TODO add unit tests
 fn parse_sdp_vector(lines: &Vec<SdpLine>) -> Result<SdpSession, SdpParserResult> {
     try!(verify_sdp_vector(lines));
 
