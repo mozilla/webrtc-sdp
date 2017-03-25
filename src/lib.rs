@@ -91,13 +91,13 @@ impl fmt::Display for SdpAttributeType {
 }
 
 #[derive(Clone)]
-struct SdpAttribute {
+pub struct SdpAttribute {
     name: SdpAttributeType,
     value: String
 }
 
 #[derive(Clone)]
-struct SdpBandwidth {
+pub struct SdpBandwidth {
     bwtype: String,
     bandwidth: u64
 }
@@ -130,7 +130,7 @@ impl fmt::Display for SdpAddrType {
 }
 
 #[derive(Clone)]
-struct SdpConnection {
+pub struct SdpConnection {
     nettype: SdpNetType,
     addrtype: SdpAddrType,
     unicast_addr: IpAddr
@@ -200,7 +200,7 @@ struct SdpMediaLine {
 }
 
 #[derive(Clone)]
-struct SdpOrigin {
+pub struct SdpOrigin {
     username: String,
     session_id: u64,
     session_version: u64,
@@ -210,7 +210,7 @@ struct SdpOrigin {
 }
 
 #[derive(Clone)]
-struct SdpTiming {
+pub struct SdpTiming {
     start: u64,
     stop: u64
 }
@@ -233,7 +233,7 @@ enum SdpLine {
     Zone {value: String}
 }
 
-struct SdpMedia {
+pub struct SdpMedia {
     media: SdpMediaLine,
     information: Option<String>,
     connection: Option<SdpConnection>,
@@ -243,21 +243,21 @@ struct SdpMedia {
 }
 
 pub struct SdpSession {
-    version: u64,
-    origin: SdpOrigin,
-    session: String,
+    pub version: u64,
+    pub origin: SdpOrigin,
+    pub session: String,
     information: Option<String>,
     uri: Option<String>,
     email: Option<String>,
     phone: Option<String>,
-    connection: Option<SdpConnection>,
-    bandwidth: Vec<SdpBandwidth>,
-    timing: SdpTiming,
+    pub connection: Option<SdpConnection>,
+    pub bandwidth: Vec<SdpBandwidth>,
+    pub timing: SdpTiming,
     repeat: Option<String>,
     zone: Option<String>,
     key: Option<String>,
-    attribute: Vec<SdpAttribute>,
-    media: Vec<SdpMedia>,
+    pub attribute: Vec<SdpAttribute>,
+    pub media: Vec<SdpMedia>,
 }
 
 fn parse_repeat(value: &str) -> Result<SdpLine, SdpParserResult> {
