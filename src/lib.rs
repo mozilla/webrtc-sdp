@@ -136,8 +136,8 @@ pub struct SdpConnection {
     unicast_addr: IpAddr
 }
 
-#[derive(Clone)]
-enum SdpMediaValue {
+#[derive(Clone,Debug,PartialEq)]
+pub enum SdpMediaValue {
     Audio,
     Video,
     Application
@@ -154,8 +154,8 @@ impl fmt::Display for SdpMediaValue {
     }
 }
 
-#[derive(Clone)]
-enum SdpProtocolValue {
+#[derive(Clone,Debug,PartialEq)]
+pub enum SdpProtocolValue {
     UdpTlsRtpSavpf,
     TcpTlsRtpSavpf,
     DtlsSctp,
@@ -177,7 +177,7 @@ impl fmt::Display for SdpProtocolValue {
 }
 
 #[derive(Clone)]
-enum SdpFormatList {
+pub enum SdpFormatList {
     Integers {list: Vec<u32>},
     Strings {list: Vec<String>}
 }
@@ -192,11 +192,11 @@ impl fmt::Display for SdpFormatList {
 }
 
 #[derive(Clone)]
-struct SdpMediaLine {
-    media: SdpMediaValue,
-    port: u32,
-    proto: SdpProtocolValue,
-    formats: SdpFormatList
+pub struct SdpMediaLine {
+    pub media: SdpMediaValue,
+    pub port: u32,
+    pub proto: SdpProtocolValue,
+    pub formats: SdpFormatList
 }
 
 #[derive(Clone)]
@@ -242,6 +242,66 @@ pub struct SdpMedia {
     attribute: Vec<SdpAttribute>,
 }
 
+impl SdpMedia {
+    pub fn new(media: SdpMediaLine) -> SdpMedia {
+        SdpMedia { media: media,
+                   information: None,
+                   connection: None,
+                   bandwidth: Vec::new(),
+                   key: None,
+                   attribute: Vec::new()
+                 }
+    }
+
+    pub fn get_type(&self) -> SdpMediaValue {
+        self.media.media.clone()
+    }
+
+    pub fn get_port(&self) -> u32 {
+        self.media.port
+    }
+
+    pub fn get_proto(&self) -> SdpProtocolValue {
+        self.media.proto.clone()
+    }
+
+    pub fn get_formats(&self) -> SdpFormatList {
+        self.media.formats.clone()
+    }
+
+    pub fn has_connection(&self) -> bool {
+        self.connection.is_some()
+    }
+
+    pub fn has_bandwidth(&self) -> bool {
+        self.bandwidth.len() > 0
+    }
+
+    pub fn has_attributes(&self) -> bool {
+        self.attribute.len() > 0
+    }
+
+    pub fn add_attribute(&mut self, attr: SdpAttribute) {
+        self.attribute.push(attr)
+    }
+
+    pub fn add_bandwidth(&mut self, bw: SdpBandwidth) {
+        self.bandwidth.push(bw)
+    }
+
+    pub fn set_connection(&mut self, c: SdpConnection) {
+        self.connection = Some(c);
+    }
+
+    pub fn set_information(&mut self, i: String) {
+        self.information = Some(i);
+    }
+
+    pub fn set_key(&mut self, k: String) {
+        self.key = Some(k);
+    }
+}
+
 pub struct SdpSession {
     pub version: u64,
     pub origin: SdpOrigin,
@@ -252,12 +312,45 @@ pub struct SdpSession {
     phone: Option<String>,
     pub connection: Option<SdpConnection>,
     pub bandwidth: Vec<SdpBandwidth>,
-    pub timing: SdpTiming,
+    pub timing: Option<SdpTiming>,
     repeat: Option<String>,
     zone: Option<String>,
     key: Option<String>,
     pub attribute: Vec<SdpAttribute>,
     pub media: Vec<SdpMedia>,
+}
+
+impl SdpSession {
+    pub fn new(version: u64, origin: SdpOrigin, session: String) -> SdpSession {
+        SdpSession { version: version,
+                     origin: origin,
+                     session: session,
+                     information: None,
+                     uri: None,
+                     email: None,
+                     phone: None,
+                     connection: None,
+                     bandwidth: Vec::new(),
+                     timing: None,
+                     repeat: None,
+                     zone: None,
+                     key: None,
+                     attribute: Vec::new(),
+                     media: Vec::new()
+                   }
+    }
+
+    pub fn has_timing(&self) -> bool {
+        self.timing.is_some()
+    }
+
+    pub fn has_attributes(&self) -> bool {
+        self.attribute.len() > 0
+    }
+
+    pub fn has_media(&self) -> bool {
+        self.media.len() > 0
+    }
 }
 
 fn parse_repeat(value: &str) -> Result<SdpLine, SdpParserResult> {
@@ -844,38 +937,22 @@ fn test_parse_sdp_line_empty_name() {
 // TODO add uni tests here
 fn parse_media_vector(lines: &[SdpLine]) -> Result<Vec<SdpMedia>, SdpParserResult> {
     let mut media_sections: Vec<SdpMedia> = Vec::new();
-    let mut media: Option<SdpMediaLine> = None;
-    let mut information: Option<String> = None;
-    let mut connection: Option<SdpConnection> = None;
-    let mut bandwidth: Vec<SdpBandwidth> = Vec::new();
-    let mut key: Option<String> = None;
-    let mut attributes: Vec<SdpAttribute> = Vec::new();
-    match lines[0] {
-        SdpLine::Media{value: ref v} => {media = Some(v.clone())},
+    let mut sdp_media = match lines[0] {
+        SdpLine::Media{value: ref v} => {SdpMedia::new(v.clone())},
         _ => return Result::Err(SdpParserResult::ParserSequence {
             message: "first line in media section needs to be a media line".to_string(),
             line: None })
     };
     for line in lines.iter().skip(1) {
         match *line {
-            SdpLine::Information{value: ref v} => information = Some(v.clone()),
-            SdpLine::Connection{value: ref v} => connection = Some(v.clone()),
-            SdpLine::Bandwidth{value: ref v} => bandwidth.push(v.clone()),
-            SdpLine::Key{value: ref v} => key = Some(v.clone()),
-            SdpLine::Attribute{value: ref v} => attributes.push(v.clone()),
+            SdpLine::Information{value: ref v} => {sdp_media.set_information(v.clone())},
+            SdpLine::Connection{value: ref v} => {sdp_media.set_connection(v.clone())},
+            SdpLine::Bandwidth{value: ref v} => {sdp_media.add_bandwidth(v.clone());},
+            SdpLine::Key{value: ref v} => {sdp_media.set_key(v.clone())},
+            SdpLine::Attribute{value: ref v} => {sdp_media.add_attribute(v.clone());},
             SdpLine::Media{value: ref v} => {
-                media_sections.push(SdpMedia{media: media.unwrap(),
-                                             information: information,
-                                             connection: connection,
-                                             bandwidth: bandwidth,
-                                             key: key,
-                                             attribute: attributes});
-                information = None;
-                connection = None;
-                bandwidth = Vec::new();
-                key = None;
-                attributes = Vec::new();
-                media = Some(v.clone());
+                media_sections.push(sdp_media);
+                sdp_media = SdpMedia::new(v.clone());
             },
 
             SdpLine::Email{..} | SdpLine::Phone{..} | SdpLine::Origin{..} |
@@ -887,12 +964,7 @@ fn parse_media_vector(lines: &[SdpLine]) -> Result<Vec<SdpMedia>, SdpParserResul
                         line: None})
         };
     };
-    media_sections.push(SdpMedia{media: media.unwrap(),
-                                 information: information,
-                                 connection: connection,
-                                 bandwidth: bandwidth,
-                                 key: key,
-                                 attribute: attributes});
+    media_sections.push(sdp_media);
     Result::Ok(media_sections)
 }
 
@@ -923,9 +995,11 @@ fn verify_sdp_vector(lines: &Vec<SdpLine>) -> Result<(), SdpParserResult> {
             line: None })
     };
     let mut has_timing: bool = false;
+    let mut has_media: bool = false;
     for line in lines.iter().skip(3) {
         match *line {
             SdpLine::Timing{..} => has_timing = true,
+            SdpLine::Media{..} => has_media = true,
             _ => (),
         }
     }
@@ -934,6 +1008,11 @@ fn verify_sdp_vector(lines: &Vec<SdpLine>) -> Result<(), SdpParserResult> {
     if !has_timing {
         return Result::Err(SdpParserResult::ParserSequence {
             message: "Missing timing".to_string(),
+            line: None},);
+    }
+    if !has_media {
+        return Result::Err(SdpParserResult::ParserSequence {
+            message: "Missing media".to_string(),
             line: None},);
     }
     Result::Ok(())
@@ -955,10 +1034,16 @@ fn parse_sdp_vector(lines: &Vec<SdpLine>) -> Result<SdpSession, SdpParserResult>
         SdpLine::Session{value: ref v} => Some(v.clone()),
         _ => None
     };
+    /*
+    let sdp_session = SdpSession::new(version.unwrap(),
+                                      origin.unwrap(),
+                                      session.unwrap());
+                                      */
     let mut attributes: Vec<SdpAttribute> = Vec::new();
     let mut bandwidth: Vec<SdpBandwidth> = Vec::new();
     let mut media: Vec<SdpMedia> = Vec::new();
     let mut timing: Option<SdpTiming> = None;
+    let mut parsed_media: bool = false;
     for (i, line) in lines.iter().enumerate().skip(3) {
         match *line {
             SdpLine::Attribute{value: ref v} => {attributes.push(v.clone());},
@@ -967,7 +1052,9 @@ fn parse_sdp_vector(lines: &Vec<SdpLine>) -> Result<SdpSession, SdpParserResult>
             SdpLine::Media{..} => {match parse_media_vector(&lines[i..]) {
                                                   Ok(n) => media.extend(n),
                                                   Err(e) => return Result::Err(e),
-                                              }},
+                                              };
+                                    parsed_media = true;
+                                   },
             SdpLine::Origin{..} |
                 SdpLine::Session{..} |
                 SdpLine::Version{..} => return Result::Err(SdpParserResult::ParserSequence {
@@ -978,8 +1065,12 @@ fn parse_sdp_vector(lines: &Vec<SdpLine>) -> Result<SdpSession, SdpParserResult>
                 SdpLine::Information{..} | SdpLine::Key{..} |
                 SdpLine::Phone{..} | SdpLine::Repeat{..} |
                 SdpLine::Uri{..} | SdpLine::Zone{..} => (),
-        }
+        };
+        if parsed_media {
+            break;
+        };
     }
+    //Result::Ok(sdp_session)
     Result::Ok(SdpSession{version: version.unwrap(),
                           origin: origin.unwrap(),
                           session: session.unwrap(),
@@ -989,7 +1080,7 @@ fn parse_sdp_vector(lines: &Vec<SdpLine>) -> Result<SdpSession, SdpParserResult>
                           phone: None,
                           connection: None,
                           bandwidth: bandwidth,
-                          timing: timing.unwrap(),
+                          timing: timing,
                           repeat: None,
                           zone: None,
                           key: None,

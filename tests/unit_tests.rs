@@ -12,6 +12,11 @@ fn parse_minimal_sdp() {
     assert!(sdp.connection.is_none());
     assert_eq!(sdp.attribute.len(), 0);
     assert_eq!(sdp.media.len(), 1);
+
+    let msection = &(sdp.media[0]);
+    assert_eq!(msection.get_type(), rsdparsa::SdpMediaValue::Audio);
+    assert_eq!(msection.get_port(), 0);
+    assert_eq!(msection.get_proto(), rsdparsa::SdpProtocolValue::UdpTlsRtpSavpf);
 }
 
 #[test]
@@ -23,6 +28,11 @@ fn parse_firefox_audio_offer() {
     let sdp = sdp_opt.unwrap();
     assert_eq!(sdp.version, 0);
     assert_eq!(sdp.media.len(), 1);
+
+    let msection = &(sdp.media[0]);
+    assert_eq!(msection.get_type(), rsdparsa::SdpMediaValue::Audio);
+    assert_eq!(msection.get_port(), 9);
+    assert_eq!(msection.get_proto(), rsdparsa::SdpProtocolValue::UdpTlsRtpSavpf);
 }
 
 #[test]
@@ -34,6 +44,11 @@ fn parse_firefox_video_offer() {
     let sdp = sdp_opt.unwrap();
     assert_eq!(sdp.version, 0);
     assert_eq!(sdp.media.len(), 1);
+
+    let msection = &(sdp.media[0]);
+    assert_eq!(msection.get_type(), rsdparsa::SdpMediaValue::Video);
+    assert_eq!(msection.get_port(), 9);
+    assert_eq!(msection.get_proto(), rsdparsa::SdpProtocolValue::UdpTlsRtpSavpf);
 }
 
 #[test]
@@ -45,6 +60,11 @@ fn parse_firefox_datachannel_offer() {
     let sdp = sdp_opt.unwrap();
     assert_eq!(sdp.version, 0);
     assert_eq!(sdp.media.len(), 1);
+
+    let msection = &(sdp.media[0]);
+    assert_eq!(msection.get_type(), rsdparsa::SdpMediaValue::Application);
+    assert_eq!(msection.get_port(), 49760);
+    assert_eq!(msection.get_proto(), rsdparsa::SdpProtocolValue::DtlsSctp);
 }
 
 #[test]
@@ -55,5 +75,15 @@ fn parse_chrome_audio_video_offer() {
     assert!(sdp_opt.is_some());
     let sdp = sdp_opt.unwrap();
     assert_eq!(sdp.version, 0);
-    assert_eq!(sdp.media.len(), 3);
+    assert_eq!(sdp.media.len(), 2);
+
+    let msection1 = &(sdp.media[0]);
+    assert_eq!(msection1.get_type(), rsdparsa::SdpMediaValue::Audio);
+    assert_eq!(msection1.get_port(), 9);
+    assert_eq!(msection1.get_proto(), rsdparsa::SdpProtocolValue::UdpTlsRtpSavpf);
+
+    let msection2 = &(sdp.media[1]);
+    assert_eq!(msection2.get_type(), rsdparsa::SdpMediaValue::Video);
+    assert_eq!(msection2.get_port(), 9);
+    assert_eq!(msection2.get_proto(), rsdparsa::SdpProtocolValue::UdpTlsRtpSavpf);
 }
