@@ -17,6 +17,9 @@ fn parse_minimal_sdp() {
     assert_eq!(msection.get_type(), rsdparsa::SdpMediaValue::Audio);
     assert_eq!(msection.get_port(), 0);
     assert_eq!(msection.get_proto(), rsdparsa::SdpProtocolValue::UdpTlsRtpSavpf);
+    assert!(!msection.has_attributes());
+    assert!(!msection.has_bandwidth());
+    assert!(!msection.has_connection());
 }
 
 #[test]
@@ -33,6 +36,9 @@ fn parse_firefox_audio_offer() {
     assert_eq!(msection.get_type(), rsdparsa::SdpMediaValue::Audio);
     assert_eq!(msection.get_port(), 9);
     assert_eq!(msection.get_proto(), rsdparsa::SdpProtocolValue::UdpTlsRtpSavpf);
+    assert!(msection.has_attributes());
+    assert!(msection.has_connection());
+    assert!(!msection.has_bandwidth());
 }
 
 #[test]
@@ -81,9 +87,15 @@ fn parse_chrome_audio_video_offer() {
     assert_eq!(msection1.get_type(), rsdparsa::SdpMediaValue::Audio);
     assert_eq!(msection1.get_port(), 9);
     assert_eq!(msection1.get_proto(), rsdparsa::SdpProtocolValue::UdpTlsRtpSavpf);
+    assert!(msection1.has_attributes());
+    assert!(msection1.has_connection());
+    assert!(!msection1.has_bandwidth());
 
     let msection2 = &(sdp.media[1]);
     assert_eq!(msection2.get_type(), rsdparsa::SdpMediaValue::Video);
     assert_eq!(msection2.get_port(), 9);
     assert_eq!(msection2.get_proto(), rsdparsa::SdpProtocolValue::UdpTlsRtpSavpf);
+    assert!(msection2.has_attributes());
+    assert!(msection2.has_connection());
+    assert!(!msection2.has_bandwidth());
 }
