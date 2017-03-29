@@ -1036,124 +1036,69 @@ fn parse_media_vector(lines: &[SdpLine]) -> Result<Vec<SdpMedia>, SdpParserResul
 }
 
 // TODO add unit tests
-fn verify_sdp_vector(lines: &Vec<SdpLine>) -> Result<(), SdpParserResult> {
+fn parse_sdp_vector(lines: &Vec<SdpLine>) -> Result<SdpSession, SdpParserResult> {
     if lines.len() < 5 {
         return Result::Err(SdpParserResult::ParserSequence {
             message: "SDP neeeds at least 5 lines".to_string(),
             line: None })
     }
+
     // TODO are these mataches really the only way to verify the types?
-    match lines[0] {
-        SdpLine::Version{..} => (),
+    let version: u64 = match lines[0] {
+        SdpLine::Version{value: v} => v,
         _ => return Result::Err(SdpParserResult::ParserSequence {
             message: "first line needs to be version number".to_string(),
             line: None })
     };
-    match lines[1] {
-        SdpLine::Origin{..} => (),
+    let origin: SdpOrigin = match lines[1] {
+        SdpLine::Origin{value: ref v} => v.clone(),
         _ => return Result::Err(SdpParserResult::ParserSequence {
             message: "second line needs to be origin".to_string(),
             line: None })
     };
-    match lines[2] {
-        SdpLine::Session{..} => (),
+    let session: String = match lines[2] {
+        SdpLine::Session{value: ref v} => v.clone(),
         _ => return Result::Err(SdpParserResult::ParserSequence {
             message: "third line needs to be session".to_string(),
             line: None })
     };
-    let mut has_timing: bool = false;
-    let mut has_media: bool = false;
-    for line in lines.iter().skip(3) {
+    let mut sdp_session = SdpSession::new(version,
+                                          origin,
+                                          session);
+    for (i, line) in lines.iter().enumerate().skip(3) {
         match *line {
-            SdpLine::Timing{..} => has_timing = true,
-            SdpLine::Media{..} => has_media = true,
-            _ => (),
-        }
+            SdpLine::Attribute{value: ref v} => {sdp_session.add_attribute(v.clone())},
+            SdpLine::Bandwidth{value: ref v} => {sdp_session.add_bandwidth(v.clone())},
+            SdpLine::Timing{value: ref v} => {sdp_session.set_timing(v.clone())},
+            SdpLine::Media{..} => {sdp_session.extend_media(
+                                        try!(parse_media_vector(&lines[i..])))
+                                  },
+            SdpLine::Origin{..} |
+            SdpLine::Session{..} |
+            SdpLine::Version{..} => return Result::Err(SdpParserResult::ParserSequence {
+                                                        message: "internal parser error".to_string(),
+                                                        line: Some(i)}),
+            // TODO does anyone really ever need these?
+            SdpLine::Connection{..} | SdpLine::Email{..} |
+            SdpLine::Information{..} | SdpLine::Key{..} |
+            SdpLine::Phone{..} | SdpLine::Repeat{..} |
+            SdpLine::Uri{..} | SdpLine::Zone{..}         => (),
+        };
+        if sdp_session.has_media() {
+            break;
+        };
     }
-    // TODO according to RFC 4566 we are suppose to check if all lines appear
-    //      the right order
-    if !has_timing {
+    if !sdp_session.has_timing() {
         return Result::Err(SdpParserResult::ParserSequence {
             message: "Missing timing".to_string(),
             line: None},);
     }
-    if !has_media {
+    if !sdp_session.has_media() {
         return Result::Err(SdpParserResult::ParserSequence {
             message: "Missing media".to_string(),
             line: None},);
     }
-    Result::Ok(())
-}
-
-// TODO add unit tests
-fn parse_sdp_vector(lines: &Vec<SdpLine>) -> Result<SdpSession, SdpParserResult> {
-    try!(verify_sdp_vector(lines));
-
-    let version: Option<u64> = match lines[0] {
-        SdpLine::Version{value: v} => Some(v),
-        _ => None
-    };
-    let origin: Option<SdpOrigin> = match lines[1] {
-        SdpLine::Origin{value: ref v} => Some(v.clone()),
-        _ => None
-    };
-    let session: Option<String> = match lines[2] {
-        SdpLine::Session{value: ref v} => Some(v.clone()),
-        _ => None
-    };
-    /*
-    let sdp_session = SdpSession::new(version.unwrap(),
-                                      origin.unwrap(),
-                                      session.unwrap());
-                                      */
-    let mut attributes: Vec<SdpAttribute> = Vec::new();
-    let mut bandwidth: Vec<SdpBandwidth> = Vec::new();
-    let mut media: Vec<SdpMedia> = Vec::new();
-    let mut timing: Option<SdpTiming> = None;
-    let mut parsed_media: bool = false;
-    for (i, line) in lines.iter().enumerate().skip(3) {
-        match *line {
-            SdpLine::Attribute{value: ref v} => {attributes.push(v.clone());},
-            SdpLine::Bandwidth{value: ref v} => {bandwidth.push(v.clone());},
-            SdpLine::Timing{value: ref v} => {timing = Some(v.clone());},
-            SdpLine::Media{..} => {match parse_media_vector(&lines[i..]) {
-                                                  Ok(n) => media.extend(n),
-                                                  Err(e) => return Result::Err(e),
-                                              };
-                                    parsed_media = true;
-                                   },
-            SdpLine::Origin{..} |
-                SdpLine::Session{..} |
-                SdpLine::Version{..} => return Result::Err(SdpParserResult::ParserSequence {
-                                                            message: "internal parser error".to_string(),
-                                                            line: Some(i)}),
-            // TODO does anyone really ever need these?
-            SdpLine::Connection{..} | SdpLine::Email{..} |
-                SdpLine::Information{..} | SdpLine::Key{..} |
-                SdpLine::Phone{..} | SdpLine::Repeat{..} |
-                SdpLine::Uri{..} | SdpLine::Zone{..} => (),
-        };
-        if parsed_media {
-            break;
-        };
-    }
-    //Result::Ok(sdp_session)
-    Result::Ok(SdpSession{version: version.unwrap(),
-                          origin: origin.unwrap(),
-                          session: session.unwrap(),
-                          information: None,
-                          uri: None,
-                          email: None,
-                          phone: None,
-                          connection: None,
-                          bandwidth: bandwidth,
-                          timing: timing,
-                          repeat: None,
-                          zone: None,
-                          key: None,
-                          attribute: attributes,
-                          media: media,
-                          })
+    Result::Ok(sdp_session)
 }
 
 pub fn parse_sdp(sdp: &str, fail_on_warning: bool) -> Result<SdpSession, SdpParserResult> {
