@@ -253,20 +253,20 @@ impl SdpMedia {
                  }
     }
 
-    pub fn get_type(&self) -> SdpMediaValue {
-        self.media.media.clone()
+    pub fn get_type(&self) -> &SdpMediaValue {
+        &self.media.media
     }
 
     pub fn get_port(&self) -> u32 {
         self.media.port
     }
 
-    pub fn get_proto(&self) -> SdpProtocolValue {
-        self.media.proto.clone()
+    pub fn get_proto(&self) -> &SdpProtocolValue {
+        &self.media.proto
     }
 
-    pub fn get_formats(&self) -> SdpFormatList {
-        self.media.formats.clone()
+    pub fn get_formats(&self) -> &SdpFormatList {
+        &self.media.formats
     }
 
     pub fn has_connection(&self) -> bool {
@@ -289,14 +289,17 @@ impl SdpMedia {
         self.bandwidth.push(bw)
     }
 
+    //TODO complain if connection is set already
     pub fn set_connection(&mut self, c: SdpConnection) {
         self.connection = Some(c);
     }
 
+    //TODO complain if information is set already
     pub fn set_information(&mut self, i: String) {
         self.information = Some(i);
     }
 
+    //TODO complain if key is set already
     pub fn set_key(&mut self, k: String) {
         self.key = Some(k);
     }
@@ -338,6 +341,70 @@ impl SdpSession {
                      attribute: Vec::new(),
                      media: Vec::new()
                    }
+    }
+
+    pub fn get_version(&self) -> u64 {
+        self.version
+    }
+
+    pub fn get_origin(&self) -> &SdpOrigin {
+        &self.origin
+    }
+
+    pub fn get_session(&self) -> &String {
+        &self.session
+    }
+
+    pub fn set_information(&mut self, i: String) {
+        self.information = Some(i)
+    }
+
+    pub fn set_uri(&mut self, u: String) {
+        self.uri = Some(u)
+    }
+
+    pub fn set_email(&mut self, e: String) {
+        self.email = Some(e)
+    }
+
+    pub fn set_phone(&mut self, p: String) {
+        self.phone = Some(p)
+    }
+
+    pub fn set_connection(&mut self, c: SdpConnection) {
+        self.connection = Some(c)
+    }
+
+    pub fn add_bandwidth(&mut self, b: SdpBandwidth) {
+        self.bandwidth.push(b)
+    }
+
+    pub fn set_timing(&mut self, t: SdpTiming) {
+        self.timing = Some(t)
+    }
+
+    pub fn set_repeat(&mut self, r: String) {
+        self.repeat = Some(r)
+    }
+
+    pub fn set_zone(&mut self, z: String) {
+        self.zone = Some(z)
+    }
+
+    pub fn set_key(&mut self, k: String) {
+        self.key = Some(k)
+    }
+
+    pub fn add_attribute(&mut self, a: SdpAttribute) {
+        self.attribute.push(a)
+    }
+
+    pub fn add_media(&mut self, m: SdpMedia) {
+        self.media.push(m)
+    }
+
+    pub fn extend_media(&mut self, v: Vec<SdpMedia>) {
+        self.media.extend(v)
     }
 
     pub fn has_timing(&self) -> bool {
