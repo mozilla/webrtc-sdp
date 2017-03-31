@@ -99,3 +99,25 @@ fn parse_chrome_audio_video_offer() {
     assert!(msection2.has_connection());
     assert!(!msection2.has_bandwidth());
 }
+
+#[test]
+fn parse_firefox_simulcast_offer() {
+    let sdp_res = rsdparsa::parse_sdp("v=0\r\no=mozilla...THIS_IS_SDPARTA-55.0a1 983028567300715536 0 IN IP4 0.0.0.0\r\ns=-\r\nt=0 0\r\na=fingerprint:sha-256 68:42:13:88:B6:C1:7D:18:79:07:8A:C6:DC:28:D6:DC:DD:E3:C9:41:E7:80:A7:FE:02:65:FB:76:A0:CD:58:ED\r\na=ice-options:trickle\r\na=msid-semantic:WMS *\r\nm=video 9 UDP/TLS/RTP/SAVPF 120 121 126 97\r\nc=IN IP4 0.0.0.0\r\na=sendrecv\r\na=extmap:1 http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time\r\na=extmap:2 urn:ietf:params:rtp-hdrext:toffset\r\na=extmap:3/sendonly urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id\r\na=fmtp:126 profile-level-id=42e01f;level-asymmetry-allowed=1;packetization-mode=1\r\na=fmtp:97 profile-level-id=42e01f;level-asymmetry-allowed=1\r\na=fmtp:120 max-fs=12288;max-fr=60\r\na=fmtp:121 max-fs=12288;max-fr=60\r\na=ice-pwd:4af388405d558b91f5ba6c2c48f161bf\r\na=ice-ufrag:ce1ac488\r\na=mid:sdparta_0\r\na=msid:{fb6d1fa3-d993-f244-a0fe-d9fb99214c23} {8be9a0f7-9272-6c42-90f3-985d55bd8de5}\r\na=rid:foo send\r\na=rid:bar send\r\na=rtcp-fb:120 nack\r\na=rtcp-fb:120 nack pli\r\na=rtcp-fb:120 ccm fir\r\na=rtcp-fb:120 goog-remb\r\na=rtcp-fb:121 nack\r\na=rtcp-fb:121 nack pli\r\na=rtcp-fb:121 ccm fir\r\na=rtcp-fb:121 goog-remb\r\na=rtcp-fb:126 nack\r\na=rtcp-fb:126 nack pli\r\na=rtcp-fb:126 ccm fir\r\na=rtcp-fb:126 goog-remb\r\na=rtcp-fb:97 nack\r\na=rtcp-fb:97 nack pli\r\na=rtcp-fb:97 ccm fir\r\na=rtcp-fb:97 goog-remb\r\na=rtcp-mux\r\na=rtpmap:120 VP8/90000\r\na=rtpmap:121 VP9/90000\r\na=rtpmap:126 H264/90000\r\na=rtpmap:97 H264/90000\r\na=setup:actpass\r\na=simulcast: send rid=foo;bar\r\na=ssrc:2988475468 cname:{77067f00-2e8d-8b4c-8992-cfe338f56851}\r\na=ssrc:1649784806 cname:{77067f00-2e8d-8b4c-8992-cfe338f56851}\r\n", true);
+    assert!(sdp_res.is_ok());
+    let sdp_opt = sdp_res.ok();
+    assert!(sdp_opt.is_some());
+    let sdp = sdp_opt.unwrap();
+    assert_eq!(sdp.version, 0);
+    assert_eq!(sdp.media.len(), 1);
+}
+
+#[test]
+fn parse_firefox_simulcast_answer() {
+    let sdp_res = rsdparsa::parse_sdp("v=0\r\no=mozilla...THIS_IS_SDPARTA-55.0a1 7548296603161351381 0 IN IP4 0.0.0.0\r\ns=-\r\nt=0 0\r\na=fingerprint:sha-256 B1:47:49:4F:7D:83:03:BE:E9:FC:73:A3:FB:33:38:40:0B:3B:6A:56:78:EB:EE:D5:6D:2D:D5:3A:B6:13:97:E7\r\na=ice-options:trickle\r\na=msid-semantic:WMS *\r\nm=video 9 UDP/TLS/RTP/SAVPF 120\r\nc=IN IP4 0.0.0.0\r\na=recvonly\r\na=extmap:1 http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time\r\na=extmap:2 urn:ietf:params:rtp-hdrext:toffset\r\na=fmtp:120 max-fs=12288;max-fr=60\r\na=ice-pwd:c886e2caf2ae397446312930cd1afe51\r\na=ice-ufrag:f57396c0\r\na=mid:sdparta_0\r\na=rtcp-fb:120 nack\r\na=rtcp-fb:120 nack pli\r\na=rtcp-fb:120 ccm fir\r\na=rtcp-fb:120 goog-remb\r\na=rtcp-mux\r\na=rtpmap:120 VP8/90000\r\na=setup:active\r\na=ssrc:2564157021 cname:{cae1cd32-7433-5b48-8dc8-8e3f8b2f96cd}\r\na=simulcast: recv rid=foo;bar\r\na=rid:foo recv\r\na=rid:bar recv\r\na=extmap:3/recvonly urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id\r\n", true);
+    assert!(sdp_res.is_ok());
+    let sdp_opt = sdp_res.ok();
+    assert!(sdp_opt.is_some());
+    let sdp = sdp_opt.unwrap();
+    assert_eq!(sdp.version, 0);
+    assert_eq!(sdp.media.len(), 1);
+}

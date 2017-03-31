@@ -22,7 +22,7 @@ impl From<ParseIntError> for SdpParserResult {
 }
 
 #[derive(Clone)]
-enum SdpAttributeType {
+pub enum SdpAttributeType {
     // TODO consolidate these into groups
     Candidate,
     EndOfCandidates,
@@ -93,7 +93,62 @@ impl fmt::Display for SdpAttributeType {
 #[derive(Clone)]
 pub struct SdpAttribute {
     name: SdpAttributeType,
-    value: String
+    string_value: Option<String>,
+    string_vector: Vec<String>
+}
+
+impl SdpAttribute {
+    pub fn new(t: SdpAttributeType) -> SdpAttribute {
+        SdpAttribute { name: t,
+                       string_value: None,
+                       string_vector: Vec::new()
+                     }
+    }
+
+    fn parse_value(&mut self, v: &str) -> Result<(), SdpParserResult> {
+        match self.name {
+            SdpAttributeType::EndOfCandidates |
+            SdpAttributeType::Inactive |
+            SdpAttributeType::Recvonly |
+            SdpAttributeType::RtcpMux |
+            SdpAttributeType::RtcpRsize |
+            SdpAttributeType::Sendonly |
+            SdpAttributeType::Sendrecv => {
+                if v.len() >0 {
+                    return Err(SdpParserResult::ParserLineError{
+                        message: "This attribute is not allowed to have a value".to_string(),
+                        line: v.to_string()})
+                }
+            },
+
+            SdpAttributeType::IcePwd |
+            SdpAttributeType::IceUfrag |
+            SdpAttributeType::Mid |
+            SdpAttributeType::Rid |
+            SdpAttributeType::Setup => (self.string_value = Some(v.to_string())),
+
+            SdpAttributeType::IceOptions => {
+                self.string_vector =
+                    v.split_whitespace().map(|x| x.to_string()).collect();
+            },
+            SdpAttributeType::Candidate => (self.string_value = Some(v.to_string())),
+            SdpAttributeType::Extmap => (self.string_value = Some(v.to_string())),
+            SdpAttributeType::Fingerprint => (self.string_value = Some(v.to_string())),
+            SdpAttributeType::Fmtp => (self.string_value = Some(v.to_string())),
+            SdpAttributeType::Group => (self.string_value = Some(v.to_string())),
+            SdpAttributeType::Msid => (self.string_value = Some(v.to_string())),
+            SdpAttributeType::MsidSemantic => (self.string_value = Some(v.to_string())),
+            SdpAttributeType::Rtcp => (self.string_value = Some(v.to_string())),
+            SdpAttributeType::RtcpFb => (self.string_value = Some(v.to_string())),
+            SdpAttributeType::Rtpmap => (self.string_value = Some(v.to_string())),
+            SdpAttributeType::Sctpmap => (self.string_value = Some(v.to_string())),
+            SdpAttributeType::SctpPort => (self.string_value = Some(v.to_string())),
+            SdpAttributeType::Simulcast => (self.string_value = Some(v.to_string())),
+            SdpAttributeType::Ssrc => (self.string_value = Some(v.to_string())),
+            SdpAttributeType::SsrcGroup => (self.string_value = Some(v.to_string())),
+        }
+        Ok(())
+    }
 }
 
 #[derive(Clone)]
@@ -872,57 +927,57 @@ fn test_media_invalid_payload() {
 }
 
 fn parse_attribute(value: &str) -> Result<SdpLine, SdpParserResult> {
-    let attribute = value;
-    let colon = attribute.find(':');
+    let colon = value.find(':');
     let name: &str;
-    let mut value: &str = "";
+    let mut val: &str = "";
     if colon == None {
-        name = attribute;
+        name = value;
     } else {
-        let (aname, avalue) = attribute.split_at(colon.unwrap());
+        let (aname, avalue) = value.split_at(colon.unwrap());
         name = aname;
-        value = avalue;
+        val = avalue;
     }
-    let mut attrtype;
-    match name.to_lowercase().as_ref() {
+    let attrtype = match name.to_lowercase().as_ref() {
         // TODO TODO TODO
-        "candidate" => { attrtype = SdpAttributeType::Candidate; },
-        "end-of-candidates" => { attrtype = SdpAttributeType::EndOfCandidates; },
-        "extmap" => { attrtype = SdpAttributeType::Extmap; },
-        "fingerprint" => { attrtype = SdpAttributeType::Fingerprint; },
-        "fmtp" => { attrtype = SdpAttributeType::Fmtp; },
-        "group" => { attrtype = SdpAttributeType::Group; },
-        "ice-options" => { attrtype = SdpAttributeType::IceOptions; },
-        "ice-pwd" => { attrtype = SdpAttributeType::IcePwd; },
-        "ice-ufrag" => { attrtype = SdpAttributeType::IceUfrag; },
-        "inactive" => { attrtype = SdpAttributeType::Inactive; },
-        "mid" => { attrtype = SdpAttributeType::Mid; },
-        "msid" => { attrtype = SdpAttributeType::Msid; },
-        "msid-semantic" => { attrtype = SdpAttributeType::MsidSemantic; },
-        "rid" => { attrtype = SdpAttributeType::Rid; },
-        "recvonly" => { attrtype = SdpAttributeType::Recvonly; },
-        "rtcp" => { attrtype = SdpAttributeType::Rtcp; },
-        "rtcp-fb" => { attrtype = SdpAttributeType::RtcpFb; },
-        "rtcp-mux" => { attrtype = SdpAttributeType::RtcpMux; },
-        "rtcp-rsize" => { attrtype = SdpAttributeType::RtcpRsize; },
-        "rtpmap" => { attrtype = SdpAttributeType::Rtpmap; },
-        "sctpmap" => { attrtype = SdpAttributeType::Sctpmap; },
-        "sctp-port" => { attrtype = SdpAttributeType::SctpPort; },
-        "sendonly" => { attrtype = SdpAttributeType::Sendonly; },
-        "sendrecv" => { attrtype = SdpAttributeType::Sendrecv; },
-        "setup" => { attrtype = SdpAttributeType::Setup; },
-        "simulcast" => { attrtype = SdpAttributeType::Simulcast; },
-        "ssrc" => { attrtype = SdpAttributeType::Ssrc; },
-        "ssrc-group" => { attrtype = SdpAttributeType::SsrcGroup; },
+        "candidate" => SdpAttributeType::Candidate,
+        "end-of-candidates" => SdpAttributeType::EndOfCandidates,
+        "extmap" => SdpAttributeType::Extmap,
+        "fingerprint" => SdpAttributeType::Fingerprint,
+        "fmtp" => SdpAttributeType::Fmtp,
+        "group" => SdpAttributeType::Group,
+        "ice-options" => SdpAttributeType::IceOptions,
+        "ice-pwd" => SdpAttributeType::IcePwd,
+        "ice-ufrag" => SdpAttributeType::IceUfrag,
+        "inactive" => SdpAttributeType::Inactive,
+        "mid" => SdpAttributeType::Mid,
+        "msid" => SdpAttributeType::Msid,
+        "msid-semantic" => SdpAttributeType::MsidSemantic,
+        "rid" => SdpAttributeType::Rid,
+        "recvonly" => SdpAttributeType::Recvonly,
+        "rtcp" => SdpAttributeType::Rtcp,
+        "rtcp-fb" => SdpAttributeType::RtcpFb,
+        "rtcp-mux" => SdpAttributeType::RtcpMux,
+        "rtcp-rsize" => SdpAttributeType::RtcpRsize,
+        "rtpmap" => SdpAttributeType::Rtpmap,
+        "sctpmap" => SdpAttributeType::Sctpmap,
+        "sctp-port" => SdpAttributeType::SctpPort,
+        "sendonly" => SdpAttributeType::Sendonly,
+        "sendrecv" => SdpAttributeType::Sendrecv,
+        "setup" => SdpAttributeType::Setup,
+        "simulcast" => SdpAttributeType::Simulcast,
+        "ssrc" => SdpAttributeType::Ssrc,
+        "ssrc-group" => SdpAttributeType::SsrcGroup,
         _ => return Err(SdpParserResult::ParserUnsupported {
               message: "unsupported attribute value".to_string(),
               line: name.to_string() }),
-    }
-    let a = SdpAttribute { name: attrtype,
-                           value: String::from(value) };
+    };
+    let mut attr = SdpAttribute::new(attrtype);
+    try!(attr.parse_value(val.trim()));
+    /*
     println!("attribute: {}, {}", 
-             a.name, a.value);
-    Ok(SdpLine::Attribute { value: a })
+             a.name, a.value.some());
+             */
+    Ok(SdpLine::Attribute { value: attr })
 }
 
 // TODO add missing unit tests
