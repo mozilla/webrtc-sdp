@@ -91,6 +91,14 @@ impl fmt::Display for SdpAttributeType {
 }
 
 #[derive(Clone)]
+struct SdpAttributeRtcp {
+    port: u32,
+    nettype: SdpNetType,
+    addrtype: SdpAddrType,
+    unicast_addr: IpAddr
+}
+
+#[derive(Clone)]
 struct SdpAttributeRtcpFb {
     payload_type: u32,
     // TODO parse this and use an enum instead?
@@ -143,6 +151,7 @@ enum SdpAttributeValue {
     integer {value: u32},
     vector {value: Vec<String>},
     rtpmap {value: SdpAttributeRtpmap},
+    rtcp {value: SdpAttributeRtcp},
     rtcpfb {value: SdpAttributeRtcpFb},
     setup {value: SdpAttributeSetup},
     sctpmap {value: SdpAttributeSctpmap},
@@ -210,7 +219,32 @@ impl SdpAttribute {
             SdpAttributeType::Group => (self.string_value = Some(v.to_string())),
             SdpAttributeType::Msid => (self.string_value = Some(v.to_string())),
             SdpAttributeType::MsidSemantic => (self.string_value = Some(v.to_string())),
-            SdpAttributeType::Rtcp => (self.string_value = Some(v.to_string())),
+            SdpAttributeType::Rtcp => {
+                self.string_value = Some(v.to_string());
+                let tokens: Vec<&str> = v.split_whitespace().collect();
+                if tokens.len() != 4 {
+                    return Err(SdpParserResult::ParserLineError{
+                        message: "Rtcp needs to have four tokens".to_string(),
+                        line: v.to_string()})
+                }
+                let port = try!(tokens[0].parse::<u32>());
+                if port > 65535 {
+                    return Err(SdpParserResult::ParserLineError{
+                        message: "Rtcp port can only be a bit 16bit number".to_string(),
+                        line: v.to_string()})
+                }
+                let nettype = try!(parse_nettype(tokens[1]));
+                let addrtype = try!(parse_addrtype(tokens[2]));
+                let unicast_addr = try!(parse_unicast_addr(&addrtype, tokens[3]));
+                self.value = Some(SdpAttributeValue::rtcp {value:
+                    SdpAttributeRtcp {
+                        port: port,
+                        nettype: nettype,
+                        addrtype: addrtype,
+                        unicast_addr: unicast_addr
+                    }
+                });
+            },
             SdpAttributeType::RtcpFb => {
                 let tokens: Vec<&str> = v.splitn(2, ' ').collect();
                 self.value = Some(SdpAttributeValue::rtcpfb {value:
