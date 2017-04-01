@@ -91,6 +91,13 @@ impl fmt::Display for SdpAttributeType {
 }
 
 #[derive(Clone)]
+struct SdpAttributeRtcpFb {
+    payload_type: u32,
+    // TODO parse this and use an enum instead?
+    feedback_type: String
+}
+
+#[derive(Clone)]
 struct SdpAttributeRtpmap {
     payload_type: u32,
     codec_name: String,
@@ -130,7 +137,8 @@ enum SdpAttributeValue {
     integer {value: u32},
     vector {value: Vec<String>},
     rtpmap {value: SdpAttributeRtpmap},
-    setup {value: SdpAttributeSetup}
+    rtcpfb {value: SdpAttributeRtcpFb},
+    setup {value: SdpAttributeSetup},
 }
 
 #[derive(Clone)]
@@ -197,7 +205,14 @@ impl SdpAttribute {
             SdpAttributeType::MsidSemantic => (self.string_value = Some(v.to_string())),
             SdpAttributeType::Rtcp => (self.string_value = Some(v.to_string())),
             SdpAttributeType::RtcpFb => {
-                self.string_value = Some(v.to_string())
+                let tokens: Vec<&str> = v.splitn(2, ' ').collect();
+                self.value = Some(SdpAttributeValue::rtcpfb {value:
+                    SdpAttributeRtcpFb {
+                        // TODO limit this to dymaic PTs
+                        payload_type: try!(tokens[0].parse::<u32>()),
+                        feedback_type: tokens[1].to_string()
+                    }
+                });
             },
             SdpAttributeType::Rtpmap => {
                 let tokens: Vec<&str> = v.split_whitespace().collect();
@@ -206,6 +221,7 @@ impl SdpAttribute {
                         message: "Rtpmap needs to have two tokens".to_string(),
                         line: v.to_string()})
                 }
+                // TODO limit this to dymaic PTs
                 let payload_type: u32 = try!(tokens[0].parse::<u32>());
                 let split: Vec<&str> = tokens[1].split('/').collect();
                 if split.len() > 3 {
