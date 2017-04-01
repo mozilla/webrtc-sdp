@@ -91,17 +91,60 @@ impl fmt::Display for SdpAttributeType {
 }
 
 #[derive(Clone)]
+struct SdpAttributeRtpmap {
+    payload_type: u32,
+    codec_name: String,
+    frequency: Option<u32>,
+    channels: Option<u32>
+}
+
+impl SdpAttributeRtpmap {
+    pub fn new(pt: u32, codec: String) -> SdpAttributeRtpmap {
+        SdpAttributeRtpmap { payload_type: pt,
+                             codec_name: codec,
+                             frequency: None,
+                             channels: None
+        }
+    }
+
+    fn set_frequency(&mut self, f: u32) {
+        self.frequency = Some(f)
+    }
+
+    fn set_channels(&mut self, c: u32) {
+        self.channels = Some(c)
+    }
+}
+
+#[derive(Clone)]
+enum SdpAttributeSetup {
+    active,
+    actpass,
+    holdconn,
+    passive
+}
+
+#[derive(Clone)]
+enum SdpAttributeValue {
+    string {value: String},
+    integer {value: u32},
+    vector {value: Vec<String>},
+    rtpmap {value: SdpAttributeRtpmap},
+    setup {value: SdpAttributeSetup}
+}
+
+#[derive(Clone)]
 pub struct SdpAttribute {
     name: SdpAttributeType,
     string_value: Option<String>,
-    string_vector: Vec<String>
+    value: Option<SdpAttributeValue>
 }
 
 impl SdpAttribute {
     pub fn new(t: SdpAttributeType) -> SdpAttribute {
         SdpAttribute { name: t,
                        string_value: None,
-                       string_vector: Vec::new()
+                       value: None
                      }
     }
 
@@ -124,12 +167,26 @@ impl SdpAttribute {
             SdpAttributeType::IcePwd |
             SdpAttributeType::IceUfrag |
             SdpAttributeType::Mid |
-            SdpAttributeType::Rid |
-            SdpAttributeType::Setup => (self.string_value = Some(v.to_string())),
+            SdpAttributeType::Rid => {
+                self.value = Some(SdpAttributeValue::string {value: v.to_string()})
+            },
 
             SdpAttributeType::IceOptions => {
-                self.string_vector =
-                    v.split_whitespace().map(|x| x.to_string()).collect();
+                self.value = Some(SdpAttributeValue::vector {
+                    value: v.split_whitespace().map(|x| x.to_string()).collect()})
+            },
+            SdpAttributeType::Setup => {
+                self.value = Some(SdpAttributeValue::setup {value:
+                    match v.to_lowercase().as_ref() {
+                        "active" => SdpAttributeSetup::active,
+                        "actpass" => SdpAttributeSetup::actpass,
+                        "holdconn" => SdpAttributeSetup::holdconn,
+                        "passive" => SdpAttributeSetup::passive,
+                        _ => return Err(SdpParserResult::ParserLineError{
+                            message: "Unsupported setup value".to_string(),
+                            line: v.to_string()}),
+                    }
+                })
             },
             SdpAttributeType::Candidate => (self.string_value = Some(v.to_string())),
             SdpAttributeType::Extmap => (self.string_value = Some(v.to_string())),
@@ -139,7 +196,9 @@ impl SdpAttribute {
             SdpAttributeType::Msid => (self.string_value = Some(v.to_string())),
             SdpAttributeType::MsidSemantic => (self.string_value = Some(v.to_string())),
             SdpAttributeType::Rtcp => (self.string_value = Some(v.to_string())),
-            SdpAttributeType::RtcpFb => {self.string_value = Some(v.to_string())},
+            SdpAttributeType::RtcpFb => {
+                self.string_value = Some(v.to_string())
+            },
             SdpAttributeType::Rtpmap => {
                 let tokens: Vec<&str> = v.split_whitespace().collect();
                 if tokens.len() != 2 {
@@ -154,18 +213,22 @@ impl SdpAttribute {
                         message: "Rtpmap codec token can max 3 subtokens".to_string(),
                         line: v.to_string()})
                 }
-                let codec_name = split[0];
-                let mut frequency: Option<u32> = None;
+                let mut rtpmap = SdpAttributeRtpmap::new(payload_type,
+                                                         split[0].to_string());
                 if split.len() > 1 {
-                    frequency = Some(try!(split[1].parse::<u32>()));
+                    rtpmap.set_frequency(try!(split[1].parse::<u32>()));
                 }
-                let mut channels: Option<u32> = None;
                 if split.len() > 2 {
-                    channels = Some(try!(split[2].parse::<u32>()));
+                    rtpmap.set_channels(try!(split[2].parse::<u32>()));
                 }
+                self.value = Some(SdpAttributeValue::rtpmap {value: rtpmap})
             },
             SdpAttributeType::Sctpmap => (self.string_value = Some(v.to_string())),
-            SdpAttributeType::SctpPort => (self.string_value = Some(v.to_string())),
+            SdpAttributeType::SctpPort => {
+                self.value = Some(SdpAttributeValue::integer {
+                    value: try!(v.parse::<u32>())
+                })
+            }
             SdpAttributeType::Simulcast => (self.string_value = Some(v.to_string())),
             SdpAttributeType::Ssrc => (self.string_value = Some(v.to_string())),
             SdpAttributeType::SsrcGroup => (self.string_value = Some(v.to_string())),
