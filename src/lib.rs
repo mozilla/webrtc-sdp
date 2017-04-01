@@ -106,6 +106,13 @@ struct SdpAttributeRtcpFb {
 }
 
 #[derive(Clone)]
+struct SdpAttributeFingerprint {
+    // TODO turn the supported hash algorithms into an enum?
+    hash_algorithm: String,
+    fingerprint: String
+}
+
+#[derive(Clone)]
 struct SdpAttributeSctpmap {
     port: u32,
     channels: u32
@@ -150,6 +157,7 @@ enum SdpAttributeValue {
     string {value: String},
     integer {value: u32},
     vector {value: Vec<String>},
+    fingerprint {value: SdpAttributeFingerprint},
     rtpmap {value: SdpAttributeRtpmap},
     rtcp {value: SdpAttributeRtcp},
     rtcpfb {value: SdpAttributeRtcpFb},
@@ -195,32 +203,32 @@ impl SdpAttribute {
                 self.value = Some(SdpAttributeValue::string {value: v.to_string()})
             },
 
+            SdpAttributeType::Candidate => (self.string_value = Some(v.to_string())),
+            SdpAttributeType::Extmap => (self.string_value = Some(v.to_string())),
+            SdpAttributeType::Fingerprint => {
+                self.string_value = Some(v.to_string());
+                let tokens: Vec<&str> = v.split_whitespace().collect();
+                if tokens.len() != 2 {
+                    return Err(SdpParserResult::ParserLineError{
+                        message: "Fingerprint needs to have two tokens".to_string(),
+                        line: v.to_string()})
+                }
+                self.value = Some(SdpAttributeValue::fingerprint {value:
+                    SdpAttributeFingerprint {
+                        hash_algorithm: tokens[0].to_string(),
+                        fingerprint: tokens[1].to_string()
+                    }
+                })
+            },
+            SdpAttributeType::Fmtp => (self.string_value = Some(v.to_string())),
+            SdpAttributeType::Group => (self.string_value = Some(v.to_string())),
             SdpAttributeType::IceOptions => {
                 self.value = Some(SdpAttributeValue::vector {
                     value: v.split_whitespace().map(|x| x.to_string()).collect()})
             },
-            SdpAttributeType::Setup => {
-                self.value = Some(SdpAttributeValue::setup {value:
-                    match v.to_lowercase().as_ref() {
-                        "active" => SdpAttributeSetup::active,
-                        "actpass" => SdpAttributeSetup::actpass,
-                        "holdconn" => SdpAttributeSetup::holdconn,
-                        "passive" => SdpAttributeSetup::passive,
-                        _ => return Err(SdpParserResult::ParserLineError{
-                            message: "Unsupported setup value".to_string(),
-                            line: v.to_string()}),
-                    }
-                })
-            },
-            SdpAttributeType::Candidate => (self.string_value = Some(v.to_string())),
-            SdpAttributeType::Extmap => (self.string_value = Some(v.to_string())),
-            SdpAttributeType::Fingerprint => (self.string_value = Some(v.to_string())),
-            SdpAttributeType::Fmtp => (self.string_value = Some(v.to_string())),
-            SdpAttributeType::Group => (self.string_value = Some(v.to_string())),
             SdpAttributeType::Msid => (self.string_value = Some(v.to_string())),
             SdpAttributeType::MsidSemantic => (self.string_value = Some(v.to_string())),
             SdpAttributeType::Rtcp => {
-                self.string_value = Some(v.to_string());
                 let tokens: Vec<&str> = v.split_whitespace().collect();
                 if tokens.len() != 4 {
                     return Err(SdpParserResult::ParserLineError{
@@ -317,6 +325,19 @@ impl SdpAttribute {
                 })
             }
             SdpAttributeType::Simulcast => (self.string_value = Some(v.to_string())),
+            SdpAttributeType::Setup => {
+                self.value = Some(SdpAttributeValue::setup {value:
+                    match v.to_lowercase().as_ref() {
+                        "active" => SdpAttributeSetup::active,
+                        "actpass" => SdpAttributeSetup::actpass,
+                        "holdconn" => SdpAttributeSetup::holdconn,
+                        "passive" => SdpAttributeSetup::passive,
+                        _ => return Err(SdpParserResult::ParserLineError{
+                            message: "Unsupported setup value".to_string(),
+                            line: v.to_string()}),
+                    }
+                })
+            },
             SdpAttributeType::Ssrc => (self.string_value = Some(v.to_string())),
             SdpAttributeType::SsrcGroup => (self.string_value = Some(v.to_string())),
         }
