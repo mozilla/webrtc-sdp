@@ -139,8 +139,31 @@ impl SdpAttribute {
             SdpAttributeType::Msid => (self.string_value = Some(v.to_string())),
             SdpAttributeType::MsidSemantic => (self.string_value = Some(v.to_string())),
             SdpAttributeType::Rtcp => (self.string_value = Some(v.to_string())),
-            SdpAttributeType::RtcpFb => (self.string_value = Some(v.to_string())),
-            SdpAttributeType::Rtpmap => (self.string_value = Some(v.to_string())),
+            SdpAttributeType::RtcpFb => {self.string_value = Some(v.to_string())},
+            SdpAttributeType::Rtpmap => {
+                let tokens: Vec<&str> = v.split_whitespace().collect();
+                if tokens.len() != 2 {
+                    return Err(SdpParserResult::ParserLineError{
+                        message: "Rtpmap needs to have two tokens".to_string(),
+                        line: v.to_string()})
+                }
+                let payload_type: u32 = try!(tokens[0].parse::<u32>());
+                let split: Vec<&str> = tokens[1].split('/').collect();
+                if split.len() > 3 {
+                    return Err(SdpParserResult::ParserLineError{
+                        message: "Rtpmap codec token can max 3 subtokens".to_string(),
+                        line: v.to_string()})
+                }
+                let codec_name = split[0];
+                let mut frequency: Option<u32> = None;
+                if split.len() > 1 {
+                    frequency = Some(try!(split[1].parse::<u32>()));
+                }
+                let mut channels: Option<u32> = None;
+                if split.len() > 2 {
+                    channels = Some(try!(split[2].parse::<u32>()));
+                }
+            },
             SdpAttributeType::Sctpmap => (self.string_value = Some(v.to_string())),
             SdpAttributeType::SctpPort => (self.string_value = Some(v.to_string())),
             SdpAttributeType::Simulcast => (self.string_value = Some(v.to_string())),
@@ -927,15 +950,14 @@ fn test_media_invalid_payload() {
 }
 
 fn parse_attribute(value: &str) -> Result<SdpLine, SdpParserResult> {
-    let colon = value.find(':');
     let name: &str;
     let mut val: &str = "";
-    if colon == None {
+    if value.find(':') == None {
         name = value;
     } else {
-        let (aname, avalue) = value.split_at(colon.unwrap());
-        name = aname;
-        val = avalue;
+        let v: Vec<&str> = value.splitn(2, ':').collect();
+        name = v[0];
+        val = v[1];
     }
     let attrtype = match name.to_lowercase().as_ref() {
         // TODO TODO TODO
@@ -978,6 +1000,131 @@ fn parse_attribute(value: &str) -> Result<SdpLine, SdpParserResult> {
              a.name, a.value.some());
              */
     Ok(SdpLine::Attribute { value: attr })
+}
+
+#[test]
+fn test_parse_attribute_candidate() {
+    assert!(parse_attribute("candidate:0 1 UDP 2122252543 172.16.156.106 49760 typ host").is_ok())
+}
+
+#[test]
+fn test_parse_attribute_end_of_candidates() {
+    assert!(parse_attribute("end-of-candidates").is_ok())
+}
+
+#[test]
+fn test_parse_attribute_extmap() {
+    assert!(parse_attribute("extmap:1/sendonly urn:ietf:params:rtp-hdrext:ssrc-audio-level").is_ok())
+}
+
+#[test]
+fn test_parse_attribute_fingerprint() {
+    assert!(parse_attribute("fingerprint:sha-256 CD:34:D1:62:16:95:7B:B7:EB:74:E2:39:27:97:EB:0B:23:73:AC:BC:BF:2F:E3:91:CB:57:A9:9D:4A:A2:0B:40").is_ok())
+}
+
+#[test]
+fn test_parse_attribute_fmtp() {
+    assert!(parse_attribute("fmtp:109 maxplaybackrate=48000;stereo=1;useinbandfec=1").is_ok())
+}
+
+#[test]
+fn test_parse_attribute_group() {
+    assert!(parse_attribute("group:BUNDLE sdparta_0 sdparta_1 sdparta_2").is_ok())
+}
+
+#[test]
+fn test_parse_attribute_ice_options() {
+    assert!(parse_attribute("ice-options:trickle").is_ok())
+}
+
+#[test]
+fn test_parse_attribute_ice_pwd() {
+    assert!(parse_attribute("ice-pwd:e3baa26dd2fa5030d881d385f1e36cce").is_ok())
+}
+
+#[test]
+fn test_parse_attribute_ice_ufrag() {
+    assert!(parse_attribute("ice-ufrag:58b99ead").is_ok())
+}
+
+#[test]
+fn test_parse_attribute_inactive() {
+    assert!(parse_attribute("inactive").is_ok())
+}
+
+#[test]
+fn test_parse_attribute_mid() {
+    assert!(parse_attribute("mid:sdparta_0").is_ok())
+}
+
+#[test]
+fn test_parse_attribute_msid() {
+    assert!(parse_attribute("msid:{5a990edd-0568-ac40-8d97-310fc33f3411} {218cfa1c-617d-2249-9997-60929ce4c405}").is_ok())
+}
+
+#[test]
+fn test_parse_attribute_msid_semantics() {
+    assert!(parse_attribute("msid-semantic:WMS *").is_ok())
+}
+
+#[test]
+fn test_parse_attribute_rid() {
+    assert!(parse_attribute("rid:foo send").is_ok())
+}
+
+#[test]
+fn test_parse_attribute_recvonly() {
+    assert!(parse_attribute("recvonly").is_ok())
+}
+
+#[test]
+fn test_parse_attribute_rtcp() {
+    assert!(parse_attribute("rtcp:9 IN IP4 0.0.0.0").is_ok())
+}
+
+#[test]
+fn test_parse_attribute_rtcp_fb() {
+    assert!(parse_attribute("rtcp-fb:101 ccm fir").is_ok())
+}
+
+#[test]
+fn test_parse_attribute_rtcp_mux() {
+    assert!(parse_attribute("rtcp-mux").is_ok())
+}
+
+#[test]
+fn test_parse_attribute_rtcp_rsize() {
+    assert!(parse_attribute("rtcp-rsize").is_ok())
+}
+
+#[test]
+fn test_parse_attribute_rtpmap() {
+    assert!(parse_attribute("rtpmap:109 opus/48000/2").is_ok())
+}
+
+#[test]
+fn test_parse_attribute_sctpmap() {
+    assert!(parse_attribute("sctpmap:5000 webrtc-datachannel 256").is_ok())
+}
+
+#[test]
+fn test_parse_attribute_sctp_port() {
+    assert!(parse_attribute("sctp-port:5000").is_ok())
+}
+
+#[test]
+fn test_parse_attribute_simulcast() {
+    assert!(parse_attribute("simulcast: send rid=foo;bar").is_ok())
+}
+
+#[test]
+fn test_parse_attribute_ssrc() {
+    assert!(parse_attribute("ssrc:2655508255 cname:{735484ea-4f6c-f74a-bd66-7425f8476c2e}").is_ok())
+}
+
+#[test]
+fn test_parse_attribute_ssrc_group() {
+    assert!(parse_attribute("ssrc-group:FID 3156517279 2673335628").is_ok())
 }
 
 // TODO add missing unit tests
@@ -1054,6 +1201,16 @@ fn test_parse_sdp_line_empty_value() {
 #[test]
 fn test_parse_sdp_line_empty_name() {
     assert!(parse_sdp_line("=abc").is_err());
+}
+
+#[test]
+fn test_parse_sdp_line_valid_a_line() {
+    assert!(parse_sdp_line("a=rtpmap:8 PCMA/8000").is_ok());
+}
+
+#[test]
+fn test_parse_sdp_line_invalid_a_line() {
+    assert!(parse_sdp_line("a=rtpmap:8 PCMA/8000 1").is_err());
 }
 
 // TODO add uni tests here
