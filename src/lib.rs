@@ -146,23 +146,23 @@ impl SdpAttributeRtpmap {
 
 #[derive(Clone)]
 enum SdpAttributeSetup {
-    active,
-    actpass,
-    holdconn,
-    passive
+    Active,
+    Actpass,
+    Holdconn,
+    Passive
 }
 
 #[derive(Clone)]
 enum SdpAttributeValue {
-    string {value: String},
-    integer {value: u32},
-    vector {value: Vec<String>},
-    fingerprint {value: SdpAttributeFingerprint},
-    rtpmap {value: SdpAttributeRtpmap},
-    rtcp {value: SdpAttributeRtcp},
-    rtcpfb {value: SdpAttributeRtcpFb},
-    setup {value: SdpAttributeSetup},
-    sctpmap {value: SdpAttributeSctpmap},
+    Str {value: String},
+    Int {value: u32},
+    Vector {value: Vec<String>},
+    Fingerprint {value: SdpAttributeFingerprint},
+    Rtpmap {value: SdpAttributeRtpmap},
+    Rtcp {value: SdpAttributeRtcp},
+    Rtcpfb {value: SdpAttributeRtcpFb},
+    Setup {value: SdpAttributeSetup},
+    Sctpmap {value: SdpAttributeSctpmap},
 }
 
 #[derive(Clone)]
@@ -200,7 +200,7 @@ impl SdpAttribute {
             SdpAttributeType::IceUfrag |
             SdpAttributeType::Mid |
             SdpAttributeType::Rid => {
-                self.value = Some(SdpAttributeValue::string {value: v.to_string()})
+                self.value = Some(SdpAttributeValue::Str {value: v.to_string()})
             },
 
             SdpAttributeType::Candidate => (self.string_value = Some(v.to_string())),
@@ -213,7 +213,7 @@ impl SdpAttribute {
                         message: "Fingerprint needs to have two tokens".to_string(),
                         line: v.to_string()})
                 }
-                self.value = Some(SdpAttributeValue::fingerprint {value:
+                self.value = Some(SdpAttributeValue::Fingerprint {value:
                     SdpAttributeFingerprint {
                         hash_algorithm: tokens[0].to_string(),
                         fingerprint: tokens[1].to_string()
@@ -223,7 +223,7 @@ impl SdpAttribute {
             SdpAttributeType::Fmtp => (self.string_value = Some(v.to_string())),
             SdpAttributeType::Group => (self.string_value = Some(v.to_string())),
             SdpAttributeType::IceOptions => {
-                self.value = Some(SdpAttributeValue::vector {
+                self.value = Some(SdpAttributeValue::Vector {
                     value: v.split_whitespace().map(|x| x.to_string()).collect()})
             },
             SdpAttributeType::Msid => (self.string_value = Some(v.to_string())),
@@ -244,7 +244,7 @@ impl SdpAttribute {
                 let nettype = try!(parse_nettype(tokens[1]));
                 let addrtype = try!(parse_addrtype(tokens[2]));
                 let unicast_addr = try!(parse_unicast_addr(&addrtype, tokens[3]));
-                self.value = Some(SdpAttributeValue::rtcp {value:
+                self.value = Some(SdpAttributeValue::Rtcp {value:
                     SdpAttributeRtcp {
                         port: port,
                         nettype: nettype,
@@ -255,7 +255,7 @@ impl SdpAttribute {
             },
             SdpAttributeType::RtcpFb => {
                 let tokens: Vec<&str> = v.splitn(2, ' ').collect();
-                self.value = Some(SdpAttributeValue::rtcpfb {value:
+                self.value = Some(SdpAttributeValue::Rtcpfb {value:
                     SdpAttributeRtcpFb {
                         // TODO limit this to dymaic PTs
                         payload_type: try!(tokens[0].parse::<u32>()),
@@ -286,7 +286,7 @@ impl SdpAttribute {
                 if split.len() > 2 {
                     rtpmap.set_channels(try!(split[2].parse::<u32>()));
                 }
-                self.value = Some(SdpAttributeValue::rtpmap {value: rtpmap})
+                self.value = Some(SdpAttributeValue::Rtpmap {value: rtpmap})
             },
             SdpAttributeType::Sctpmap => {
                 let tokens: Vec<&str> = v.split_whitespace().collect();
@@ -306,7 +306,7 @@ impl SdpAttribute {
                         message: "Unsupported sctpmap type token".to_string(),
                         line: v.to_string()})
                 }
-                self.value = Some(SdpAttributeValue::sctpmap {value:
+                self.value = Some(SdpAttributeValue::Sctpmap {value:
                     SdpAttributeSctpmap {
                         port: port,
                         channels: try!(tokens[2].parse::<u32>())
@@ -320,18 +320,18 @@ impl SdpAttribute {
                         message: "Sctpport port can only be a bit 16bit number".to_string(),
                         line: v.to_string()})
                 }
-                self.value = Some(SdpAttributeValue::integer {
+                self.value = Some(SdpAttributeValue::Int {
                     value: port
                 })
             }
             SdpAttributeType::Simulcast => (self.string_value = Some(v.to_string())),
             SdpAttributeType::Setup => {
-                self.value = Some(SdpAttributeValue::setup {value:
+                self.value = Some(SdpAttributeValue::Setup {value:
                     match v.to_lowercase().as_ref() {
-                        "active" => SdpAttributeSetup::active,
-                        "actpass" => SdpAttributeSetup::actpass,
-                        "holdconn" => SdpAttributeSetup::holdconn,
-                        "passive" => SdpAttributeSetup::passive,
+                        "active" => SdpAttributeSetup::Active,
+                        "actpass" => SdpAttributeSetup::Actpass,
+                        "holdconn" => SdpAttributeSetup::Holdconn,
+                        "passive" => SdpAttributeSetup::Passive,
                         _ => return Err(SdpParserResult::ParserLineError{
                             message: "Unsupported setup value".to_string(),
                             line: v.to_string()}),
