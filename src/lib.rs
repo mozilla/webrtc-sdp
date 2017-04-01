@@ -98,6 +98,12 @@ struct SdpAttributeRtcpFb {
 }
 
 #[derive(Clone)]
+struct SdpAttributeSctpmap {
+    port: u32,
+    channels: u32
+}
+
+#[derive(Clone)]
 struct SdpAttributeRtpmap {
     payload_type: u32,
     codec_name: String,
@@ -139,6 +145,7 @@ enum SdpAttributeValue {
     rtpmap {value: SdpAttributeRtpmap},
     rtcpfb {value: SdpAttributeRtcpFb},
     setup {value: SdpAttributeSetup},
+    sctpmap {value: SdpAttributeSctpmap},
 }
 
 #[derive(Clone)]
@@ -239,10 +246,40 @@ impl SdpAttribute {
                 }
                 self.value = Some(SdpAttributeValue::rtpmap {value: rtpmap})
             },
-            SdpAttributeType::Sctpmap => (self.string_value = Some(v.to_string())),
+            SdpAttributeType::Sctpmap => {
+                let tokens: Vec<&str> = v.split_whitespace().collect();
+                if tokens.len() != 3 {
+                    return Err(SdpParserResult::ParserLineError{
+                        message: "Sctpmap needs to have three tokens".to_string(),
+                        line: v.to_string()})
+                }
+                let port = try!(tokens[0].parse::<u32>());
+                if port > 65535 {
+                    return Err(SdpParserResult::ParserLineError{
+                        message: "Sctpmap port can only be a bit 16bit number".to_string(),
+                        line: v.to_string()})
+                }
+                if tokens[1].to_lowercase() != "webrtc-datachannel" {
+                    return Err(SdpParserResult::ParserLineError{
+                        message: "Unsupported sctpmap type token".to_string(),
+                        line: v.to_string()})
+                }
+                self.value = Some(SdpAttributeValue::sctpmap {value:
+                    SdpAttributeSctpmap {
+                        port: port,
+                        channels: try!(tokens[2].parse::<u32>())
+                    }
+                });
+            },
             SdpAttributeType::SctpPort => {
+                let port = try!(v.parse::<u32>());
+                if port > 65535 {
+                    return Err(SdpParserResult::ParserLineError{
+                        message: "Sctpport port can only be a bit 16bit number".to_string(),
+                        line: v.to_string()})
+                }
                 self.value = Some(SdpAttributeValue::integer {
-                    value: try!(v.parse::<u32>())
+                    value: port
                 })
             }
             SdpAttributeType::Simulcast => (self.string_value = Some(v.to_string())),
