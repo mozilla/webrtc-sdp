@@ -106,6 +106,20 @@ struct SdpAttributeRtcpFb {
 }
 
 #[derive(Clone)]
+enum SdpAttributeDirection {
+    Sendrecv,
+    Sendonly,
+    Recvonly
+}
+
+#[derive(Clone)]
+struct SdpAttributeExtmap {
+    id: u32,
+    direction: Option<SdpAttributeDirection>,
+    url: String
+}
+
+#[derive(Clone)]
 struct SdpAttributeFingerprint {
     // TODO turn the supported hash algorithms into an enum?
     hash_algorithm: String,
@@ -157,6 +171,7 @@ enum SdpAttributeValue {
     Str {value: String},
     Int {value: u32},
     Vector {value: Vec<String>},
+    Extmap {value: SdpAttributeExtmap},
     Fingerprint {value: SdpAttributeFingerprint},
     Rtpmap {value: SdpAttributeRtpmap},
     Rtcp {value: SdpAttributeRtcp},
@@ -204,9 +219,38 @@ impl SdpAttribute {
             },
 
             SdpAttributeType::Candidate => (self.string_value = Some(v.to_string())),
-            SdpAttributeType::Extmap => (self.string_value = Some(v.to_string())),
+            SdpAttributeType::Extmap => {
+                let tokens: Vec<&str> = v.split_whitespace().collect();
+                if tokens.len() != 2 {
+                    return Err(SdpParserResult::ParserLineError{
+                        message: "Extmap needs to have two tokens".to_string(),
+                        line: v.to_string()})
+                }
+                let id: u32;
+                let mut dir: Option<SdpAttributeDirection> = None;
+                if tokens[0].find('/') == None {
+                    id = try!(tokens[0].parse::<u32>());
+                } else {
+                    let id_dir: Vec<&str> = tokens[0].splitn(2, '/').collect();
+                    id = try!(id_dir[0].parse::<u32>());
+                    dir = Some(match id_dir[1].to_lowercase().as_ref() {
+                        "recvonly" => SdpAttributeDirection::Recvonly,
+                        "sendonly" => SdpAttributeDirection::Sendonly,
+                        "sendrecv" => SdpAttributeDirection::Sendrecv,
+                        _ => return Err(SdpParserResult::ParserLineError{
+                            message: "Unsupported direction in extmap value".to_string(),
+                            line: v.to_string()}),
+                    })
+                }
+                self.value = Some(SdpAttributeValue::Extmap {value:
+                    SdpAttributeExtmap {
+                        id: id,
+                        direction: dir,
+                        url: tokens[1].to_string()
+                    }
+                })
+            },
             SdpAttributeType::Fingerprint => {
-                self.string_value = Some(v.to_string());
                 let tokens: Vec<&str> = v.split_whitespace().collect();
                 if tokens.len() != 2 {
                     return Err(SdpParserResult::ParserLineError{
