@@ -91,6 +91,60 @@ impl fmt::Display for SdpAttributeType {
 }
 
 #[derive(Clone)]
+enum SdpAttributeCandidateTransport {
+    Udp,
+    Tcp
+}
+
+#[derive(Clone)]
+enum SdpAttributeCandidateType {
+    Host,
+    Srflx,
+    Prflx,
+    Relay
+}
+
+#[derive(Clone)]
+enum SdpAttributeCandidateTcpType {
+    Active,
+    Passive,
+    Simultaneous
+}
+
+#[derive(Clone)]
+struct SdpAttributeCandidate {
+    foundation: String,
+    component: u32,
+    transport: SdpAttributeCandidateTransport,
+    priority: u64,
+    address: IpAddr,
+    port: u32,
+    c_type: SdpAttributeCandidateType,
+    tcp_type: Option<SdpAttributeCandidateTcpType>
+}
+
+impl SdpAttributeCandidate {
+    pub fn new(fd: String, comp: u32, transp: SdpAttributeCandidateTransport,
+               prio: u64, addr: IpAddr, port: u32,
+               ctyp: SdpAttributeCandidateType) -> SdpAttributeCandidate {
+        SdpAttributeCandidate {
+            foundation: fd,
+            component: comp,
+            transport: transp,
+            priority: prio,
+            address: addr,
+            port: port,
+            c_type: ctyp,
+            tcp_type: None
+        }
+    }
+
+    fn set_tcpType(&mut self, t: SdpAttributeCandidateTcpType) {
+        self.tcp_type = Some(t)
+    }
+}
+
+#[derive(Clone)]
 struct SdpAttributeRtcp {
     port: u32,
     nettype: SdpNetType,
@@ -171,6 +225,7 @@ enum SdpAttributeValue {
     Str {value: String},
     Int {value: u32},
     Vector {value: Vec<String>},
+    Candidate {value: SdpAttributeCandidate},
     Extmap {value: SdpAttributeExtmap},
     Fingerprint {value: SdpAttributeFingerprint},
     Rtpmap {value: SdpAttributeRtpmap},
@@ -218,7 +273,72 @@ impl SdpAttribute {
                 self.value = Some(SdpAttributeValue::Str {value: v.to_string()})
             },
 
-            SdpAttributeType::Candidate => (self.string_value = Some(v.to_string())),
+            SdpAttributeType::Candidate => {
+                let tokens: Vec<&str> = v.split_whitespace().collect();
+                if tokens.len() < 8 {
+                    return Err(SdpParserResult::ParserLineError{
+                        message: "Candidate needs to have minimum eigth tokens".to_string(),
+                        line: v.to_string()})
+                }
+                let component = try!(tokens[1].parse::<u32>());
+                let transport = match tokens[2].to_lowercase().as_ref() {
+                    "udp" => SdpAttributeCandidateTransport::Udp,
+                    "tcp" => SdpAttributeCandidateTransport::Tcp,
+                    _ => return Err(SdpParserResult::ParserLineError{
+                        message: "Unknonw candidate transport value".to_string(),
+                        line: v.to_string()})
+                };
+                let priority = try!(tokens[3].parse::<u64>());
+                let address = try!(parse_unicast_addr_unknown_type(tokens[4]));
+                let port = try!(tokens[5].parse::<u32>());
+                if port > 65535 {
+                    return Err(SdpParserResult::ParserLineError{
+                        message: "ICE candidate port can only be a bit 16bit number".to_string(),
+                        line: v.to_string()})
+                }
+                match tokens[6].to_lowercase().as_ref() {
+                    "typ" => (),
+                    _ => return Err(SdpParserResult::ParserLineError{
+                            message: "Candidate attribute token must be 'typ'".to_string(),
+                            line: v.to_string()})
+                };
+                let cand_type = match tokens[7].to_lowercase().as_ref() {
+                    "host" => SdpAttributeCandidateType::Host,
+                    "srflx" => SdpAttributeCandidateType::Srflx,
+                    "prflx" => SdpAttributeCandidateType::Prflx,
+                    "relay" => SdpAttributeCandidateType::Relay,
+                    _ => return Err(SdpParserResult::ParserLineError{
+                            message: "Unknow candidate type value".to_string(),
+                            line: v.to_string()})
+                };
+                let mut cand = SdpAttributeCandidate::new(tokens[0].to_string(),
+                                                          component,
+                                                          transport,
+                                                          priority,
+                                                          address,
+                                                          port,
+                                                          cand_type);
+                if tokens.len() == 10 {
+                    match tokens[8].to_lowercase().as_ref() {
+                        "tcptype" => (),
+                        _ => return Err(SdpParserResult::ParserUnsupported{
+                            message: "Uknown candidate extension name".to_string(),
+                            line: v.to_string()})
+                    };
+                    let tcp_type = match tokens[9].to_lowercase().as_ref() {
+                        "active" => SdpAttributeCandidateTcpType::Active,
+                        "passive" => SdpAttributeCandidateTcpType::Passive,
+                        "so" => SdpAttributeCandidateTcpType::Simultaneous,
+                        _ => return Err(SdpParserResult::ParserLineError{
+                            message: "Unknown tcptype value in candidate line".to_string(),
+                            line: v.to_string()})
+                    };
+                    cand.set_tcpType(tcp_type);
+                }
+                self.value = Some(SdpAttributeValue::Candidate {value:
+                    cand
+                })
+            },
             SdpAttributeType::Extmap => {
                 let tokens: Vec<&str> = v.split_whitespace().collect();
                 if tokens.len() != 2 {
@@ -866,6 +986,14 @@ fn parse_unicast_addr(addrtype: &SdpAddrType, value: &str) -> Result<IpAddr, Sdp
     })
 }
 
+fn parse_unicast_addr_unknown_type(value: &str) -> Result<IpAddr, SdpParserResult> {
+    if value.find('.') == None {
+        return parse_unicast_addr(&SdpAddrType::IP6, value);
+    } else {
+        return parse_unicast_addr(&SdpAddrType::IP4, value);
+    }
+}
+
 fn parse_origin(value: &str) -> Result<SdpLine, SdpParserResult> {
     let ot: Vec<&str> = value.split_whitespace().collect();
     if ot.len() != 6 {
@@ -1219,7 +1347,8 @@ fn parse_attribute(value: &str) -> Result<SdpLine, SdpParserResult> {
 
 #[test]
 fn test_parse_attribute_candidate() {
-    assert!(parse_attribute("candidate:0 1 UDP 2122252543 172.16.156.106 49760 typ host").is_ok())
+    assert!(parse_attribute("candidate:0 1 UDP 2122252543 172.16.156.106 49760 typ host").is_ok());
+    assert!(parse_attribute("candidate:0 1 TCP 2122252543 172.16.156.106 49760 typ host tcptype passive").is_ok());
 }
 
 #[test]
@@ -1229,7 +1358,8 @@ fn test_parse_attribute_end_of_candidates() {
 
 #[test]
 fn test_parse_attribute_extmap() {
-    assert!(parse_attribute("extmap:1/sendonly urn:ietf:params:rtp-hdrext:ssrc-audio-level").is_ok())
+    assert!(parse_attribute("extmap:1/sendonly urn:ietf:params:rtp-hdrext:ssrc-audio-level").is_ok());
+    assert!(parse_attribute("extmap:3 http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time").is_ok());
 }
 
 #[test]
