@@ -174,6 +174,12 @@ struct SdpAttributeExtmap {
 }
 
 #[derive(Clone)]
+struct SdpAttributeFmtp {
+    payload_type: u32,
+    tokens: Vec<String>
+}
+
+#[derive(Clone)]
 struct SdpAttributeFingerprint {
     // TODO turn the supported hash algorithms into an enum?
     hash_algorithm: String,
@@ -228,6 +234,7 @@ enum SdpAttributeValue {
     Candidate {value: SdpAttributeCandidate},
     Extmap {value: SdpAttributeExtmap},
     Fingerprint {value: SdpAttributeFingerprint},
+    Fmtp {value: SdpAttributeFmtp},
     Rtpmap {value: SdpAttributeRtpmap},
     Rtcp {value: SdpAttributeRtcp},
     Rtcpfb {value: SdpAttributeRtcpFb},
@@ -384,7 +391,20 @@ impl SdpAttribute {
                     }
                 })
             },
-            SdpAttributeType::Fmtp => (self.string_value = Some(v.to_string())),
+            SdpAttributeType::Fmtp => {
+                let tokens: Vec<&str> = v.split_whitespace().collect();
+                if tokens.len() != 2 {
+                    return Err(SdpParserResult::ParserLineError{
+                        message: "Fmtp needs to have two tokens".to_string(),
+                        line: v.to_string()})
+                }
+                self.value = Some(SdpAttributeValue::Fmtp {value:
+                    SdpAttributeFmtp {
+                        payload_type: try!(tokens[0].parse::<u32>()),
+                        tokens: v.split(';').map(|x| x.to_string()).collect()
+                    }
+                })
+            },
             SdpAttributeType::Group => (self.string_value = Some(v.to_string())),
             SdpAttributeType::IceOptions => {
                 self.value = Some(SdpAttributeValue::Vector {
@@ -415,7 +435,7 @@ impl SdpAttribute {
                         addrtype: addrtype,
                         unicast_addr: unicast_addr
                     }
-                });
+                })
             },
             SdpAttributeType::RtcpFb => {
                 let tokens: Vec<&str> = v.splitn(2, ' ').collect();
