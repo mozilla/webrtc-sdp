@@ -120,6 +120,8 @@ struct SdpAttributeCandidate {
     address: IpAddr,
     port: u32,
     c_type: SdpAttributeCandidateType,
+    raddr: Option<IpAddr>,
+    rport: Option<u32>,
     tcp_type: Option<SdpAttributeCandidateTcpType>
 }
 
@@ -135,8 +137,18 @@ impl SdpAttributeCandidate {
             address: addr,
             port: port,
             c_type: ctyp,
+            raddr: None,
+            rport: None,
             tcp_type: None
         }
+    }
+
+    fn set_remote_address(&mut self, ip: IpAddr) {
+        self.raddr = Some(ip)
+    }
+
+    fn set_remote_port(&mut self, p: u32) {
+        self.rport = Some(p)
     }
 
     fn set_tcpType(&mut self, t: SdpAttributeCandidateTcpType) {
@@ -325,22 +337,41 @@ impl SdpAttribute {
                                                           address,
                                                           port,
                                                           cand_type);
-                if tokens.len() == 10 {
-                    match tokens[8].to_lowercase().as_ref() {
-                        "tcptype" => (),
-                        _ => return Err(SdpParserResult::ParserUnsupported{
-                            message: "Uknown candidate extension name".to_string(),
-                            line: v.to_string()})
-                    };
-                    let tcp_type = match tokens[9].to_lowercase().as_ref() {
-                        "active" => SdpAttributeCandidateTcpType::Active,
-                        "passive" => SdpAttributeCandidateTcpType::Passive,
-                        "so" => SdpAttributeCandidateTcpType::Simultaneous,
-                        _ => return Err(SdpParserResult::ParserLineError{
-                            message: "Unknown tcptype value in candidate line".to_string(),
-                            line: v.to_string()})
-                    };
-                    cand.set_tcpType(tcp_type);
+                if tokens.len() > 8 {
+                    let mut index = 8;
+                    while tokens.len() > index + 1 {
+                        match tokens[index].to_lowercase().as_ref() {
+                            "raddr" => {
+                                let addr = try!(parse_unicast_addr_unknown_type(tokens[index + 1]));
+                                cand.set_remote_address(addr);
+                                index += 2;
+                            },
+                            "rport" => {
+                                let port = try!(tokens[index + 1].parse::<u32>());
+                                if port > 65535 {
+                                    return Err(SdpParserResult::ParserLineError{
+                                        message: "ICE candidate rport can only be a bit 16bit number".to_string(),
+                                        line: v.to_string()})
+                                }
+                                cand.set_remote_port(port);
+                                index += 2;
+                            },
+                            "tcptype" => {
+                                cand.set_tcpType(match tokens[index + 1].to_lowercase().as_ref() {
+                                    "active" => SdpAttributeCandidateTcpType::Active,
+                                    "passive" => SdpAttributeCandidateTcpType::Passive,
+                                    "so" => SdpAttributeCandidateTcpType::Simultaneous,
+                                    _ => return Err(SdpParserResult::ParserLineError{
+                                        message: "Unknown tcptype value in candidate line".to_string(),
+                                        line: v.to_string()})
+                                });
+                                index += 2;
+                            },
+                            _ => return Err(SdpParserResult::ParserUnsupported{
+                                message: "Uknown candidate extension name".to_string(),
+                                line: v.to_string()})
+                        };
+                    }
                 }
                 self.value = Some(SdpAttributeValue::Candidate {value:
                     cand
@@ -400,7 +431,10 @@ impl SdpAttribute {
                 }
                 self.value = Some(SdpAttributeValue::Fmtp {value:
                     SdpAttributeFmtp {
+                        // TODO check for dynamic PT range
                         payload_type: try!(tokens[0].parse::<u32>()),
+                        // TODO this should probably be slit into known tokens
+                        // plus a list of unknown tokens
                         tokens: v.split(';').map(|x| x.to_string()).collect()
                     }
                 })
@@ -1368,7 +1402,28 @@ fn parse_attribute(value: &str) -> Result<SdpLine, SdpParserResult> {
 #[test]
 fn test_parse_attribute_candidate() {
     assert!(parse_attribute("candidate:0 1 UDP 2122252543 172.16.156.106 49760 typ host").is_ok());
+    assert!(parse_attribute("candidate:foo 1 UDP 2122252543 172.16.156.106 49760 typ host").is_ok());
+    assert!(parse_attribute("candidate:0 1 TCP 2122252543 172.16.156.106 49760 typ host").is_ok());
+    assert!(parse_attribute("candidate:0 1 TCP 2122252543 ::1 49760 typ host").is_ok());
+    assert!(parse_attribute("candidate:0 1 UDP 2122252543 172.16.156.106 49760 typ srflx").is_ok());
+    assert!(parse_attribute("candidate:0 1 UDP 2122252543 172.16.156.106 49760 typ prflx").is_ok());
+    assert!(parse_attribute("candidate:0 1 UDP 2122252543 172.16.156.106 49760 typ relay").is_ok());
+    assert!(parse_attribute("candidate:0 1 TCP 2122252543 172.16.156.106 49760 typ host tcptype active").is_ok());
     assert!(parse_attribute("candidate:0 1 TCP 2122252543 172.16.156.106 49760 typ host tcptype passive").is_ok());
+    assert!(parse_attribute("candidate:0 1 TCP 2122252543 172.16.156.106 49760 typ host tcptype so").is_ok());
+    assert!(parse_attribute("candidate:1 1 UDP 1685987071 24.23.204.141 54609 typ srflx raddr 192.168.1.4 rport 61665").is_ok());
+    assert!(parse_attribute("candidate:1 1 TCP 1685987071 24.23.204.141 54609 typ srflx raddr 192.168.1.4 rport 61665 tcptype passive").is_ok());
+
+    assert!(parse_attribute("candidate:0 1 UDP 2122252543 172.16.156.106 49760 typ").is_err());
+    assert!(parse_attribute("candidate:0 foo UDP 2122252543 172.16.156.106 49760 typ host").is_err());
+    assert!(parse_attribute("candidate:0 1 FOO 2122252543 172.16.156.106 49760 typ host").is_err());
+    assert!(parse_attribute("candidate:0 1 UDP foo 172.16.156.106 49760 typ host").is_err());
+    assert!(parse_attribute("candidate:0 1 UDP 2122252543 172.16.156 49760 typ host").is_err());
+    assert!(parse_attribute("candidate:0 1 UDP 2122252543 172.16.156.106 70000 typ host").is_err());
+    assert!(parse_attribute("candidate:0 1 UDP 2122252543 172.16.156.106 49760 type host").is_err());
+    assert!(parse_attribute("candidate:0 1 UDP 2122252543 172.16.156.106 49760 typ fost").is_err());
+    assert!(parse_attribute("candidate:1 1 UDP 1685987071 24.23.204.141 54609 typ srflx raddr 192.168.1 rport 61665").is_err());
+    assert!(parse_attribute("candidate:1 1 UDP 1685987071 24.23.204.141 54609 typ srflx raddr 192.168.1.4 rport 70000").is_err());
 }
 
 #[test]
