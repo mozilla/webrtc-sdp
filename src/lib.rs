@@ -151,7 +151,7 @@ impl SdpAttributeCandidate {
         self.rport = Some(p)
     }
 
-    fn set_tcpType(&mut self, t: SdpAttributeCandidateTcpType) {
+    fn set_tcp_type(&mut self, t: SdpAttributeCandidateTcpType) {
         self.tcp_type = Some(t)
     }
 }
@@ -205,6 +205,23 @@ struct SdpAttributeSctpmap {
 }
 
 #[derive(Clone)]
+enum SdpAttributeGroupSemantic {
+    LipSynchronization,
+    FlowIdentification,
+    SingleReservationFlow,
+    AlternateNetworkAddressType,
+    ForwardErrorCorrection,
+    DecodingDependency,
+    Bundle
+}
+
+#[derive(Clone)]
+struct SdpAttributeGroup {
+    semantics: SdpAttributeGroupSemantic,
+    tags: Vec<String>
+}
+
+#[derive(Clone)]
 struct SdpAttributeRtpmap {
     payload_type: u32,
     codec_name: String,
@@ -247,6 +264,7 @@ enum SdpAttributeValue {
     Extmap {value: SdpAttributeExtmap},
     Fingerprint {value: SdpAttributeFingerprint},
     Fmtp {value: SdpAttributeFmtp},
+    Group {value: SdpAttributeGroup},
     Rtpmap {value: SdpAttributeRtpmap},
     Rtcp {value: SdpAttributeRtcp},
     Rtcpfb {value: SdpAttributeRtcpFb},
@@ -357,7 +375,7 @@ impl SdpAttribute {
                                 index += 2;
                             },
                             "tcptype" => {
-                                cand.set_tcpType(match tokens[index + 1].to_lowercase().as_ref() {
+                                cand.set_tcp_type(match tokens[index + 1].to_lowercase().as_ref() {
                                     "active" => SdpAttributeCandidateTcpType::Active,
                                     "passive" => SdpAttributeCandidateTcpType::Passive,
                                     "so" => SdpAttributeCandidateTcpType::Simultaneous,
@@ -439,7 +457,32 @@ impl SdpAttribute {
                     }
                 })
             },
-            SdpAttributeType::Group => (self.string_value = Some(v.to_string())),
+            SdpAttributeType::Group => {
+                let mut tokens  = v.split_whitespace();
+                let semantics = match tokens.next() {
+                    None => return Err(SdpParserResult::ParserLineError{
+                        message: "Group attribute is missing semantics token".to_string(),
+                        line: v.to_string()}),
+                    Some(x) =>  match x.to_uppercase().as_ref() {
+                        "LS" => SdpAttributeGroupSemantic::LipSynchronization,
+                        "FID" => SdpAttributeGroupSemantic::FlowIdentification,
+                        "SRF" => SdpAttributeGroupSemantic::SingleReservationFlow,
+                        "ANAT" => SdpAttributeGroupSemantic::AlternateNetworkAddressType,
+                        "FEC" => SdpAttributeGroupSemantic::ForwardErrorCorrection,
+                        "DDP" => SdpAttributeGroupSemantic::DecodingDependency,
+                        "BUNDLE" => SdpAttributeGroupSemantic::Bundle,
+                        _ => return Err(SdpParserResult::ParserLineError{
+                            message: "Unsupported group semantics".to_string(),
+                            line: v.to_string()}),
+                    }
+                };
+                self.value = Some(SdpAttributeValue::Group {value:
+                    SdpAttributeGroup {
+                        semantics: semantics,
+                        tags: tokens.map(|x| x.to_string()).collect()
+                    }
+                })
+            },
             SdpAttributeType::IceOptions => {
                 self.value = Some(SdpAttributeValue::Vector {
                     value: v.split_whitespace().map(|x| x.to_string()).collect()})
@@ -1449,7 +1492,12 @@ fn test_parse_attribute_fmtp() {
 
 #[test]
 fn test_parse_attribute_group() {
-    assert!(parse_attribute("group:BUNDLE sdparta_0 sdparta_1 sdparta_2").is_ok())
+    assert!(parse_attribute("group:LS").is_ok());
+    assert!(parse_attribute("group:LS 1 2").is_ok());
+    assert!(parse_attribute("group:BUNDLE sdparta_0 sdparta_1 sdparta_2").is_ok());
+
+    assert!(parse_attribute("group:").is_err());
+    assert!(parse_attribute("group:NEVER_SUPPORTED_SEMANTICS").is_err());
 }
 
 #[test]
