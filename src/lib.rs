@@ -222,6 +222,12 @@ struct SdpAttributeGroup {
 }
 
 #[derive(Clone)]
+struct SdpAttributeMsid {
+    id: String,
+    appdata: Option<String>
+}
+
+#[derive(Clone)]
 struct SdpAttributeRtpmap {
     payload_type: u32,
     codec_name: String,
@@ -265,6 +271,7 @@ enum SdpAttributeValue {
     Fingerprint {value: SdpAttributeFingerprint},
     Fmtp {value: SdpAttributeFmtp},
     Group {value: SdpAttributeGroup},
+    Msid {value: SdpAttributeMsid},
     Rtpmap {value: SdpAttributeRtpmap},
     Rtcp {value: SdpAttributeRtcp},
     Rtcpfb {value: SdpAttributeRtcpFb},
@@ -487,7 +494,25 @@ impl SdpAttribute {
                 self.value = Some(SdpAttributeValue::Vector {
                     value: v.split_whitespace().map(|x| x.to_string()).collect()})
             },
-            SdpAttributeType::Msid => (self.string_value = Some(v.to_string())),
+            SdpAttributeType::Msid => {
+                let mut tokens  = v.split_whitespace();
+                let id = match tokens.next() {
+                    None => return Err(SdpParserResult::ParserLineError{
+                        message: "Msid attribute is missing msid-id token".to_string(),
+                        line: v.to_string()}),
+                    Some(x) => x.to_string()
+                };
+                let appdata = match tokens.next() {
+                    None => None,
+                    Some(x) => Some(x.to_string())
+                };
+                self.value = Some(SdpAttributeValue::Msid {value:
+                    SdpAttributeMsid {
+                        id: id,
+                        appdata: appdata
+                    }
+                })
+            },
             SdpAttributeType::MsidSemantic => (self.string_value = Some(v.to_string())),
             SdpAttributeType::Rtcp => {
                 let tokens: Vec<&str> = v.split_whitespace().collect();
@@ -1527,7 +1552,10 @@ fn test_parse_attribute_mid() {
 
 #[test]
 fn test_parse_attribute_msid() {
-    assert!(parse_attribute("msid:{5a990edd-0568-ac40-8d97-310fc33f3411} {218cfa1c-617d-2249-9997-60929ce4c405}").is_ok())
+    assert!(parse_attribute("msid:{5a990edd-0568-ac40-8d97-310fc33f3411}").is_ok());
+    assert!(parse_attribute("msid:{5a990edd-0568-ac40-8d97-310fc33f3411} {218cfa1c-617d-2249-9997-60929ce4c405}").is_ok());
+
+    assert!(parse_attribute("msid:").is_err());
 }
 
 #[test]
