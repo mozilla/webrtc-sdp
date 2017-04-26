@@ -157,6 +157,67 @@ impl SdpAttributeCandidate {
 }
 
 #[derive(Clone)]
+struct SdpAttributeSimulcastId {
+    id: String,
+    paused: bool
+}
+
+impl SdpAttributeSimulcastId {
+    pub fn new(idstr: String) -> SdpAttributeSimulcastId {
+        if idstr.starts_with("~") {
+            SdpAttributeSimulcastId {
+                id: idstr[1..].to_string(),
+                paused: true
+            }
+        } else {
+            SdpAttributeSimulcastId {
+                id: idstr,
+                paused: false
+            }
+        }
+    }
+}
+
+#[derive(Clone)]
+struct SdpAttributeSimulcastAlternatives {
+    ids: Vec<SdpAttributeSimulcastId>
+}
+
+impl SdpAttributeSimulcastAlternatives {
+    pub fn new(idlist: String) -> SdpAttributeSimulcastAlternatives {
+        SdpAttributeSimulcastAlternatives {
+            ids: idlist.split(',')
+                 .map(|x| x.to_string())
+                 .map(|y| SdpAttributeSimulcastId::new(y))
+                 .collect()
+        }
+    }
+}
+
+#[derive(Clone)]
+struct SdpAttributeSimulcast {
+    send: Vec<SdpAttributeSimulcastAlternatives>,
+    receive: Vec<SdpAttributeSimulcastAlternatives>
+}
+
+impl SdpAttributeSimulcast {
+    fn parse_ids(&mut self,
+                 direction: SdpAttributeDirection,
+                 idlist: String) {
+        let list = idlist.split(';')
+                   .map(|x| x.to_string())
+                   .map(|y| SdpAttributeSimulcastAlternatives::new(y))
+                   .collect();
+        // TODO prevent over-writing existing values
+        match direction {
+            SdpAttributeDirection::Recvonly => self.receive = list,
+            SdpAttributeDirection::Sendonly => self.send = list,
+            _ => ()
+        }
+    }
+}
+
+#[derive(Clone)]
 struct SdpAttributeRtcp {
     port: u32,
     nettype: SdpNetType,
@@ -173,9 +234,9 @@ struct SdpAttributeRtcpFb {
 
 #[derive(Clone)]
 enum SdpAttributeDirection {
-    Sendrecv,
+    Recvonly,
     Sendonly,
-    Recvonly
+    Sendrecv,
 }
 
 #[derive(Clone)]
@@ -275,8 +336,9 @@ enum SdpAttributeValue {
     Rtpmap {value: SdpAttributeRtpmap},
     Rtcp {value: SdpAttributeRtcp},
     Rtcpfb {value: SdpAttributeRtcpFb},
-    Setup {value: SdpAttributeSetup},
     Sctpmap {value: SdpAttributeSctpmap},
+    Setup {value: SdpAttributeSetup},
+    Simulcast {value: SdpAttributeSimulcast}
 }
 
 #[derive(Clone)]
@@ -610,7 +672,41 @@ impl SdpAttribute {
                     value: port
                 })
             }
-            SdpAttributeType::Simulcast => (self.string_value = Some(v.to_string())),
+            SdpAttributeType::Simulcast => {
+                let mut tokens = v.split_whitespace();
+                let mut token = match tokens.next() {
+                    None => return Err(SdpParserResult::ParserLineError{
+                        message: "Simulcast attribute is missing send/recv value".to_string(),
+                        line: v.to_string()}),
+                    Some(x) => x,
+                };
+                let mut sc = SdpAttributeSimulcast {
+                    send: Vec::new(),
+                    receive: Vec::new()
+                };
+                loop {
+                    let sendrecv = match token.to_lowercase().as_ref() {
+                        "send" => SdpAttributeDirection::Sendonly,
+                        "recv" => SdpAttributeDirection::Recvonly,
+                        _ => return Err(SdpParserResult::ParserLineError{
+                        message: "Unsupported send/recv value in simulcast attribute".to_string(),
+                        line: v.to_string()}),
+                    };
+                    match tokens.next() {
+                        None => return Err(SdpParserResult::ParserLineError{
+                            message: "Simulcast attribute is missing id list".to_string(),
+                            line: v.to_string()}),
+                        Some(x) => sc.parse_ids(sendrecv, x.to_string()),
+                    };
+                    token = match tokens.next() {
+                        None => { break; },
+                        Some(x) => x,
+                    };
+                }
+                self.value = Some(SdpAttributeValue::Simulcast {
+                    value: sc
+                })
+            },
             SdpAttributeType::Setup => {
                 self.value = Some(SdpAttributeValue::Setup {value:
                     match v.to_lowercase().as_ref() {
@@ -1610,7 +1706,20 @@ fn test_parse_attribute_sctp_port() {
 
 #[test]
 fn test_parse_attribute_simulcast() {
-    assert!(parse_attribute("simulcast: send rid=foo;bar").is_ok())
+    assert!(parse_attribute("simulcast:send 1").is_ok());
+    assert!(parse_attribute("simulcast:recv test").is_ok());
+    assert!(parse_attribute("simulcast:recv ~test").is_ok());
+    assert!(parse_attribute("simulcast:recv test;foo").is_ok());
+    assert!(parse_attribute("simulcast:recv foo,bar").is_ok());
+    assert!(parse_attribute("simulcast:recv foo,bar;test").is_ok());
+    assert!(parse_attribute("simulcast:recv 1;4,5 send 6;7").is_ok());
+    assert!(parse_attribute("simulcast:send 1,2,3;~4,~5 recv 6;~7,~8").is_ok());
+    // old draft 03 notation used by Firefox 55
+    assert!(parse_attribute("simulcast: send rid=foo;bar").is_ok());
+
+    assert!(parse_attribute("simulcast:send").is_err());
+    assert!(parse_attribute("simulcast:foobar 1").is_err());
+    assert!(parse_attribute("simulcast:send 1 foobar 2").is_err());
 }
 
 #[test]
