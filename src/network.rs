@@ -4,7 +4,7 @@ use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
 use error::SdpParserResult;
 
-#[derive(Clone)]
+#[derive(Clone,Debug,PartialEq)]
 pub enum SdpNetType {
     Internet
 }
@@ -15,7 +15,7 @@ impl fmt::Display for SdpNetType {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone,Debug,PartialEq)]
 pub enum SdpAddrType {
     IP4,
     IP6
@@ -40,6 +40,16 @@ pub fn parse_nettype(value: &str) -> Result<SdpNetType, SdpParserResult> {
     Ok(SdpNetType::Internet)
 }
 
+#[test]
+fn test_parse_nettype() {
+    let internet = parse_nettype("iN");
+    assert!(internet.is_ok());
+    assert_eq!(internet.unwrap(), SdpNetType::Internet);
+
+    assert!(parse_nettype("").is_err());
+    assert!(parse_nettype("FOO").is_err());
+}
+
 pub fn parse_addrtype(value: &str) -> Result<SdpAddrType, SdpParserResult> {
     Ok(match value.to_uppercase().as_ref() {
         "IP4" => SdpAddrType::IP4,
@@ -48,6 +58,19 @@ pub fn parse_addrtype(value: &str) -> Result<SdpAddrType, SdpParserResult> {
             message: "address type needs to be IP4 or IP6".to_string(),
             line: value.to_string() })
     })
+}
+
+#[test]
+fn test_parse_addrtype() {
+    let ip4 = parse_addrtype("iP4");
+    assert!(ip4.is_ok());
+    assert_eq!(ip4.unwrap(), SdpAddrType::IP4);
+    let ip6 = parse_addrtype("Ip6");
+    assert!(ip6.is_ok());
+    assert_eq!(ip6.unwrap(), SdpAddrType::IP6);
+
+    assert!(parse_addrtype("").is_err());
+    assert!(parse_addrtype("IP5").is_err());
 }
 
 pub fn parse_unicast_addr(addrtype: &SdpAddrType, value: &str) -> Result<IpAddr, SdpParserResult> {
@@ -77,5 +100,13 @@ pub fn parse_unicast_addr_unknown_type(value: &str) -> Result<IpAddr, SdpParserR
     } else {
         return parse_unicast_addr(&SdpAddrType::IP4, value);
     }
+}
+
+#[test]
+fn test_parse_unicast_addr_unknown_type() {
+    let ip4 = parse_unicast_addr_unknown_type("127.0.0.1");
+    assert!(ip4.is_ok());
+    let ip6 = parse_unicast_addr_unknown_type("::1");
+    assert!(ip6.is_ok());
 }
 
