@@ -1,6 +1,7 @@
 use std::fmt;
 use std::net::IpAddr;
 
+use SdpLine;
 use error::SdpParserResult;
 use network::{SdpAddrType, SdpNetType, parse_nettype, parse_addrtype, parse_unicast_addr, parse_unicast_addr_unknown_type};
 
@@ -710,3 +711,223 @@ impl SdpAttribute {
     }
 }
 
+pub fn parse_attribute(value: &str) -> Result<SdpLine, SdpParserResult> {
+    let name: &str;
+    let mut val: &str = "";
+    if value.find(':') == None {
+        name = value;
+    } else {
+        let v: Vec<&str> = value.splitn(2, ':').collect();
+        name = v[0];
+        val = v[1];
+    }
+    let attrtype = match name.to_lowercase().as_ref() {
+        "candidate" => SdpAttributeType::Candidate,
+        "end-of-candidates" => SdpAttributeType::EndOfCandidates,
+        "extmap" => SdpAttributeType::Extmap,
+        "fingerprint" => SdpAttributeType::Fingerprint,
+        "fmtp" => SdpAttributeType::Fmtp,
+        "group" => SdpAttributeType::Group,
+        "ice-options" => SdpAttributeType::IceOptions,
+        "ice-pwd" => SdpAttributeType::IcePwd,
+        "ice-ufrag" => SdpAttributeType::IceUfrag,
+        "inactive" => SdpAttributeType::Inactive,
+        "mid" => SdpAttributeType::Mid,
+        "msid" => SdpAttributeType::Msid,
+        "msid-semantic" => SdpAttributeType::MsidSemantic,
+        "rid" => SdpAttributeType::Rid,
+        "recvonly" => SdpAttributeType::Recvonly,
+        "rtcp" => SdpAttributeType::Rtcp,
+        "rtcp-fb" => SdpAttributeType::RtcpFb,
+        "rtcp-mux" => SdpAttributeType::RtcpMux,
+        "rtcp-rsize" => SdpAttributeType::RtcpRsize,
+        "rtpmap" => SdpAttributeType::Rtpmap,
+        "sctpmap" => SdpAttributeType::Sctpmap,
+        "sctp-port" => SdpAttributeType::SctpPort,
+        "sendonly" => SdpAttributeType::Sendonly,
+        "sendrecv" => SdpAttributeType::Sendrecv,
+        "setup" => SdpAttributeType::Setup,
+        "simulcast" => SdpAttributeType::Simulcast,
+        "ssrc" => SdpAttributeType::Ssrc,
+        "ssrc-group" => SdpAttributeType::SsrcGroup,
+        _ => return Err(SdpParserResult::ParserUnsupported {
+              message: "unsupported attribute value".to_string(),
+              line: name.to_string() }),
+    };
+    let mut attr = SdpAttribute::new(attrtype);
+    try!(attr.parse_value(val.trim()));
+    /*
+    println!("attribute: {}, {}", 
+             a.name, a.value.some());
+             */
+    Ok(SdpLine::Attribute { value: attr })
+}
+
+#[test]
+fn test_parse_attribute_candidate() {
+    assert!(parse_attribute("candidate:0 1 UDP 2122252543 172.16.156.106 49760 typ host").is_ok());
+    assert!(parse_attribute("candidate:foo 1 UDP 2122252543 172.16.156.106 49760 typ host").is_ok());
+    assert!(parse_attribute("candidate:0 1 TCP 2122252543 172.16.156.106 49760 typ host").is_ok());
+    assert!(parse_attribute("candidate:0 1 TCP 2122252543 ::1 49760 typ host").is_ok());
+    assert!(parse_attribute("candidate:0 1 UDP 2122252543 172.16.156.106 49760 typ srflx").is_ok());
+    assert!(parse_attribute("candidate:0 1 UDP 2122252543 172.16.156.106 49760 typ prflx").is_ok());
+    assert!(parse_attribute("candidate:0 1 UDP 2122252543 172.16.156.106 49760 typ relay").is_ok());
+    assert!(parse_attribute("candidate:0 1 TCP 2122252543 172.16.156.106 49760 typ host tcptype active").is_ok());
+    assert!(parse_attribute("candidate:0 1 TCP 2122252543 172.16.156.106 49760 typ host tcptype passive").is_ok());
+    assert!(parse_attribute("candidate:0 1 TCP 2122252543 172.16.156.106 49760 typ host tcptype so").is_ok());
+    assert!(parse_attribute("candidate:1 1 UDP 1685987071 24.23.204.141 54609 typ srflx raddr 192.168.1.4 rport 61665").is_ok());
+    assert!(parse_attribute("candidate:1 1 TCP 1685987071 24.23.204.141 54609 typ srflx raddr 192.168.1.4 rport 61665 tcptype passive").is_ok());
+
+    assert!(parse_attribute("candidate:0 1 UDP 2122252543 172.16.156.106 49760 typ").is_err());
+    assert!(parse_attribute("candidate:0 foo UDP 2122252543 172.16.156.106 49760 typ host").is_err());
+    assert!(parse_attribute("candidate:0 1 FOO 2122252543 172.16.156.106 49760 typ host").is_err());
+    assert!(parse_attribute("candidate:0 1 UDP foo 172.16.156.106 49760 typ host").is_err());
+    assert!(parse_attribute("candidate:0 1 UDP 2122252543 172.16.156 49760 typ host").is_err());
+    assert!(parse_attribute("candidate:0 1 UDP 2122252543 172.16.156.106 70000 typ host").is_err());
+    assert!(parse_attribute("candidate:0 1 UDP 2122252543 172.16.156.106 49760 type host").is_err());
+    assert!(parse_attribute("candidate:0 1 UDP 2122252543 172.16.156.106 49760 typ fost").is_err());
+    assert!(parse_attribute("candidate:1 1 UDP 1685987071 24.23.204.141 54609 typ srflx raddr 192.168.1 rport 61665").is_err());
+    assert!(parse_attribute("candidate:1 1 UDP 1685987071 24.23.204.141 54609 typ srflx raddr 192.168.1.4 rport 70000").is_err());
+}
+
+#[test]
+fn test_parse_attribute_end_of_candidates() {
+    assert!(parse_attribute("end-of-candidates").is_ok())
+}
+
+#[test]
+fn test_parse_attribute_extmap() {
+    assert!(parse_attribute("extmap:1/sendonly urn:ietf:params:rtp-hdrext:ssrc-audio-level").is_ok());
+    assert!(parse_attribute("extmap:3 http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time").is_ok());
+}
+
+#[test]
+fn test_parse_attribute_fingerprint() {
+    assert!(parse_attribute("fingerprint:sha-256 CD:34:D1:62:16:95:7B:B7:EB:74:E2:39:27:97:EB:0B:23:73:AC:BC:BF:2F:E3:91:CB:57:A9:9D:4A:A2:0B:40").is_ok())
+}
+
+#[test]
+fn test_parse_attribute_fmtp() {
+    assert!(parse_attribute("fmtp:109 maxplaybackrate=48000;stereo=1;useinbandfec=1").is_ok())
+}
+
+#[test]
+fn test_parse_attribute_group() {
+    assert!(parse_attribute("group:LS").is_ok());
+    assert!(parse_attribute("group:LS 1 2").is_ok());
+    assert!(parse_attribute("group:BUNDLE sdparta_0 sdparta_1 sdparta_2").is_ok());
+
+    assert!(parse_attribute("group:").is_err());
+    assert!(parse_attribute("group:NEVER_SUPPORTED_SEMANTICS").is_err());
+}
+
+#[test]
+fn test_parse_attribute_ice_options() {
+    assert!(parse_attribute("ice-options:trickle").is_ok())
+}
+
+#[test]
+fn test_parse_attribute_ice_pwd() {
+    assert!(parse_attribute("ice-pwd:e3baa26dd2fa5030d881d385f1e36cce").is_ok())
+}
+
+#[test]
+fn test_parse_attribute_ice_ufrag() {
+    assert!(parse_attribute("ice-ufrag:58b99ead").is_ok())
+}
+
+#[test]
+fn test_parse_attribute_inactive() {
+    assert!(parse_attribute("inactive").is_ok())
+}
+
+#[test]
+fn test_parse_attribute_mid() {
+    assert!(parse_attribute("mid:sdparta_0").is_ok())
+}
+
+#[test]
+fn test_parse_attribute_msid() {
+    assert!(parse_attribute("msid:{5a990edd-0568-ac40-8d97-310fc33f3411}").is_ok());
+    assert!(parse_attribute("msid:{5a990edd-0568-ac40-8d97-310fc33f3411} {218cfa1c-617d-2249-9997-60929ce4c405}").is_ok());
+
+    assert!(parse_attribute("msid:").is_err());
+}
+
+#[test]
+fn test_parse_attribute_msid_semantics() {
+    assert!(parse_attribute("msid-semantic:WMS *").is_ok())
+}
+
+#[test]
+fn test_parse_attribute_rid() {
+    assert!(parse_attribute("rid:foo send").is_ok())
+}
+
+#[test]
+fn test_parse_attribute_recvonly() {
+    assert!(parse_attribute("recvonly").is_ok())
+}
+
+#[test]
+fn test_parse_attribute_rtcp() {
+    assert!(parse_attribute("rtcp:9 IN IP4 0.0.0.0").is_ok())
+}
+
+#[test]
+fn test_parse_attribute_rtcp_fb() {
+    assert!(parse_attribute("rtcp-fb:101 ccm fir").is_ok())
+}
+
+#[test]
+fn test_parse_attribute_rtcp_mux() {
+    assert!(parse_attribute("rtcp-mux").is_ok())
+}
+
+#[test]
+fn test_parse_attribute_rtcp_rsize() {
+    assert!(parse_attribute("rtcp-rsize").is_ok())
+}
+
+#[test]
+fn test_parse_attribute_rtpmap() {
+    assert!(parse_attribute("rtpmap:109 opus/48000/2").is_ok())
+}
+
+#[test]
+fn test_parse_attribute_sctpmap() {
+    assert!(parse_attribute("sctpmap:5000 webrtc-datachannel 256").is_ok())
+}
+
+#[test]
+fn test_parse_attribute_sctp_port() {
+    assert!(parse_attribute("sctp-port:5000").is_ok())
+}
+
+#[test]
+fn test_parse_attribute_simulcast() {
+    assert!(parse_attribute("simulcast:send 1").is_ok());
+    assert!(parse_attribute("simulcast:recv test").is_ok());
+    assert!(parse_attribute("simulcast:recv ~test").is_ok());
+    assert!(parse_attribute("simulcast:recv test;foo").is_ok());
+    assert!(parse_attribute("simulcast:recv foo,bar").is_ok());
+    assert!(parse_attribute("simulcast:recv foo,bar;test").is_ok());
+    assert!(parse_attribute("simulcast:recv 1;4,5 send 6;7").is_ok());
+    assert!(parse_attribute("simulcast:send 1,2,3;~4,~5 recv 6;~7,~8").is_ok());
+    // old draft 03 notation used by Firefox 55
+    assert!(parse_attribute("simulcast: send rid=foo;bar").is_ok());
+
+    assert!(parse_attribute("simulcast:send").is_err());
+    assert!(parse_attribute("simulcast:foobar 1").is_err());
+    assert!(parse_attribute("simulcast:send 1 foobar 2").is_err());
+}
+
+#[test]
+fn test_parse_attribute_ssrc() {
+    assert!(parse_attribute("ssrc:2655508255 cname:{735484ea-4f6c-f74a-bd66-7425f8476c2e}").is_ok())
+}
+
+#[test]
+fn test_parse_attribute_ssrc_group() {
+    assert!(parse_attribute("ssrc-group:FID 3156517279 2673335628").is_ok())
+}
