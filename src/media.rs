@@ -148,6 +148,23 @@ fn parse_media_token(value: &str) -> Result<SdpMediaValue, SdpParserResult> {
     })
 }
 
+#[test]
+fn test_parse_media_token() {
+    let audio = parse_media_token("audio");
+    assert!(audio.is_ok());
+    assert_eq!(audio.unwrap(), SdpMediaValue::Audio);
+    let video = parse_media_token("VIDEO");
+    assert!(video.is_ok());
+    assert_eq!(video.unwrap(), SdpMediaValue::Video);
+    let app = parse_media_token("aPplIcatIOn");
+    assert!(app.is_ok());
+    assert_eq!(app.unwrap(), SdpMediaValue::Application);
+
+    assert!(parse_media_token("").is_err());
+    assert!(parse_media_token("foobar").is_err());
+}
+
+
 fn parse_protocol_token(value: &str) -> Result<SdpProtocolValue, SdpParserResult> {
     Ok(match value.to_uppercase().as_ref() {
         "UDP/TLS/RTP/SAVPF" => SdpProtocolValue::UdpTlsRtpSavpf,
@@ -159,6 +176,28 @@ fn parse_protocol_token(value: &str) -> Result<SdpProtocolValue, SdpParserResult
               message: "unsupported protocol value".to_string(),
               line: value.to_string() }),
     })
+}
+
+#[test]
+fn test_parse_protocol_token() {
+    let udps = parse_protocol_token("udp/tls/rtp/savpf");
+    assert!(udps.is_ok());
+    assert_eq!(udps.unwrap(), SdpProtocolValue::UdpTlsRtpSavpf);
+    let tcps = parse_protocol_token("TCP/tls/rtp/savpf");
+    assert!(tcps.is_ok());
+    assert_eq!(tcps.unwrap(), SdpProtocolValue::TcpTlsRtpSavpf);
+    let dtls = parse_protocol_token("dtLs/ScTP");
+    assert!(dtls.is_ok());
+    assert_eq!(dtls.unwrap(), SdpProtocolValue::DtlsSctp);
+    let usctp = parse_protocol_token("udp/DTLS/sctp");
+    assert!(usctp.is_ok());
+    assert_eq!(usctp.unwrap(), SdpProtocolValue::UdpDtlsSctp);
+    let tsctp = parse_protocol_token("tcp/dtls/SCTP");
+    assert!(tsctp.is_ok());
+    assert_eq!(tsctp.unwrap(), SdpProtocolValue::TcpDtlsSctp);
+
+    assert!(parse_protocol_token("").is_err());
+    assert!(parse_protocol_token("foobar").is_err());
 }
 
 pub fn parse_media(value: &str) -> Result<SdpLine, SdpParserResult> {
@@ -250,7 +289,6 @@ fn test_media_invalid_payload() {
     assert!(parse_media("audio 9 UDP/TLS/RTP/SAVPF 300").is_err());
 }
 
-// TODO add uni tests here
 pub fn parse_media_vector(lines: &[SdpLine]) -> Result<Vec<SdpMedia>, SdpParserResult> {
     let mut media_sections: Vec<SdpMedia> = Vec::new();
     let mut sdp_media = match lines[0] {
@@ -283,4 +321,4 @@ pub fn parse_media_vector(lines: &[SdpLine]) -> Result<Vec<SdpMedia>, SdpParserR
     media_sections.push(sdp_media);
     Ok(media_sections)
 }
-
+// TODO add unit tests for parse_media_vector
