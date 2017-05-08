@@ -1,6 +1,6 @@
 use std::fmt;
 use {SdpLine, SdpBandwidth, SdpConnection};
-use attributes::SdpAttribute;
+use attribute_type::SdpAttribute;
 use error::SdpParserResult;
 
 #[derive(Clone)]

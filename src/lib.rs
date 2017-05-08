@@ -1,14 +1,14 @@
 use std::net::IpAddr;
 
-mod attributes;
+mod attribute_type;
 mod error;
-mod media;
+mod media_type;
 mod network;
 mod unsupported_types;
 
-use attributes::{SdpAttribute, parse_attribute};
+use attribute_type::{SdpAttribute, parse_attribute};
 use error::SdpParserResult;
-use media::{SdpMedia, SdpMediaLine, parse_media, parse_media_vector};
+use media_type::{SdpMedia, SdpMediaLine, parse_media, parse_media_vector};
 use network::{SdpNetType, SdpAddrType, parse_addrtype, parse_nettype, parse_unicast_addr};
 use unsupported_types::{parse_email, parse_information, parse_key, parse_phone, parse_repeat, parse_uri, parse_zone};
 
