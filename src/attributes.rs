@@ -362,6 +362,10 @@ impl SdpAttribute {
             SdpAttributeType::Rid => {
                 self.value = Some(SdpAttributeValue::Str {value: v.to_string()})
             },
+            SdpAttributeType::SsrcGroup => {
+                // JSEP has no support for it...
+                self.value = Some(SdpAttributeValue::Str {value: v.to_string()})
+            },
 
             SdpAttributeType::Candidate => {
                 let tokens: Vec<&str> = v.split_whitespace().collect();
@@ -705,7 +709,6 @@ impl SdpAttribute {
                 })
             },
             SdpAttributeType::Ssrc => (self.string_value = Some(v.to_string())),
-            SdpAttributeType::SsrcGroup => (self.string_value = Some(v.to_string())),
         }
         Ok(())
     }
