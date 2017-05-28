@@ -307,6 +307,32 @@ enum SdpAttributeSetup {
 }
 
 #[derive(Clone)]
+struct SdpAttributeSsrc {
+    id: u32,
+    attribute: Option<String>,
+    value: Option<String>
+}
+
+impl SdpAttributeSsrc {
+    pub fn new(id: u32) -> SdpAttributeSsrc {
+        SdpAttributeSsrc { id: id,
+                           attribute: None,
+                           value: None
+        }
+    }
+
+    fn set_attribute(&mut self, a: &str) {
+        if a.find(':') == None {
+            self.attribute = Some(a.to_string());
+        } else {
+            let v: Vec<&str> = a.splitn(2, ':').collect();
+            self.attribute = Some(v[0].to_string());
+            self.value = Some(v[1].to_string());
+        }
+    }
+}
+
+#[derive(Clone)]
 enum SdpAttributeValue {
     Str {value: String},
     Int {value: u32},
@@ -322,20 +348,19 @@ enum SdpAttributeValue {
     Rtcpfb {value: SdpAttributeRtcpFb},
     Sctpmap {value: SdpAttributeSctpmap},
     Setup {value: SdpAttributeSetup},
-    Simulcast {value: SdpAttributeSimulcast}
+    Simulcast {value: SdpAttributeSimulcast},
+    Ssrc {value: SdpAttributeSsrc},
 }
 
 #[derive(Clone)]
 pub struct SdpAttribute {
     name: SdpAttributeType,
-    string_value: Option<String>,
     value: Option<SdpAttributeValue>
 }
 
 impl SdpAttribute {
     pub fn new(t: SdpAttributeType) -> SdpAttribute {
         SdpAttribute { name: t,
-                       string_value: None,
                        value: None
                      }
     }
@@ -711,7 +736,23 @@ impl SdpAttribute {
                     }
                 })
             },
-            SdpAttributeType::Ssrc => (self.string_value = Some(v.to_string())),
+            SdpAttributeType::Ssrc => {
+                let mut tokens  = v.split_whitespace();
+                let ssrc_id = match tokens.next() {
+                    None => return Err(SdpParserResult::ParserLineError{
+                        message: "Ssrc attribute is missing ssrc-id value".to_string(),
+                        line: v.to_string()}),
+                    Some(x) => try!(x.parse::<u32>())
+                };
+                let mut ssrc = SdpAttributeSsrc::new(ssrc_id);
+                match tokens.next() {
+                    None => (),
+                    Some(x) => ssrc.set_attribute(x),
+                };
+                self.value = Some(SdpAttributeValue::Ssrc {
+                    value: ssrc
+                })
+            },
         }
         Ok(())
     }
@@ -930,7 +971,12 @@ fn test_parse_attribute_simulcast() {
 
 #[test]
 fn test_parse_attribute_ssrc() {
-    assert!(parse_attribute("ssrc:2655508255 cname:{735484ea-4f6c-f74a-bd66-7425f8476c2e}").is_ok())
+    assert!(parse_attribute("ssrc:2655508255").is_ok());
+    assert!(parse_attribute("ssrc:2655508255 foo").is_ok());
+    assert!(parse_attribute("ssrc:2655508255 cname:{735484ea-4f6c-f74a-bd66-7425f8476c2e}").is_ok());
+
+    assert!(parse_attribute("ssrc:").is_err());
+    assert!(parse_attribute("ssrc:foo").is_err());
 }
 
 #[test]
