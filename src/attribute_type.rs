@@ -362,8 +362,12 @@ impl SdpAttribute {
             SdpAttributeType::Rid => {
                 self.value = Some(SdpAttributeValue::Str {value: v.to_string()})
             },
+            SdpAttributeType::MsidSemantic => {
+                // mmusic-msid-16 no longer describes this...
+                self.value = Some(SdpAttributeValue::Str {value: v.to_string()})
+            },
             SdpAttributeType::SsrcGroup => {
-                // JSEP has no support for it...
+                // JSEP has no support for it any more...
                 self.value = Some(SdpAttributeValue::Str {value: v.to_string()})
             },
 
@@ -563,7 +567,6 @@ impl SdpAttribute {
                     }
                 })
             },
-            SdpAttributeType::MsidSemantic => (self.string_value = Some(v.to_string())),
             SdpAttributeType::Rtcp => {
                 let tokens: Vec<&str> = v.split_whitespace().collect();
                 if tokens.len() != 4 {
