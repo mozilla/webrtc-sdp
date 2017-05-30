@@ -31,6 +31,7 @@ impl fmt::Display for SdpMediaValue {
 
 #[derive(Clone,Debug,PartialEq)]
 pub enum SdpProtocolValue {
+    RtpSavpf,
     UdpTlsRtpSavpf,
     TcpTlsRtpSavpf,
     DtlsSctp,
@@ -41,6 +42,7 @@ pub enum SdpProtocolValue {
 impl fmt::Display for SdpProtocolValue {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let printable = match *self {
+            SdpProtocolValue::RtpSavpf       => "Rtp/Savpf",
             SdpProtocolValue::UdpTlsRtpSavpf => "Udp/Tls/Rtp/Savpf",
             SdpProtocolValue::TcpTlsRtpSavpf => "Tcp/Tls/Rtp/Savpf",
             SdpProtocolValue::DtlsSctp       => "Dtls/Sctp",
@@ -167,6 +169,7 @@ fn test_parse_media_token() {
 
 fn parse_protocol_token(value: &str) -> Result<SdpProtocolValue, SdpParserResult> {
     Ok(match value.to_uppercase().as_ref() {
+        "RTP/SAVPF"         => SdpProtocolValue::RtpSavpf,
         "UDP/TLS/RTP/SAVPF" => SdpProtocolValue::UdpTlsRtpSavpf,
         "TCP/TLS/RTP/SAVPF" => SdpProtocolValue::TcpTlsRtpSavpf,
         "DTLS/SCTP"         => SdpProtocolValue::DtlsSctp,
@@ -180,6 +183,9 @@ fn parse_protocol_token(value: &str) -> Result<SdpProtocolValue, SdpParserResult
 
 #[test]
 fn test_parse_protocol_token() {
+    let rtps = parse_protocol_token("rtp/savpf");
+    assert!(rtps.is_ok());
+    assert_eq!(rtps.unwrap(), SdpProtocolValue::RtpSavpf);
     let udps = parse_protocol_token("udp/tls/rtp/savpf");
     assert!(udps.is_ok());
     assert_eq!(udps.unwrap(), SdpProtocolValue::UdpTlsRtpSavpf);

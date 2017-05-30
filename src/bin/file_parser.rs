@@ -2,10 +2,18 @@ use std::error::Error;
 use std::io::prelude::*;
 use std::fs::File;
 use std::path::Path;
+use std::env;
 extern crate rsdparsa;
 
 fn main() {
-    let path = Path::new("sdp.txt");
+    let filename = match env::args().nth(1) {
+        None => {
+            println!("Missing file name argument!");
+            return;
+        },
+        Some(x) => x,
+    };
+    let path = Path::new(filename.as_str());
     let display = path.display();
 
     let mut file = match File::open(&path) {
@@ -23,5 +31,5 @@ fn main() {
         Ok(s) => s
     };
 
-    rsdparsa::parse_sdp(&s, true);
+    rsdparsa::parse_sdp(&s, true).is_ok();
 }
