@@ -8,6 +8,7 @@ use network::{SdpAddrType, SdpNetType, parse_nettype, parse_addrtype, parse_unic
 #[derive(Clone)]
 pub enum SdpAttributeType {
     // TODO consolidate these into groups
+    BundleOnly,
     Candidate,
     EndOfCandidates,
     Extmap,
@@ -42,6 +43,7 @@ pub enum SdpAttributeType {
 impl fmt::Display for SdpAttributeType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let printable = match *self {
+            SdpAttributeType::BundleOnly => "Bundle-Only",
             SdpAttributeType::Candidate => "Candidate",
             SdpAttributeType::EndOfCandidates => "End-Of-Candidates",
             SdpAttributeType::Extmap => "Extmap",
@@ -369,6 +371,7 @@ impl SdpAttribute {
 
     pub fn parse_value(&mut self, v: &str) -> Result<(), SdpParserResult> {
         match self.name {
+            SdpAttributeType::BundleOnly |
             SdpAttributeType::EndOfCandidates |
             SdpAttributeType::IceLite |
             SdpAttributeType::Inactive |
@@ -772,6 +775,7 @@ pub fn parse_attribute(value: &str) -> Result<SdpLine, SdpParserResult> {
         val = v[1];
     }
     let attrtype = match name.to_lowercase().as_ref() {
+        "bundle-only" => SdpAttributeType::BundleOnly,
         "candidate" => SdpAttributeType::Candidate,
         "end-of-candidates" => SdpAttributeType::EndOfCandidates,
         "extmap" => SdpAttributeType::Extmap,
@@ -870,6 +874,11 @@ fn test_parse_attribute_group() {
 
     assert!(parse_attribute("group:").is_err());
     assert!(parse_attribute("group:NEVER_SUPPORTED_SEMANTICS").is_err());
+}
+
+#[test]
+fn test_parse_attribute_bundle_only() {
+    assert!(parse_attribute("bundle-only").is_ok())
 }
 
 #[test]
