@@ -20,6 +20,7 @@ pub enum SdpAttributeType {
     IcePwd,
     IceUfrag,
     Inactive,
+    MaxMessageSize,
     Mid,
     Msid,
     MsidSemantic,
@@ -55,6 +56,7 @@ impl fmt::Display for SdpAttributeType {
             SdpAttributeType::IcePwd => "Ice-Pwd",
             SdpAttributeType::IceUfrag => "Ice-Ufrag",
             SdpAttributeType::Inactive => "Inactive",
+            SdpAttributeType::MaxMessageSize => "Max-Message-Size",
             SdpAttributeType::Mid => "Mid",
             SdpAttributeType::Msid => "Msid",
             SdpAttributeType::MsidSemantic => "Msid-Semantic",
@@ -579,6 +581,11 @@ impl SdpAttribute {
                 self.value = Some(SdpAttributeValue::Vector {
                     value: v.split_whitespace().map(|x| x.to_string()).collect()})
             },
+            SdpAttributeType::MaxMessageSize => {
+                self.value = Some(SdpAttributeValue::Int {
+                    value: try!(v.parse::<u32>())
+                })
+            }
             SdpAttributeType::Msid => {
                 let mut tokens  = v.split_whitespace();
                 let id = match tokens.next() {
@@ -787,6 +794,7 @@ pub fn parse_attribute(value: &str) -> Result<SdpLine, SdpParserResult> {
         "ice-pwd" => SdpAttributeType::IcePwd,
         "ice-ufrag" => SdpAttributeType::IceUfrag,
         "inactive" => SdpAttributeType::Inactive,
+        "max-message-size" => SdpAttributeType::MaxMessageSize,
         "mid" => SdpAttributeType::Mid,
         "msid" => SdpAttributeType::Msid,
         "msid-semantic" => SdpAttributeType::MsidSemantic,
@@ -967,6 +975,11 @@ fn test_parse_attribute_sctpmap() {
 #[test]
 fn test_parse_attribute_sctp_port() {
     assert!(parse_attribute("sctp-port:5000").is_ok())
+}
+
+#[test]
+fn test_parse_attribute_max_message_size() {
+    assert!(parse_attribute("max-message-size:1").is_ok())
 }
 
 #[test]
