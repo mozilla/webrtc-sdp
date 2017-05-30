@@ -22,9 +22,11 @@ pub enum SdpAttributeType {
     IceUfrag,
     Inactive,
     MaxMessageSize,
+    MaxPtime,
     Mid,
     Msid,
     MsidSemantic,
+    Ptime,
     Rid,
     Recvonly,
     Rtcp,
@@ -59,9 +61,11 @@ impl fmt::Display for SdpAttributeType {
             SdpAttributeType::IceUfrag => "Ice-Ufrag",
             SdpAttributeType::Inactive => "Inactive",
             SdpAttributeType::MaxMessageSize => "Max-Message-Size",
+            SdpAttributeType::MaxPtime => "Max-Ptime",
             SdpAttributeType::Mid => "Mid",
             SdpAttributeType::Msid => "Msid",
             SdpAttributeType::MsidSemantic => "Msid-Semantic",
+            SdpAttributeType::Ptime => "Ptime",
             SdpAttributeType::Rid => "Rid",
             SdpAttributeType::Recvonly => "Recvonly",
             SdpAttributeType::Rtcp => "Rtcp",
@@ -392,6 +396,14 @@ impl SdpAttribute {
                 }
             },
 
+            SdpAttributeType::MaxMessageSize |
+            SdpAttributeType::MaxPtime |
+            SdpAttributeType::Ptime => {
+                self.value = Some(SdpAttributeValue::Int {
+                    value: try!(v.parse::<u32>())
+                })
+            },
+
             SdpAttributeType::IcePwd |
             SdpAttributeType::IceUfrag |
             SdpAttributeType::Mid |
@@ -584,11 +596,6 @@ impl SdpAttribute {
                 self.value = Some(SdpAttributeValue::Vector {
                     value: v.split_whitespace().map(|x| x.to_string()).collect()})
             },
-            SdpAttributeType::MaxMessageSize => {
-                self.value = Some(SdpAttributeValue::Int {
-                    value: try!(v.parse::<u32>())
-                })
-            }
             SdpAttributeType::Msid => {
                 let mut tokens  = v.split_whitespace();
                 let id = match tokens.next() {
@@ -799,9 +806,11 @@ pub fn parse_attribute(value: &str) -> Result<SdpLine, SdpParserResult> {
         "ice-ufrag" => SdpAttributeType::IceUfrag,
         "inactive" => SdpAttributeType::Inactive,
         "max-message-size" => SdpAttributeType::MaxMessageSize,
+        "maxptime" => SdpAttributeType::MaxPtime,
         "mid" => SdpAttributeType::Mid,
         "msid" => SdpAttributeType::Msid,
         "msid-semantic" => SdpAttributeType::MsidSemantic,
+        "ptime" => SdpAttributeType::Ptime,
         "rid" => SdpAttributeType::Rid,
         "recvonly" => SdpAttributeType::Recvonly,
         "rtcp" => SdpAttributeType::Rtcp,
@@ -924,6 +933,11 @@ fn test_parse_attribute_inactive() {
 }
 
 #[test]
+fn test_parse_attribute_maxptime() {
+    assert!(parse_attribute("maxptime:60").is_ok())
+}
+
+#[test]
 fn test_parse_attribute_mid() {
     assert!(parse_attribute("mid:sdparta_0").is_ok())
 }
@@ -939,6 +953,11 @@ fn test_parse_attribute_msid() {
 #[test]
 fn test_parse_attribute_msid_semantics() {
     assert!(parse_attribute("msid-semantic:WMS *").is_ok())
+}
+
+#[test]
+fn test_parse_attribute_ptime() {
+    assert!(parse_attribute("ptime:30").is_ok())
 }
 
 #[test]
