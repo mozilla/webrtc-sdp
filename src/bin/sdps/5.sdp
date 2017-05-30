@@ -1,5 +1,5 @@
-v=0\r\n
-o=- 4294967296 2 IN IP4 127.0.0.1\r\n
-s=SIP Call\r\n
-t=0 0\r\n
-a=ice-lite\r\n
+v=0
+o=- 4294967296 2 IN IP4 127.0.0.1
+s=SIP Call
+t=0 0
+a=ice-lite
