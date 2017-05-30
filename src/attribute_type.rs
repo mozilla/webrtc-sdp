@@ -16,6 +16,7 @@ pub enum SdpAttributeType {
     Fmtp,
     Group,
     IceLite,
+    IceMismatch,
     IceOptions,
     IcePwd,
     IceUfrag,
@@ -52,6 +53,7 @@ impl fmt::Display for SdpAttributeType {
             SdpAttributeType::Fmtp => "Fmtp",
             SdpAttributeType::Group => "Group",
             SdpAttributeType::IceLite => "Ice-Lite",
+            SdpAttributeType::IceMismatch => "Ice-Mismatch",
             SdpAttributeType::IceOptions => "Ice-Options",
             SdpAttributeType::IcePwd => "Ice-Pwd",
             SdpAttributeType::IceUfrag => "Ice-Ufrag",
@@ -376,6 +378,7 @@ impl SdpAttribute {
             SdpAttributeType::BundleOnly |
             SdpAttributeType::EndOfCandidates |
             SdpAttributeType::IceLite |
+            SdpAttributeType::IceMismatch |
             SdpAttributeType::Inactive |
             SdpAttributeType::Recvonly |
             SdpAttributeType::RtcpMux |
@@ -790,6 +793,7 @@ pub fn parse_attribute(value: &str) -> Result<SdpLine, SdpParserResult> {
         "fmtp" => SdpAttributeType::Fmtp,
         "group" => SdpAttributeType::Group,
         "ice-lite" => SdpAttributeType::IceLite,
+        "ice-mismatch" => SdpAttributeType::IceMismatch,
         "ice-options" => SdpAttributeType::IceOptions,
         "ice-pwd" => SdpAttributeType::IcePwd,
         "ice-ufrag" => SdpAttributeType::IceUfrag,
@@ -892,6 +896,11 @@ fn test_parse_attribute_bundle_only() {
 #[test]
 fn test_parse_attribute_ice_lite() {
     assert!(parse_attribute("ice-lite").is_ok())
+}
+
+#[test]
+fn test_parse_attribute_ice_mismatch() {
+    assert!(parse_attribute("ice-mismatch").is_ok())
 }
 
 #[test]
