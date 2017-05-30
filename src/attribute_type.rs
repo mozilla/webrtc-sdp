@@ -14,6 +14,7 @@ pub enum SdpAttributeType {
     Fingerprint,
     Fmtp,
     Group,
+    IceLite,
     IceOptions,
     IcePwd,
     IceUfrag,
@@ -47,6 +48,7 @@ impl fmt::Display for SdpAttributeType {
             SdpAttributeType::Fingerprint => "Fingerprint",
             SdpAttributeType::Fmtp => "Fmtp",
             SdpAttributeType::Group => "Group",
+            SdpAttributeType::IceLite => "Ice-Lite",
             SdpAttributeType::IceOptions => "Ice-Options",
             SdpAttributeType::IcePwd => "Ice-Pwd",
             SdpAttributeType::IceUfrag => "Ice-Ufrag",
@@ -368,6 +370,7 @@ impl SdpAttribute {
     pub fn parse_value(&mut self, v: &str) -> Result<(), SdpParserResult> {
         match self.name {
             SdpAttributeType::EndOfCandidates |
+            SdpAttributeType::IceLite |
             SdpAttributeType::Inactive |
             SdpAttributeType::Recvonly |
             SdpAttributeType::RtcpMux |
@@ -775,6 +778,7 @@ pub fn parse_attribute(value: &str) -> Result<SdpLine, SdpParserResult> {
         "fingerprint" => SdpAttributeType::Fingerprint,
         "fmtp" => SdpAttributeType::Fmtp,
         "group" => SdpAttributeType::Group,
+        "ice-lite" => SdpAttributeType::IceLite,
         "ice-options" => SdpAttributeType::IceOptions,
         "ice-pwd" => SdpAttributeType::IcePwd,
         "ice-ufrag" => SdpAttributeType::IceUfrag,
@@ -866,6 +870,11 @@ fn test_parse_attribute_group() {
 
     assert!(parse_attribute("group:").is_err());
     assert!(parse_attribute("group:NEVER_SUPPORTED_SEMANTICS").is_err());
+}
+
+#[test]
+fn test_parse_attribute_ice_lite() {
+    assert!(parse_attribute("ice-lite").is_ok())
 }
 
 #[test]
