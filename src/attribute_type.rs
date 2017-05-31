@@ -216,9 +216,29 @@ impl SdpAttributeSimulcast {
 #[derive(Clone)]
 struct SdpAttributeRtcp {
     port: u32,
-    nettype: SdpNetType,
-    addrtype: SdpAddrType,
-    unicast_addr: IpAddr
+    nettype: Option<SdpNetType>,
+    addrtype: Option<SdpAddrType>,
+    unicast_addr: Option<IpAddr>
+}
+
+impl SdpAttributeRtcp {
+    pub fn new(port: u32) -> SdpAttributeRtcp {
+        SdpAttributeRtcp {
+            port: port,
+            nettype: None,
+            addrtype: None,
+            unicast_addr: None
+        }
+    }
+
+    fn set_nettype(&mut self, nt: SdpNetType) {
+        self.nettype = Some(nt)
+    }
+
+    fn set_addr(&mut self, at: SdpAddrType, addr: IpAddr) {
+        self.addrtype = Some(at);
+        self.unicast_addr = Some(addr)
+    }
 }
 
 #[derive(Clone)]
@@ -616,29 +636,42 @@ impl SdpAttribute {
                 })
             },
             SdpAttributeType::Rtcp => {
-                let tokens: Vec<&str> = v.split_whitespace().collect();
-                if tokens.len() != 4 {
-                    return Err(SdpParserResult::ParserLineError{
-                        message: "Rtcp needs to have four tokens".to_string(),
-                        line: v.to_string()})
-                }
-                let port = try!(tokens[0].parse::<u32>());
+                let mut tokens = v.split_whitespace();
+                let port = match tokens.next() {
+                    None => return Err(SdpParserResult::ParserLineError{
+                        message: "Rtcp attribute is missing port number".to_string(),
+                        line: v.to_string()}),
+                    Some(x) => try!(x.parse::<u32>())
+                };
                 if port > 65535 {
                     return Err(SdpParserResult::ParserLineError{
                         message: "Rtcp port can only be a bit 16bit number".to_string(),
                         line: v.to_string()})
-                }
-                let nettype = try!(parse_nettype(tokens[1]));
-                let addrtype = try!(parse_addrtype(tokens[2]));
-                let unicast_addr = try!(parse_unicast_addr(&addrtype, tokens[3]));
-                self.value = Some(SdpAttributeValue::Rtcp {value:
-                    SdpAttributeRtcp {
-                        port: port,
-                        nettype: nettype,
-                        addrtype: addrtype,
-                        unicast_addr: unicast_addr
-                    }
-                })
+                };
+                let mut rtcp = SdpAttributeRtcp::new(port);
+                match tokens.next() {
+                    None => (),
+                    Some(x) => {
+                        rtcp.set_nettype(try!(parse_nettype(x)));
+                        match tokens.next() {
+                            None => return Err(SdpParserResult::ParserLineError{
+                                message: "Rtcp attribute is missing address type token".to_string(),
+                                line: v.to_string()}),
+                            Some(x) => {
+                                let addrtype = try!(parse_addrtype(x));
+                                let addr = match tokens.next() {
+                                    None => return Err(SdpParserResult::ParserLineError{
+                                        message: "Rtcp attribute is missing ip address token".to_string(),
+                                        line: v.to_string()}),
+                                    Some(x) =>
+                                        try!(parse_unicast_addr(&addrtype, x)),
+                                };
+                                rtcp.set_addr(addrtype, addr);
+                            },
+                        };
+                    },
+                };
+                self.value = Some(SdpAttributeValue::Rtcp {value: rtcp})
             },
             SdpAttributeType::RtcpFb => {
                 let tokens: Vec<&str> = v.splitn(2, ' ').collect();
@@ -972,7 +1005,8 @@ fn test_parse_attribute_recvonly() {
 
 #[test]
 fn test_parse_attribute_rtcp() {
-    assert!(parse_attribute("rtcp:9 IN IP4 0.0.0.0").is_ok())
+    assert!(parse_attribute("rtcp:5000").is_ok());
+    assert!(parse_attribute("rtcp:9 IN IP4 0.0.0.0").is_ok());
 }
 
 #[test]
