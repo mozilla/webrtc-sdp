@@ -9,16 +9,16 @@ pub enum SdpNetType {
     Internet
 }
 
-impl fmt::Display for SdpNetType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "IN")
-    }
-}
-
 #[derive(Clone,Debug,PartialEq)]
 pub enum SdpAddrType {
     IP4,
     IP6
+}
+
+impl fmt::Display for SdpNetType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "IN")
+    }
 }
 
 impl fmt::Display for SdpAddrType {

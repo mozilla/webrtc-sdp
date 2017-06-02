@@ -22,7 +22,9 @@ pub struct SdpBandwidth {
 pub struct SdpConnection {
     nettype: SdpNetType,
     addrtype: SdpAddrType,
-    unicast_addr: IpAddr
+    addr: IpAddr,
+    ttl: Option<u32>,
+    amount: Option<u32>
 }
 
 #[derive(Clone)]
@@ -273,22 +275,34 @@ fn parse_connection(value: &str) -> Result<SdpLine, SdpParserResult> {
             message: "connection attribute must have three tokens".to_string(),
             line: value.to_string() });
     }
-    // TODO this is exactly the same parser as the end of origin.
-    //      Share it in a function?!
     let nettype = try!(parse_nettype(cv[0]));
     let addrtype = try!(parse_addrtype(cv[1]));
-    let unicast_addr = try!(parse_unicast_addr(&addrtype, cv[2]));
-    let c = SdpConnection { nettype: nettype,
-                            addrtype: addrtype,
-                            unicast_addr: unicast_addr };
+    let mut ttl = None;
+    let mut amount = None;
+    let mut addr_token = cv[2];
+    if addr_token.find('/') != None {
+        let addr_tokens: Vec<&str> = addr_token.split('/').collect();
+        if addr_tokens.len() >= 3 {
+            amount = Some(try!(addr_tokens[2].parse::<u32>()));
+        }
+        ttl = Some(try!(addr_tokens[1].parse::<u32>()));
+        addr_token = addr_tokens[0];
+    }
+    let addr = try!(parse_unicast_addr(&addrtype, addr_token));
+    let c = SdpConnection { nettype,
+                            addrtype,
+                            addr,
+                            ttl,
+                            amount };
     println!("connection: {}, {}, {}",
-             c.nettype, c.addrtype, c.unicast_addr);
+             c.nettype, c.addrtype, c.addr);
     Ok(SdpLine::Connection { value: c })
 }
 
 #[test]
 fn connection_works() {
     assert!(parse_connection("IN IP4 127.0.0.1").is_ok());
+    assert!(parse_connection("IN IP4 127.0.0.1/10/10").is_ok());
 }
 
 #[test]
