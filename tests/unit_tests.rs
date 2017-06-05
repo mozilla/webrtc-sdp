@@ -23,6 +23,17 @@ fn parse_minimal_sdp() {
 }
 
 #[test]
+fn parse_minimal_sdp_with_emtpy_lines() {
+    let sdp_res = rsdparsa::parse_sdp("v=0\r\n\r\no=- 0 0 IN IP4 0.0.0.0\r\n \r\ns=-\r\nt=0 0\r\nm=audio 0 UDP/TLS/RTP/SAVPF 0\r\n", false);
+    assert!(sdp_res.is_ok());
+    let sdp_opt = sdp_res.ok();
+    assert!(sdp_opt.is_some());
+    let sdp = sdp_opt.unwrap();
+    assert_eq!(sdp.version, 0);
+    assert_eq!(sdp.session, "-");
+}
+
+#[test]
 fn parse_firefox_audio_offer() {
     let sdp_res = rsdparsa::parse_sdp("v=0\r\no=mozilla...THIS_IS_SDPARTA-52.0a1 506705521068071134 0 IN IP4 0.0.0.0\r\ns=-\r\nt=0 0\r\na=fingerprint:sha-256 CD:34:D1:62:16:95:7B:B7:EB:74:E2:39:27:97:EB:0B:23:73:AC:BC:BF:2F:E3:91:CB:57:A9:9D:4A:A2:0B:40\r\na=group:BUNDLE sdparta_0 sdparta_1 sdparta_2\r\na=ice-options:trickle\r\na=msid-semantic:WMS *\r\nm=audio 9 UDP/TLS/RTP/SAVPF 109 9 0 8\r\nc=IN IP4 0.0.0.0\r\na=sendrecv\r\na=extmap:1/sendonly urn:ietf:params:rtp-hdrext:ssrc-audio-level\r\na=fmtp:109 maxplaybackrate=48000;stereo=1;useinbandfec=1\r\na=ice-pwd:e3baa26dd2fa5030d881d385f1e36cce\r\na=ice-ufrag:58b99ead\r\na=mid:sdparta_0\r\na=msid:{5a990edd-0568-ac40-8d97-310fc33f3411} {218cfa1c-617d-2249-9997-60929ce4c405}\r\na=rtcp-mux\r\na=rtpmap:109 opus/48000/2\r\na=rtpmap:9 G722/8000/1\r\na=rtpmap:0 PCMU/8000\r\na=rtpmap:8 PCMA/8000\r\na=setup:actpass\r\na=ssrc:2655508255 cname:{735484ea-4f6c-f74a-bd66-7425f8476c2e}\r\n", true);
     assert!(sdp_res.is_ok());

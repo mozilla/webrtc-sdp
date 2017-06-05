@@ -13,8 +13,17 @@ use network::{SdpNetType, SdpAddrType, parse_addrtype, parse_nettype, parse_unic
 use unsupported_types::{parse_email, parse_information, parse_key, parse_phone, parse_repeat, parse_uri, parse_zone};
 
 #[derive(Clone)]
+pub enum SdpBandwidthType {
+    As,
+    Ct,
+    Tias,
+    Unknown
+}
+
+#[derive(Clone)]
 pub struct SdpBandwidth {
-    bwtype: String,
+    bwtype: SdpBandwidthType,
+    unknown_type: Option<String>,
     bandwidth: u64
 }
 
@@ -344,23 +353,29 @@ fn parse_bandwidth(value: &str) -> Result<SdpLine, SdpParserResult> {
             message: "bandwidth attribute must have two tokens".to_string(),
             line: value.to_string() });
     }
-    let bwtype = bv[0];
-    match bwtype.to_uppercase().as_ref() {
-        "AS" | "TIAS" => (),
-        _ => return Err(SdpParserResult::ParserUnsupported {
-              message: "unsupported bandwidth type value".to_string(),
-              line: value.to_string() }),
+    let mut unknown_type = None;
+    let bwtype = match bv[0].to_uppercase().as_ref() {
+        "AS" => SdpBandwidthType::As,
+        "CT" => SdpBandwidthType::Ct,
+        "TIAS" => SdpBandwidthType::Tias,
+        _ => {
+            unknown_type = Some(String::from(bv[0]));
+            SdpBandwidthType::Unknown
+        }
     };
     let bandwidth = try!(bv[1].parse::<u64>());
-    let b = SdpBandwidth { bwtype: String::from(bwtype),
-                            bandwidth: bandwidth };
+    let b = SdpBandwidth { bwtype,
+                           unknown_type,
+                           bandwidth };
     println!("bandwidth: {}, {}",
-             b.bwtype, b.bandwidth);
+             bv[0], b.bandwidth);
     Ok(SdpLine::Bandwidth { value: b })
 }
 
 #[test]
 fn bandwidth_works() {
+    assert!(parse_bandwidth("AS:1").is_ok());
+    assert!(parse_bandwidth("CT:123").is_ok());
     assert!(parse_bandwidth("TIAS:12345").is_ok());
 }
 
@@ -372,7 +387,7 @@ fn bandwidth_wrong_amount_of_tokens() {
 
 #[test]
 fn bandwidth_unsupported_type() {
-    assert!(parse_bandwidth("UNSUPPORTED:12345").is_err());
+    assert!(parse_bandwidth("UNSUPPORTED:12345").is_ok());
 }
 
 fn parse_timing(value: &str) -> Result<SdpLine, SdpParserResult> {
@@ -571,7 +586,11 @@ pub fn parse_sdp(sdp: &str, fail_on_warning: bool) -> Result<SdpSession, SdpPars
     let mut warnings: Vec<SdpParserResult> = Vec::new();
     let mut sdp_lines: Vec<SdpLine> = Vec::new();
     for line in lines {
-        match parse_sdp_line(line) {
+        let stripped_line = line.trim();
+        if stripped_line.len() == 0 {
+            continue;
+        }
+        match parse_sdp_line(stripped_line) {
             Ok(n) => { sdp_lines.push(n); },
             Err(e) => {
                 match e {
@@ -601,6 +620,7 @@ pub fn parse_sdp(sdp: &str, fail_on_warning: bool) -> Result<SdpSession, SdpPars
         };
     };
     for error in errors {
+        /*
         match error {
             SdpParserResult::ParserLineError { message: msg, line: l} =>
                 { println!("Parser error: {}\n  in line: {}", msg, l) },
@@ -608,6 +628,8 @@ pub fn parse_sdp(sdp: &str, fail_on_warning: bool) -> Result<SdpSession, SdpPars
                 { println!("Parser sequence: {}", msg)}
             _ => panic!(),
         };
+        */
+        return Err(error);
     };
     let session = try!(parse_sdp_vector(&sdp_lines));
     Ok(session)
