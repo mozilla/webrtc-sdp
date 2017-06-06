@@ -228,10 +228,10 @@ pub fn parse_media(value: &str) -> Result<SdpLine, SdpParserResult> {
             for num in fmt_slice {
                 let fmt_num = try!(num.parse::<u32>());
                 match fmt_num {
-                    0 => (),           // PCMU
-                    8 => (),           // PCMA
-                    9 => (),           // G722
-                    13 => (),          // Comfort Noise
+                    0  |  // PCMU
+                    8  |  // PCMA
+                    9  |  // G722
+                    13 |  // Comfort Noise
                     96 ... 127 => (),  // dynamic range
                     _ => return Err(SdpParserResult::ParserLineError {
                           message: "format number in media line is out of range".to_string(),

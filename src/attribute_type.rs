@@ -427,15 +427,9 @@ impl SdpAttribute {
             SdpAttributeType::IcePwd |
             SdpAttributeType::IceUfrag |
             SdpAttributeType::Mid |
-            SdpAttributeType::Rid => {
-                self.value = Some(SdpAttributeValue::Str {value: v.to_string()})
-            },
-            SdpAttributeType::MsidSemantic => {
-                // mmusic-msid-16 no longer describes this...
-                self.value = Some(SdpAttributeValue::Str {value: v.to_string()})
-            },
-            SdpAttributeType::SsrcGroup => {
-                // JSEP has no support for it any more...
+            SdpAttributeType::MsidSemantic | // mmusic-msid-16 doesnt have this
+            SdpAttributeType::Rid |
+            SdpAttributeType::SsrcGroup => { // not in JSEP any more...
                 self.value = Some(SdpAttributeValue::Str {value: v.to_string()})
             },
 
