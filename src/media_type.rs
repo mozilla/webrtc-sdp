@@ -8,22 +8,22 @@ pub struct SdpMediaLine {
     pub media: SdpMediaValue,
     pub port: u32,
     pub proto: SdpProtocolValue,
-    pub formats: SdpFormatList
+    pub formats: SdpFormatList,
 }
 
 #[derive(Clone,Debug,PartialEq)]
 pub enum SdpMediaValue {
     Audio,
     Video,
-    Application
+    Application,
 }
 
 impl fmt::Display for SdpMediaValue {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let printable = match *self {
-            SdpMediaValue::Audio       => "Audio",
-            SdpMediaValue::Video       => "Video",
-            SdpMediaValue::Application => "Application"
+            SdpMediaValue::Audio => "Audio",
+            SdpMediaValue::Video => "Video",
+            SdpMediaValue::Application => "Application",
         };
         write!(f, "{}", printable)
     }
@@ -36,18 +36,18 @@ pub enum SdpProtocolValue {
     TcpTlsRtpSavpf,
     DtlsSctp,
     UdpDtlsSctp,
-    TcpDtlsSctp
+    TcpDtlsSctp,
 }
 
 impl fmt::Display for SdpProtocolValue {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let printable = match *self {
-            SdpProtocolValue::RtpSavpf       => "Rtp/Savpf",
+            SdpProtocolValue::RtpSavpf => "Rtp/Savpf",
             SdpProtocolValue::UdpTlsRtpSavpf => "Udp/Tls/Rtp/Savpf",
             SdpProtocolValue::TcpTlsRtpSavpf => "Tcp/Tls/Rtp/Savpf",
-            SdpProtocolValue::DtlsSctp       => "Dtls/Sctp",
-            SdpProtocolValue::UdpDtlsSctp    => "Udp/Dtls/Sctp",
-            SdpProtocolValue::TcpDtlsSctp    => "Tcp/Dtls/Sctp"
+            SdpProtocolValue::DtlsSctp => "Dtls/Sctp",
+            SdpProtocolValue::UdpDtlsSctp => "Udp/Dtls/Sctp",
+            SdpProtocolValue::TcpDtlsSctp => "Tcp/Dtls/Sctp",
         };
         write!(f, "{}", printable)
     }
@@ -55,15 +55,15 @@ impl fmt::Display for SdpProtocolValue {
 
 #[derive(Clone)]
 pub enum SdpFormatList {
-    Integers {list: Vec<u32>},
-    Strings {list: Vec<String>}
+    Integers { list: Vec<u32> },
+    Strings { list: Vec<String> },
 }
 
 impl fmt::Display for SdpFormatList {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             SdpFormatList::Integers { list: ref x } => write!(f, "{:?}", x),
-            SdpFormatList::Strings { list: ref x } => write!(f, "{:?}", x)
+            SdpFormatList::Strings { list: ref x } => write!(f, "{:?}", x),
         }
     }
 }
@@ -79,13 +79,14 @@ pub struct SdpMedia {
 
 impl SdpMedia {
     pub fn new(media: SdpMediaLine) -> SdpMedia {
-        SdpMedia { media: media,
-                   information: None,
-                   connection: None,
-                   bandwidth: Vec::new(),
-                   key: None,
-                   attribute: Vec::new()
-                 }
+        SdpMedia {
+            media: media,
+            information: None,
+            connection: None,
+            bandwidth: Vec::new(),
+            key: None,
+            attribute: Vec::new(),
+        }
     }
 
     pub fn get_type(&self) -> &SdpMediaValue {
@@ -141,13 +142,16 @@ impl SdpMedia {
 }
 fn parse_media_token(value: &str) -> Result<SdpMediaValue, SdpParserResult> {
     Ok(match value.to_lowercase().as_ref() {
-        "audio"       => SdpMediaValue::Audio,
-        "video"       => SdpMediaValue::Video,
-        "application" => SdpMediaValue::Application,
-        _ => return Err(SdpParserResult::ParserUnsupported {
-              message: "unsupported media value".to_string(),
-              line: value.to_string() }),
-    })
+           "audio" => SdpMediaValue::Audio,
+           "video" => SdpMediaValue::Video,
+           "application" => SdpMediaValue::Application,
+           _ => {
+               return Err(SdpParserResult::ParserUnsupported {
+                              message: "unsupported media value".to_string(),
+                              line: value.to_string(),
+                          })
+           }
+       })
 }
 
 #[test]
@@ -169,16 +173,19 @@ fn test_parse_media_token() {
 
 fn parse_protocol_token(value: &str) -> Result<SdpProtocolValue, SdpParserResult> {
     Ok(match value.to_uppercase().as_ref() {
-        "RTP/SAVPF"         => SdpProtocolValue::RtpSavpf,
-        "UDP/TLS/RTP/SAVPF" => SdpProtocolValue::UdpTlsRtpSavpf,
-        "TCP/TLS/RTP/SAVPF" => SdpProtocolValue::TcpTlsRtpSavpf,
-        "DTLS/SCTP"         => SdpProtocolValue::DtlsSctp,
-        "UDP/DTLS/SCTP"     => SdpProtocolValue::UdpDtlsSctp,
-        "TCP/DTLS/SCTP"     => SdpProtocolValue::TcpDtlsSctp,
-        _ => return Err(SdpParserResult::ParserUnsupported {
-              message: "unsupported protocol value".to_string(),
-              line: value.to_string() }),
-    })
+           "RTP/SAVPF" => SdpProtocolValue::RtpSavpf,
+           "UDP/TLS/RTP/SAVPF" => SdpProtocolValue::UdpTlsRtpSavpf,
+           "TCP/TLS/RTP/SAVPF" => SdpProtocolValue::TcpTlsRtpSavpf,
+           "DTLS/SCTP" => SdpProtocolValue::DtlsSctp,
+           "UDP/DTLS/SCTP" => SdpProtocolValue::UdpDtlsSctp,
+           "TCP/DTLS/SCTP" => SdpProtocolValue::TcpDtlsSctp,
+           _ => {
+               return Err(SdpParserResult::ParserUnsupported {
+                              message: "unsupported protocol value".to_string(),
+                              line: value.to_string(),
+                          })
+           }
+       })
 }
 
 #[test]
@@ -210,15 +217,17 @@ pub fn parse_media(value: &str) -> Result<SdpLine, SdpParserResult> {
     let mv: Vec<&str> = value.split_whitespace().collect();
     if mv.len() < 4 {
         return Err(SdpParserResult::ParserLineError {
-            message: "media attribute must have at least four tokens".to_string(),
-            line: value.to_string() });
+                       message: "media attribute must have at least four tokens".to_string(),
+                       line: value.to_string(),
+                   });
     }
     let media = try!(parse_media_token(mv[0]));
     let port = try!(mv[1].parse::<u32>());
     if port > 65535 {
         return Err(SdpParserResult::ParserLineError {
-            message: "media port token is too big".to_string(),
-            line: value.to_string() })
+                       message: "media port token is too big".to_string(),
+                       line: value.to_string(),
+                   });
     }
     let proto = try!(parse_protocol_token(mv[2]));
     let fmt_slice: &[&str] = &mv[3..];
@@ -238,9 +247,9 @@ pub fn parse_media(value: &str) -> Result<SdpLine, SdpParserResult> {
                           line: value.to_string() }),
                 };
                 fmt_vec.push(fmt_num);
-            };
+            }
             SdpFormatList::Integers { list: fmt_vec }
-        },
+        }
         SdpMediaValue::Application => {
             let mut fmt_vec: Vec<String> = vec![];
             // TODO enforce length == 1 and content 'webrtc-datachannel' only?
@@ -250,12 +259,13 @@ pub fn parse_media(value: &str) -> Result<SdpLine, SdpParserResult> {
             SdpFormatList::Strings { list: fmt_vec }
         }
     };
-    let m = SdpMediaLine { media: media,
-                           port: port,
-                           proto: proto,
-                           formats: fmt };
-    println!("media: {}, {}, {}, {}",
-             m.media, m.port, m.proto, m.formats);
+    let m = SdpMediaLine {
+        media: media,
+        port: port,
+        proto: proto,
+        formats: fmt,
+    };
+    println!("media: {}, {}, {}, {}", m.media, m.port, m.proto, m.formats);
     Ok(SdpLine::Media { value: m })
 }
 
@@ -298,32 +308,47 @@ fn test_media_invalid_payload() {
 pub fn parse_media_vector(lines: &[SdpLine]) -> Result<Vec<SdpMedia>, SdpParserResult> {
     let mut media_sections: Vec<SdpMedia> = Vec::new();
     let mut sdp_media = match lines[0] {
-        SdpLine::Media{value: ref v} => {SdpMedia::new(v.clone())},
-        _ => return Err(SdpParserResult::ParserSequence {
-            message: "first line in media section needs to be a media line".to_string(),
-            line: None })
+        SdpLine::Media { value: ref v } => SdpMedia::new(v.clone()),
+        _ => {
+            return Err(SdpParserResult::ParserSequence {
+                           message: "first line in media section needs to be a media line"
+                               .to_string(),
+                           line: None,
+                       })
+        }
     };
     for line in lines.iter().skip(1) {
         match *line {
-            SdpLine::Information{value: ref v} => {sdp_media.set_information(v.clone())},
-            SdpLine::Connection{value: ref v} => {sdp_media.set_connection(v.clone())},
-            SdpLine::Bandwidth{value: ref v} => {sdp_media.add_bandwidth(v.clone());},
-            SdpLine::Key{value: ref v} => {sdp_media.set_key(v.clone())},
-            SdpLine::Attribute{value: ref v} => {sdp_media.add_attribute(v.clone());},
-            SdpLine::Media{value: ref v} => {
+            SdpLine::Information { value: ref v } => sdp_media.set_information(v.clone()),
+            SdpLine::Connection { value: ref v } => sdp_media.set_connection(v.clone()),
+            SdpLine::Bandwidth { value: ref v } => {
+                sdp_media.add_bandwidth(v.clone());
+            }
+            SdpLine::Key { value: ref v } => sdp_media.set_key(v.clone()),
+            SdpLine::Attribute { value: ref v } => {
+                sdp_media.add_attribute(v.clone());
+            }
+            SdpLine::Media { value: ref v } => {
                 media_sections.push(sdp_media);
                 sdp_media = SdpMedia::new(v.clone());
-            },
+            }
 
-            SdpLine::Email{..} | SdpLine::Phone{..} | SdpLine::Origin{..} |
-                SdpLine::Repeat{..} | SdpLine::Session{..} |
-                SdpLine::Timing{..} | SdpLine::Uri{..} | SdpLine::Version{..} |
-                SdpLine::Zone{..} => return Err(
-                    SdpParserResult::ParserSequence {
-                        message: "invalid type in media section".to_string(),
-                        line: None})
+            SdpLine::Email { .. } |
+            SdpLine::Phone { .. } |
+            SdpLine::Origin { .. } |
+            SdpLine::Repeat { .. } |
+            SdpLine::Session { .. } |
+            SdpLine::Timing { .. } |
+            SdpLine::Uri { .. } |
+            SdpLine::Version { .. } |
+            SdpLine::Zone { .. } => {
+                return Err(SdpParserResult::ParserSequence {
+                               message: "invalid type in media section".to_string(),
+                               line: None,
+                           })
+            }
         };
-    };
+    }
     media_sections.push(sdp_media);
     Ok(media_sections)
 }
