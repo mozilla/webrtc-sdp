@@ -231,7 +231,7 @@ pub fn parse_media(value: &str) -> Result<SdpLine, SdpParserResult> {
     }
     let proto = try!(parse_protocol_token(mv[2]));
     let fmt_slice: &[&str] = &mv[3..];
-    let fmt = match media {
+    let formats = match media {
         SdpMediaValue::Audio | SdpMediaValue::Video => {
             let mut fmt_vec: Vec<u32> = vec![];
             for num in fmt_slice {
@@ -260,10 +260,10 @@ pub fn parse_media(value: &str) -> Result<SdpLine, SdpParserResult> {
         }
     };
     let m = SdpMediaLine {
-        media: media,
-        port: port,
-        proto: proto,
-        formats: fmt,
+        media,
+        port,
+        proto,
+        formats,
     };
     println!("media: {}, {}, {}, {}", m.media, m.port, m.proto, m.formats);
     Ok(SdpLine::Media { value: m })
