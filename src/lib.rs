@@ -1,3 +1,5 @@
+#![cfg_attr(feature="clippy", feature(plugin))]
+
 use std::net::IpAddr;
 
 mod attribute_type;
