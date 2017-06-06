@@ -109,11 +109,11 @@ impl SdpMedia {
     }
 
     pub fn has_bandwidth(&self) -> bool {
-        self.bandwidth.len() > 0
+        !self.bandwidth.is_empty()
     }
 
     pub fn has_attributes(&self) -> bool {
-        self.attribute.len() > 0
+        !self.attribute.is_empty()
     }
 
     pub fn add_attribute(&mut self, attr: SdpAttribute) {

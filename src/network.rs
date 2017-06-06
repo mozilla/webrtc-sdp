@@ -32,7 +32,7 @@ impl fmt::Display for SdpAddrType {
 }
 
 pub fn parse_nettype(value: &str) -> Result<SdpNetType, SdpParserResult> {
-    if value.to_uppercase() != String::from("IN") {
+    if value.to_uppercase() != "IN" {
         return Err(SdpParserResult::ParserLineError {
             message: "nettype needs to be IN".to_string(),
             line: value.to_string() });
@@ -74,8 +74,8 @@ fn test_parse_addrtype() {
 }
 
 pub fn parse_unicast_addr(addrtype: &SdpAddrType, value: &str) -> Result<IpAddr, SdpParserResult> {
-    Ok(match addrtype {
-        &SdpAddrType::IP4 => {
+    Ok(match *addrtype {
+        SdpAddrType::IP4 => {
             IpAddr::V4(match Ipv4Addr::from_str(value) {
                 Ok(n) => n,
                 Err(_) => return Err(SdpParserResult::ParserLineError {
@@ -83,7 +83,7 @@ pub fn parse_unicast_addr(addrtype: &SdpAddrType, value: &str) -> Result<IpAddr,
                     line: value.to_string() })
             })
         },
-        &SdpAddrType::IP6 => {
+        SdpAddrType::IP6 => {
             IpAddr::V6(match Ipv6Addr::from_str(value) {
                 Ok(n) => n,
                 Err(_) => return Err(SdpParserResult::ParserLineError {
@@ -96,9 +96,9 @@ pub fn parse_unicast_addr(addrtype: &SdpAddrType, value: &str) -> Result<IpAddr,
 
 pub fn parse_unicast_addr_unknown_type(value: &str) -> Result<IpAddr, SdpParserResult> {
     if value.find('.') == None {
-        return parse_unicast_addr(&SdpAddrType::IP6, value);
+        parse_unicast_addr(&SdpAddrType::IP6, value)
     } else {
-        return parse_unicast_addr(&SdpAddrType::IP4, value);
+        parse_unicast_addr(&SdpAddrType::IP4, value)
     }
 }
 

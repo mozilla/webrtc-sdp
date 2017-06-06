@@ -160,7 +160,7 @@ struct SdpAttributeSimulcastId {
 
 impl SdpAttributeSimulcastId {
     pub fn new(idstr: String) -> SdpAttributeSimulcastId {
-        if idstr.starts_with("~") {
+        if idstr.starts_with('~') {
             SdpAttributeSimulcastId {
                 id: idstr[1..].to_string(),
                 paused: true
@@ -184,7 +184,7 @@ impl SdpAttributeSimulcastAlternatives {
         SdpAttributeSimulcastAlternatives {
             ids: idlist.split(',')
                  .map(|x| x.to_string())
-                 .map(|y| SdpAttributeSimulcastId::new(y))
+                 .map(SdpAttributeSimulcastId::new)
                  .collect()
         }
     }
@@ -202,7 +202,7 @@ impl SdpAttributeSimulcast {
                  idlist: String) {
         let list = idlist.split(';')
                    .map(|x| x.to_string())
-                   .map(|y| SdpAttributeSimulcastAlternatives::new(y))
+                   .map(SdpAttributeSimulcastAlternatives::new)
                    .collect();
         // TODO prevent over-writing existing values
         match direction {
@@ -409,7 +409,7 @@ impl SdpAttribute {
             SdpAttributeType::RtcpRsize |
             SdpAttributeType::Sendonly |
             SdpAttributeType::Sendrecv => {
-                if v.len() >0 {
+                if !v.is_empty() {
                     return Err(SdpParserResult::ParserLineError{
                         message: "This attribute is not allowed to have a value".to_string(),
                         line: v.to_string()})

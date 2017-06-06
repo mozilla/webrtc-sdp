@@ -177,11 +177,11 @@ impl SdpSession {
     }
 
     pub fn has_attributes(&self) -> bool {
-        self.attribute.len() > 0
+        !self.attribute.is_empty()
     }
 
     pub fn has_media(&self) -> bool {
-        self.media.len() > 0
+        !self.media.is_empty()
     }
 }
 
@@ -441,7 +441,7 @@ fn parse_sdp_line(line: &str) -> Result<SdpLine, SdpParserResult> {
             line: line.to_string() });
     };
     let value = v[1].trim();
-    if value.len() == 0 {
+    if value.is_empty() {
         return Err(SdpParserResult::ParserLineError {
             message: "attribute value has zero length".to_string(),
             line: line.to_string() });
@@ -462,7 +462,7 @@ fn parse_sdp_line(line: &str) -> Result<SdpLine, SdpParserResult> {
         "u" => { parse_uri(value) },
         "v" => { parse_version(value) },
         "z" => { parse_zone(value) },
-        _   => { return Err(SdpParserResult::ParserLineError {
+        _   => { Err(SdpParserResult::ParserLineError {
                     message: "unsupported sdp field".to_string(),
                     line: line.to_string() }) }
     }
@@ -507,7 +507,7 @@ fn test_parse_sdp_line_invalid_a_line() {
 }
 
 // TODO add unit tests
-fn parse_sdp_vector(lines: &Vec<SdpLine>) -> Result<SdpSession, SdpParserResult> {
+fn parse_sdp_vector(lines: &[SdpLine]) -> Result<SdpSession, SdpParserResult> {
     if lines.len() < 5 {
         return Err(SdpParserResult::ParserSequence {
             message: "SDP neeeds at least 5 lines".to_string(),
@@ -587,7 +587,7 @@ pub fn parse_sdp(sdp: &str, fail_on_warning: bool) -> Result<SdpSession, SdpPars
     let mut sdp_lines: Vec<SdpLine> = Vec::new();
     for line in lines {
         let stripped_line = line.trim();
-        if stripped_line.len() == 0 {
+        if stripped_line.is_empty() {
             continue;
         }
         match parse_sdp_line(stripped_line) {
