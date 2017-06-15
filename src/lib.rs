@@ -2,11 +2,11 @@
 
 use std::net::IpAddr;
 
-mod attribute_type;
-mod error;
-mod media_type;
-mod network;
-mod unsupported_types;
+pub mod attribute_type;
+pub mod error;
+pub mod media_type;
+pub mod network;
+pub mod unsupported_types;
 
 use attribute_type::{SdpAttribute, parse_attribute};
 use error::SdpParserResult;
