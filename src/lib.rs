@@ -2,14 +2,14 @@
 
 use std::net::IpAddr;
 
-mod attribute_type;
-mod error;
-mod media_type;
-mod network;
-mod unsupported_types;
+pub mod attribute_type;
+pub mod error;
+pub mod media_type;
+pub mod network;
+pub mod unsupported_types;
 
 use attribute_type::{SdpAttribute, parse_attribute};
-use error::SdpParserResult;
+use error::SdpParserError;
 use media_type::{SdpMedia, SdpMediaLine, parse_media, parse_media_vector};
 use network::{SdpNetType, SdpAddrType, parse_addrtype, parse_nettype, parse_unicast_addr};
 use unsupported_types::{parse_email, parse_information, parse_key, parse_phone, parse_repeat, parse_uri, parse_zone};
@@ -187,7 +187,7 @@ impl SdpSession {
     }
 }
 
-fn parse_session(value: &str) -> Result<SdpLine, SdpParserResult> {
+fn parse_session(value: &str) -> Result<SdpLine, SdpParserError> {
     println!("session: {}", value);
     Ok(SdpLine::Session {value: String::from(value)})
 }
@@ -198,10 +198,10 @@ fn test_session_works() {
 }
 
 
-fn parse_version(value: &str) -> Result<SdpLine, SdpParserResult> {
+fn parse_version(value: &str) -> Result<SdpLine, SdpParserError> {
     let ver = try!(value.parse::<u64>());
     if ver != 0 {
-        return Err(SdpParserResult::ParserLineError {
+        return Err(SdpParserError::ParserLineError {
             message: "unsupported version in v field".to_string(),
             line: value.to_string() });
     };
@@ -221,10 +221,10 @@ fn test_version_unsupported_input() {
     assert!(parse_version("a").is_err());
 }
 
-fn parse_origin(value: &str) -> Result<SdpLine, SdpParserResult> {
+fn parse_origin(value: &str) -> Result<SdpLine, SdpParserError> {
     let ot: Vec<&str> = value.split_whitespace().collect();
     if ot.len() != 6 {
-        return Err(SdpParserResult::ParserLineError {
+        return Err(SdpParserError::ParserLineError {
             message: "origin field must have six tokens".to_string(),
             line: value.to_string() });
     }
@@ -279,10 +279,10 @@ fn test_origin_addr_type_mismatch() {
     assert!(parse_origin("mozilla 506705521068071134 0 IN IP4 ::1").is_err());
 }
 
-fn parse_connection(value: &str) -> Result<SdpLine, SdpParserResult> {
+fn parse_connection(value: &str) -> Result<SdpLine, SdpParserError> {
     let cv: Vec<&str> = value.split_whitespace().collect();
     if cv.len() != 3 {
-        return Err(SdpParserResult::ParserLineError {
+        return Err(SdpParserError::ParserLineError {
             message: "connection attribute must have three tokens".to_string(),
             line: value.to_string() });
     }
@@ -348,10 +348,10 @@ fn connection_addr_type_mismatch() {
     assert!(parse_connection("IN IP4 ::1").is_err());
 }
 
-fn parse_bandwidth(value: &str) -> Result<SdpLine, SdpParserResult> {
+fn parse_bandwidth(value: &str) -> Result<SdpLine, SdpParserError> {
     let bv: Vec<&str> = value.split(':').collect();
     if bv.len() != 2 {
-        return Err(SdpParserResult::ParserLineError {
+        return Err(SdpParserError::ParserLineError {
             message: "bandwidth attribute must have two tokens".to_string(),
             line: value.to_string() });
     }
@@ -392,10 +392,10 @@ fn bandwidth_unsupported_type() {
     assert!(parse_bandwidth("UNSUPPORTED:12345").is_ok());
 }
 
-fn parse_timing(value: &str) -> Result<SdpLine, SdpParserResult> {
+fn parse_timing(value: &str) -> Result<SdpLine, SdpParserError> {
     let tv: Vec<&str> = value.split_whitespace().collect();
     if tv.len() != 2 {
-        return Err(SdpParserResult::ParserLineError {
+        return Err(SdpParserError::ParserLineError {
             message: "timing attribute must have two tokens".to_string(),
             line: value.to_string() });
     }
@@ -424,27 +424,27 @@ fn test_timing_wrong_amount_of_tokens() {
     assert!(parse_timing("0 0 0").is_err());
 }
 
-fn parse_sdp_line(line: &str) -> Result<SdpLine, SdpParserResult> {
+fn parse_sdp_line(line: &str) -> Result<SdpLine, SdpParserError> {
     if line.find('=') == None {
-        return Err(SdpParserResult::ParserLineError {
+        return Err(SdpParserError::ParserLineError {
             message: "missing = character in line".to_string(),
             line: line.to_string() });
     }
     let v: Vec<&str> = line.splitn(2, '=').collect();
     if v.len() < 2 {
-        return Err(SdpParserResult::ParserLineError {
+        return Err(SdpParserError::ParserLineError {
             message: "failed to split field and attribute".to_string(),
             line: line.to_string() });
     };
     let name = v[0].trim();
     if name.is_empty() || name.len() > 1 {
-        return Err(SdpParserResult::ParserLineError {
+        return Err(SdpParserError::ParserLineError {
             message: "field name empty or too long".to_string(),
             line: line.to_string() });
     };
     let value = v[1].trim();
     if value.is_empty() {
-        return Err(SdpParserResult::ParserLineError {
+        return Err(SdpParserError::ParserLineError {
             message: "attribute value has zero length".to_string(),
             line: line.to_string() });
     }
@@ -464,7 +464,7 @@ fn parse_sdp_line(line: &str) -> Result<SdpLine, SdpParserResult> {
         "u" => { parse_uri(value) },
         "v" => { parse_version(value) },
         "z" => { parse_zone(value) },
-        _   => { Err(SdpParserResult::ParserLineError {
+        _   => { Err(SdpParserError::ParserLineError {
                     message: "unsupported sdp field".to_string(),
                     line: line.to_string() }) }
     }
@@ -509,9 +509,9 @@ fn test_parse_sdp_line_invalid_a_line() {
 }
 
 // TODO add unit tests
-fn parse_sdp_vector(lines: &[SdpLine]) -> Result<SdpSession, SdpParserResult> {
+fn parse_sdp_vector(lines: &[SdpLine]) -> Result<SdpSession, SdpParserError> {
     if lines.len() < 5 {
-        return Err(SdpParserResult::ParserSequence {
+        return Err(SdpParserError::ParserSequence {
             message: "SDP neeeds at least 5 lines".to_string(),
             line: None })
     }
@@ -519,19 +519,19 @@ fn parse_sdp_vector(lines: &[SdpLine]) -> Result<SdpSession, SdpParserResult> {
     // TODO are these mataches really the only way to verify the types?
     let version: u64 = match lines[0] {
         SdpLine::Version{value: v} => v,
-        _ => return Err(SdpParserResult::ParserSequence {
+        _ => return Err(SdpParserError::ParserSequence {
             message: "first line needs to be version number".to_string(),
             line: None })
     };
     let origin: SdpOrigin = match lines[1] {
         SdpLine::Origin{value: ref v} => v.clone(),
-        _ => return Err(SdpParserResult::ParserSequence {
+        _ => return Err(SdpParserError::ParserSequence {
             message: "second line needs to be origin".to_string(),
             line: None })
     };
     let session: String = match lines[2] {
         SdpLine::Session{value: ref v} => v.clone(),
-        _ => return Err(SdpParserResult::ParserSequence {
+        _ => return Err(SdpParserError::ParserSequence {
             message: "third line needs to be session".to_string(),
             line: None })
     };
@@ -548,7 +548,7 @@ fn parse_sdp_vector(lines: &[SdpLine]) -> Result<SdpSession, SdpParserResult> {
                                   },
             SdpLine::Origin{..} |
             SdpLine::Session{..} |
-            SdpLine::Version{..} => return Err(SdpParserResult::ParserSequence {
+            SdpLine::Version{..} => return Err(SdpParserError::ParserSequence {
                                                         message: "internal parser error".to_string(),
                                                         line: Some(i)}),
             // TODO does anyone really ever need these?
@@ -562,30 +562,30 @@ fn parse_sdp_vector(lines: &[SdpLine]) -> Result<SdpSession, SdpParserResult> {
         };
     }
     if !sdp_session.has_timing() {
-        return Err(SdpParserResult::ParserSequence {
+        return Err(SdpParserError::ParserSequence {
             message: "Missing timing".to_string(),
             line: None},);
     }
     if !sdp_session.has_media() {
-        return Err(SdpParserResult::ParserSequence {
+        return Err(SdpParserError::ParserSequence {
             message: "Missing media".to_string(),
             line: None},);
     }
     Ok(sdp_session)
 }
 
-pub fn parse_sdp(sdp: &str, fail_on_warning: bool) -> Result<SdpSession, SdpParserResult> {
+pub fn parse_sdp(sdp: &str, fail_on_warning: bool) -> Result<SdpSession, SdpParserError> {
     if sdp.is_empty() {
-        return Err(SdpParserResult::ParserLineError{message: "empty SDP".to_string(),
+        return Err(SdpParserError::ParserLineError{message: "empty SDP".to_string(),
                                                             line: "".to_string()});
     }
     if sdp.len() < 62 {
-        return Err(SdpParserResult::ParserLineError{message: "string to short to be valid SDP".to_string(),
+        return Err(SdpParserError::ParserLineError{message: "string to short to be valid SDP".to_string(),
                                                             line: sdp.to_string()});
     }
     let lines = sdp.lines();
-    let mut errors: Vec<SdpParserResult> = Vec::new();
-    let mut warnings: Vec<SdpParserResult> = Vec::new();
+    let mut errors: Vec<SdpParserError> = Vec::new();
+    let mut warnings: Vec<SdpParserError> = Vec::new();
     let mut sdp_lines: Vec<SdpLine> = Vec::new();
     for line in lines {
         let stripped_line = line.trim();
@@ -597,15 +597,15 @@ pub fn parse_sdp(sdp: &str, fail_on_warning: bool) -> Result<SdpSession, SdpPars
             Err(e) => {
                 match e {
                     // FIXME is this really a good way to accomplish this?
-                    SdpParserResult::ParserLineError { message: x, line: y } =>
-                        { errors.push(SdpParserResult::ParserLineError { message: x, line: y}) },
-                    SdpParserResult::ParserUnsupported { message: x, line: y } =>
+                    SdpParserError::ParserLineError { message: x, line: y } =>
+                        { errors.push(SdpParserError::ParserLineError { message: x, line: y}) },
+                    SdpParserError::ParserUnsupported { message: x, line: y } =>
                         {
                             println!("Warning unsupported value encountered: {}\n in line {}", x, y);
-                            warnings.push(SdpParserResult::ParserUnsupported { message: x, line: y});
+                            warnings.push(SdpParserError::ParserUnsupported { message: x, line: y});
                         },
-                    SdpParserResult::ParserSequence {message: x, line: y} =>
-                        { errors.push(SdpParserResult::ParserSequence { message: x, line: y})}
+                    SdpParserError::ParserSequence {message: x, line: y} =>
+                        { errors.push(SdpParserError::ParserSequence { message: x, line: y})}
                 }
             }
         };
@@ -615,7 +615,7 @@ pub fn parse_sdp(sdp: &str, fail_on_warning: bool) -> Result<SdpSession, SdpPars
             return Err(warning);
         } else {
             match warning {
-                SdpParserResult::ParserUnsupported { message: msg, line: l} =>
+                SdpParserError::ParserUnsupported { message: msg, line: l} =>
                     { println!("Parser unknown: {}\n  in line: {}", msg, l) },
                 _ => panic!(),
             };
@@ -624,9 +624,9 @@ pub fn parse_sdp(sdp: &str, fail_on_warning: bool) -> Result<SdpSession, SdpPars
     for error in errors {
         /*
         match error {
-            SdpParserResult::ParserLineError { message: msg, line: l} =>
+            SdpParserError::ParserLineError { message: msg, line: l} =>
                 { println!("Parser error: {}\n  in line: {}", msg, l) },
-            SdpParserResult::ParserSequence { message: msg, ..} =>
+            SdpParserError::ParserSequence { message: msg, ..} =>
                 { println!("Parser sequence: {}", msg)}
             _ => panic!(),
         };

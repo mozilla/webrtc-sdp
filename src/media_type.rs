@@ -1,7 +1,7 @@
 use std::fmt;
 use {SdpLine, SdpBandwidth, SdpConnection};
 use attribute_type::SdpAttribute;
-use error::SdpParserResult;
+use error::SdpParserError;
 
 #[derive(Clone)]
 pub struct SdpMediaLine {
@@ -140,13 +140,13 @@ impl SdpMedia {
         self.key = Some(k);
     }
 }
-fn parse_media_token(value: &str) -> Result<SdpMediaValue, SdpParserResult> {
+fn parse_media_token(value: &str) -> Result<SdpMediaValue, SdpParserError> {
     Ok(match value.to_lowercase().as_ref() {
            "audio" => SdpMediaValue::Audio,
            "video" => SdpMediaValue::Video,
            "application" => SdpMediaValue::Application,
            _ => {
-               return Err(SdpParserResult::ParserUnsupported {
+               return Err(SdpParserError::ParserUnsupported {
                               message: "unsupported media value".to_string(),
                               line: value.to_string(),
                           })
@@ -171,7 +171,7 @@ fn test_parse_media_token() {
 }
 
 
-fn parse_protocol_token(value: &str) -> Result<SdpProtocolValue, SdpParserResult> {
+fn parse_protocol_token(value: &str) -> Result<SdpProtocolValue, SdpParserError> {
     Ok(match value.to_uppercase().as_ref() {
            "RTP/SAVPF" => SdpProtocolValue::RtpSavpf,
            "UDP/TLS/RTP/SAVPF" => SdpProtocolValue::UdpTlsRtpSavpf,
@@ -180,7 +180,7 @@ fn parse_protocol_token(value: &str) -> Result<SdpProtocolValue, SdpParserResult
            "UDP/DTLS/SCTP" => SdpProtocolValue::UdpDtlsSctp,
            "TCP/DTLS/SCTP" => SdpProtocolValue::TcpDtlsSctp,
            _ => {
-               return Err(SdpParserResult::ParserUnsupported {
+               return Err(SdpParserError::ParserUnsupported {
                               message: "unsupported protocol value".to_string(),
                               line: value.to_string(),
                           })
@@ -213,10 +213,10 @@ fn test_parse_protocol_token() {
     assert!(parse_protocol_token("foobar").is_err());
 }
 
-pub fn parse_media(value: &str) -> Result<SdpLine, SdpParserResult> {
+pub fn parse_media(value: &str) -> Result<SdpLine, SdpParserError> {
     let mv: Vec<&str> = value.split_whitespace().collect();
     if mv.len() < 4 {
-        return Err(SdpParserResult::ParserLineError {
+        return Err(SdpParserError::ParserLineError {
                        message: "media attribute must have at least four tokens".to_string(),
                        line: value.to_string(),
                    });
@@ -224,7 +224,7 @@ pub fn parse_media(value: &str) -> Result<SdpLine, SdpParserResult> {
     let media = try!(parse_media_token(mv[0]));
     let port = try!(mv[1].parse::<u32>());
     if port > 65535 {
-        return Err(SdpParserResult::ParserLineError {
+        return Err(SdpParserError::ParserLineError {
                        message: "media port token is too big".to_string(),
                        line: value.to_string(),
                    });
@@ -242,7 +242,7 @@ pub fn parse_media(value: &str) -> Result<SdpLine, SdpParserResult> {
                     9  |  // G722
                     13 |  // Comfort Noise
                     96 ... 127 => (),  // dynamic range
-                    _ => return Err(SdpParserResult::ParserLineError {
+                    _ => return Err(SdpParserError::ParserLineError {
                           message: "format number in media line is out of range".to_string(),
                           line: value.to_string() }),
                 };
@@ -305,12 +305,12 @@ fn test_media_invalid_payload() {
     assert!(parse_media("audio 9 UDP/TLS/RTP/SAVPF 300").is_err());
 }
 
-pub fn parse_media_vector(lines: &[SdpLine]) -> Result<Vec<SdpMedia>, SdpParserResult> {
+pub fn parse_media_vector(lines: &[SdpLine]) -> Result<Vec<SdpMedia>, SdpParserError> {
     let mut media_sections: Vec<SdpMedia> = Vec::new();
     let mut sdp_media = match lines[0] {
         SdpLine::Media { value: ref v } => SdpMedia::new(v.clone()),
         _ => {
-            return Err(SdpParserResult::ParserSequence {
+            return Err(SdpParserError::ParserSequence {
                            message: "first line in media section needs to be a media line"
                                .to_string(),
                            line: None,
@@ -342,7 +342,7 @@ pub fn parse_media_vector(lines: &[SdpLine]) -> Result<Vec<SdpMedia>, SdpParserR
             SdpLine::Uri { .. } |
             SdpLine::Version { .. } |
             SdpLine::Zone { .. } => {
-                return Err(SdpParserResult::ParserSequence {
+                return Err(SdpParserError::ParserSequence {
                                message: "invalid type in media section".to_string(),
                                line: None,
                            })
