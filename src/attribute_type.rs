@@ -88,13 +88,13 @@ impl fmt::Display for SdpAttributeType {
 }
 
 #[derive(Clone)]
-enum SdpAttributeCandidateTransport {
+pub enum SdpAttributeCandidateTransport {
     Udp,
     Tcp,
 }
 
 #[derive(Clone)]
-enum SdpAttributeCandidateType {
+pub enum SdpAttributeCandidateType {
     Host,
     Srflx,
     Prflx,
@@ -102,24 +102,24 @@ enum SdpAttributeCandidateType {
 }
 
 #[derive(Clone)]
-enum SdpAttributeCandidateTcpType {
+pub enum SdpAttributeCandidateTcpType {
     Active,
     Passive,
     Simultaneous,
 }
 
 #[derive(Clone)]
-struct SdpAttributeCandidate {
-    foundation: String,
-    component: u32,
-    transport: SdpAttributeCandidateTransport,
-    priority: u64,
-    address: IpAddr,
-    port: u32,
-    c_type: SdpAttributeCandidateType,
-    raddr: Option<IpAddr>,
-    rport: Option<u32>,
-    tcp_type: Option<SdpAttributeCandidateTcpType>,
+pub struct SdpAttributeCandidate {
+    pub foundation: String,
+    pub component: u32,
+    pub transport: SdpAttributeCandidateTransport,
+    pub priority: u64,
+    pub address: IpAddr,
+    pub port: u32,
+    pub c_type: SdpAttributeCandidateType,
+    pub raddr: Option<IpAddr>,
+    pub rport: Option<u32>,
+    pub tcp_type: Option<SdpAttributeCandidateTcpType>,
 }
 
 impl SdpAttributeCandidate {
@@ -159,9 +159,9 @@ impl SdpAttributeCandidate {
 }
 
 #[derive(Clone)]
-struct SdpAttributeSimulcastId {
-    id: String,
-    paused: bool,
+pub struct SdpAttributeSimulcastId {
+    pub id: String,
+    pub paused: bool,
 }
 
 impl SdpAttributeSimulcastId {
@@ -181,8 +181,8 @@ impl SdpAttributeSimulcastId {
 }
 
 #[derive(Clone)]
-struct SdpAttributeSimulcastAlternatives {
-    ids: Vec<SdpAttributeSimulcastId>,
+pub struct SdpAttributeSimulcastAlternatives {
+    pub ids: Vec<SdpAttributeSimulcastId>,
 }
 
 impl SdpAttributeSimulcastAlternatives {
@@ -198,9 +198,9 @@ impl SdpAttributeSimulcastAlternatives {
 }
 
 #[derive(Clone)]
-struct SdpAttributeSimulcast {
-    send: Vec<SdpAttributeSimulcastAlternatives>,
-    receive: Vec<SdpAttributeSimulcastAlternatives>,
+pub struct SdpAttributeSimulcast {
+    pub send: Vec<SdpAttributeSimulcastAlternatives>,
+    pub receive: Vec<SdpAttributeSimulcastAlternatives>,
 }
 
 impl SdpAttributeSimulcast {
@@ -220,11 +220,11 @@ impl SdpAttributeSimulcast {
 }
 
 #[derive(Clone)]
-struct SdpAttributeRtcp {
-    port: u32,
-    nettype: Option<SdpNetType>,
-    addrtype: Option<SdpAddrType>,
-    unicast_addr: Option<IpAddr>,
+pub struct SdpAttributeRtcp {
+    pub port: u32,
+    pub nettype: Option<SdpNetType>,
+    pub addrtype: Option<SdpAddrType>,
+    pub unicast_addr: Option<IpAddr>,
 }
 
 impl SdpAttributeRtcp {
@@ -248,47 +248,47 @@ impl SdpAttributeRtcp {
 }
 
 #[derive(Clone)]
-struct SdpAttributeRtcpFb {
-    payload_type: u32,
+pub struct SdpAttributeRtcpFb {
+    pub payload_type: u32,
     // TODO parse this and use an enum instead?
-    feedback_type: String,
+    pub feedback_type: String,
 }
 
 #[derive(Clone)]
-enum SdpAttributeDirection {
+pub enum SdpAttributeDirection {
     Recvonly,
     Sendonly,
     Sendrecv,
 }
 
 #[derive(Clone)]
-struct SdpAttributeExtmap {
-    id: u32,
-    direction: Option<SdpAttributeDirection>,
-    url: String,
+pub struct SdpAttributeExtmap {
+    pub id: u32,
+    pub direction: Option<SdpAttributeDirection>,
+    pub url: String,
 }
 
 #[derive(Clone)]
-struct SdpAttributeFmtp {
-    payload_type: u32,
-    tokens: Vec<String>,
+pub struct SdpAttributeFmtp {
+    pub payload_type: u32,
+    pub tokens: Vec<String>,
 }
 
 #[derive(Clone)]
-struct SdpAttributeFingerprint {
+pub struct SdpAttributeFingerprint {
     // TODO turn the supported hash algorithms into an enum?
-    hash_algorithm: String,
-    fingerprint: String,
+    pub hash_algorithm: String,
+    pub fingerprint: String,
 }
 
 #[derive(Clone)]
-struct SdpAttributeSctpmap {
-    port: u32,
-    channels: u32,
+pub struct SdpAttributeSctpmap {
+    pub port: u32,
+    pub channels: u32,
 }
 
 #[derive(Clone)]
-enum SdpAttributeGroupSemantic {
+pub enum SdpAttributeGroupSemantic {
     LipSynchronization,
     FlowIdentification,
     SingleReservationFlow,
@@ -299,23 +299,23 @@ enum SdpAttributeGroupSemantic {
 }
 
 #[derive(Clone)]
-struct SdpAttributeGroup {
-    semantics: SdpAttributeGroupSemantic,
-    tags: Vec<String>,
+pub struct SdpAttributeGroup {
+    pub semantics: SdpAttributeGroupSemantic,
+    pub tags: Vec<String>,
 }
 
 #[derive(Clone)]
-struct SdpAttributeMsid {
-    id: String,
-    appdata: Option<String>,
+pub struct SdpAttributeMsid {
+    pub id: String,
+    pub appdata: Option<String>,
 }
 
 #[derive(Clone)]
-struct SdpAttributeRtpmap {
-    payload_type: u32,
-    codec_name: String,
-    frequency: Option<u32>,
-    channels: Option<u32>,
+pub struct SdpAttributeRtpmap {
+    pub payload_type: u32,
+    pub codec_name: String,
+    pub frequency: Option<u32>,
+    pub channels: Option<u32>,
 }
 
 impl SdpAttributeRtpmap {
@@ -338,7 +338,7 @@ impl SdpAttributeRtpmap {
 }
 
 #[derive(Clone)]
-enum SdpAttributeSetup {
+pub enum SdpAttributeSetup {
     Active,
     Actpass,
     Holdconn,
@@ -346,10 +346,10 @@ enum SdpAttributeSetup {
 }
 
 #[derive(Clone)]
-struct SdpAttributeSsrc {
-    id: u32,
-    attribute: Option<String>,
-    value: Option<String>,
+pub struct SdpAttributeSsrc {
+    pub id: u32,
+    pub attribute: Option<String>,
+    pub value: Option<String>,
 }
 
 impl SdpAttributeSsrc {
@@ -373,7 +373,7 @@ impl SdpAttributeSsrc {
 }
 
 #[derive(Clone)]
-enum SdpAttributeValue {
+pub enum SdpAttributeValue {
     Str { value: String },
     Int { value: u32 },
     Vector { value: Vec<String> },
@@ -394,8 +394,8 @@ enum SdpAttributeValue {
 
 #[derive(Clone)]
 pub struct SdpAttribute {
-    name: SdpAttributeType,
-    value: Option<SdpAttributeValue>,
+    pub name: SdpAttributeType,
+    pub value: Option<SdpAttributeValue>,
 }
 
 impl SdpAttribute {
