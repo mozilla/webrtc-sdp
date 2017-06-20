@@ -44,8 +44,6 @@ pub struct SdpOrigin {
     username: String,
     session_id: u64,
     session_version: u64,
-    nettype: SdpNetType,
-    addrtype: SdpAddrType,
     unicast_addr: IpAddr,
 }
 
@@ -242,16 +240,14 @@ fn parse_origin(value: &str) -> Result<SdpLine, SdpParserError> {
         username: String::from(username),
         session_id: session_id,
         session_version: session_version,
-        nettype: nettype,
-        addrtype: addrtype,
         unicast_addr: unicast_addr,
     };
     println!("origin: {}, {}, {}, {}, {}, {}",
              o.username,
              o.session_id,
              o.session_version,
-             o.nettype,
-             o.addrtype,
+             nettype,
+             addrtype,
              o.unicast_addr);
     Ok(SdpLine::Origin { value: o })
 }
