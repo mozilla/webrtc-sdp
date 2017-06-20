@@ -11,8 +11,8 @@ pub enum SdpNetType {
 
 #[derive(Clone,Copy,Debug,PartialEq)]
 pub enum SdpAddrType {
-    IP4,
-    IP6,
+    IP4 = 4,
+    IP6 = 6,
 }
 
 impl fmt::Display for SdpNetType {
@@ -78,35 +78,26 @@ fn test_parse_addrtype() {
 }
 
 pub fn parse_unicast_addr(addrtype: &SdpAddrType, value: &str) -> Result<IpAddr, SdpParserError> {
-    match IpAddr::from_str(value) {
-        Ok(ip_addr) => {
-            if (ip_addr.is_ipv6() && *addrtype == SdpAddrType::IP6) ||
-                (ip_addr.is_ipv4() && *addrtype == SdpAddrType::IP4) {
-                    Ok(ip_addr)
-                } else  {
-                    Err(SdpParserError::Line {
-                        message: "Failed to parse unicast address attribute.\
-                                  addrtype does not match address."
-                            .to_string(),
-                        line: value.to_string()
-                    })
-                }
-        },
-        Err(_) =>
+    let ip_addr = parse_unicast_addr_unknown_type(value)?;
+    if (ip_addr.is_ipv6() && *addrtype == SdpAddrType::IP6) ||
+        (ip_addr.is_ipv4() && *addrtype == SdpAddrType::IP4) {
+            Ok(ip_addr)
+        } else  {
             Err(SdpParserError::Line {
-                message: "Failed to parse unicast address attribute"
+                message: "Failed to parse unicast address attribute.\
+                          addrtype does not match address."
                     .to_string(),
                 line: value.to_string()
             })
-    }
+        }
 }
 
 pub fn parse_unicast_addr_unknown_type(value: &str) -> Result<IpAddr, SdpParserError> {
-    if value.find('.') == None {
-        parse_unicast_addr(&SdpAddrType::IP6, value)
-    } else {
-        parse_unicast_addr(&SdpAddrType::IP4, value)
-    }
+    IpAddr::from_str(value).map_err(|_| SdpParserError::Line {
+        message: "Failed to parse unicast address attribute"
+            .to_string(),
+        line: value.to_string()
+    })
 }
 
 #[test]
