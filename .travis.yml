@@ -1,0 +1,41 @@
+language: rust
+
+dist: trusty
+
+rust:
+  - stable
+  - beta
+  - nightly
+
+os:
+  - linux
+  - osx
+
+sudo: false
+
+cache:
+  cargo: true
+
+matrix:
+  allow_failures:
+    - rust: nightly
+
+# Add clippy
+before_script:
+  - |
+      if [[ "$TRAVIS_RUST_VERSION" == "nightly" ]]; then
+        ( ( cargo install clippy && export CLIPPY=true ) || export CLIPPY=false );
+      fi
+  - export PATH=$PATH:~/.cargo/bin
+
+script:
+  - cargo build --verbose --all
+  - cargo test --verbose --all
+  - |
+      if [[ "$TRAVIS_RUST_VERSION" == "nightly" ]]; then
+        echo "nightly rust"
+        echo $CLIPPY
+        if [[ "$CLIPPY"]]; then
+          cargo clippy
+        fi
+      fi
