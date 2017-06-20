@@ -82,7 +82,7 @@ pub fn parse_unicast_addr(addrtype: &SdpAddrType, value: &str) -> Result<IpAddr,
     if (ip_addr.is_ipv6() && *addrtype == SdpAddrType::IP6) ||
         (ip_addr.is_ipv4() && *addrtype == SdpAddrType::IP4) {
             Ok(ip_addr)
-        } else  {
+        } else {
             Err(SdpParserError::Line {
                 message: "Failed to parse unicast address attribute.\
                           addrtype does not match address."
