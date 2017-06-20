@@ -1,6 +1,9 @@
 language: rust
 
-rust: nightly
+rust:
+  - stable
+  - beta
+  - nightly
 
 os:
   - linux
@@ -10,3 +13,7 @@ sudo: false
 
 cache:
   cargo: true
+
+matrix:
+  allow_failures:
+    - rust: nightly
