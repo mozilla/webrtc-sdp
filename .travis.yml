@@ -30,8 +30,12 @@ before_script:
 
 script:
   - cargo build --verbose --all
-  - |
-      if [[ "$TRAVIS_RUST_VERSION" == "nightly" && $CLIPPY ]]; then
-        cargo clippy
-      fi
   - cargo test --verbose --all
+  - |
+      if [[ "$TRAVIS_RUST_VERSION" == "nightly" ]]; then
+        echo "nightly rust"
+        echo $CLIPPY
+        if [[ "$CLIPPY"]]; then
+          cargo clippy
+        fi
+      fi
