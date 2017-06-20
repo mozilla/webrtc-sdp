@@ -3,7 +3,8 @@ use std::net::IpAddr;
 
 use SdpLine;
 use error::SdpParserError;
-use network::{SdpAddrType, SdpNetType, parse_nettype, parse_addrtype, parse_unicast_addr, parse_unicast_addr_unknown_type};
+use network::{SdpAddrType, SdpNetType, parse_nettype, parse_addrtype, parse_unicast_addr,
+              parse_unicast_addr_unknown_type};
 
 #[derive(Clone)]
 pub enum SdpAttributeType {
@@ -89,7 +90,7 @@ impl fmt::Display for SdpAttributeType {
 #[derive(Clone)]
 pub enum SdpAttributeCandidateTransport {
     Udp,
-    Tcp
+    Tcp,
 }
 
 #[derive(Clone)]
@@ -97,14 +98,14 @@ pub enum SdpAttributeCandidateType {
     Host,
     Srflx,
     Prflx,
-    Relay
+    Relay,
 }
 
 #[derive(Clone)]
 pub enum SdpAttributeCandidateTcpType {
     Active,
     Passive,
-    Simultaneous
+    Simultaneous,
 }
 
 #[derive(Clone)]
@@ -118,13 +119,18 @@ pub struct SdpAttributeCandidate {
     pub c_type: SdpAttributeCandidateType,
     pub raddr: Option<IpAddr>,
     pub rport: Option<u32>,
-    pub tcp_type: Option<SdpAttributeCandidateTcpType>
+    pub tcp_type: Option<SdpAttributeCandidateTcpType>,
 }
 
 impl SdpAttributeCandidate {
-    pub fn new(fd: String, comp: u32, transp: SdpAttributeCandidateTransport,
-               prio: u64, addr: IpAddr, port: u32,
-               ctyp: SdpAttributeCandidateType) -> SdpAttributeCandidate {
+    pub fn new(fd: String,
+               comp: u32,
+               transp: SdpAttributeCandidateTransport,
+               prio: u64,
+               addr: IpAddr,
+               port: u32,
+               ctyp: SdpAttributeCandidateType)
+               -> SdpAttributeCandidate {
         SdpAttributeCandidate {
             foundation: fd,
             component: comp,
@@ -135,7 +141,7 @@ impl SdpAttributeCandidate {
             c_type: ctyp,
             raddr: None,
             rport: None,
-            tcp_type: None
+            tcp_type: None,
         }
     }
 
@@ -155,7 +161,7 @@ impl SdpAttributeCandidate {
 #[derive(Clone)]
 pub struct SdpAttributeSimulcastId {
     pub id: String,
-    pub paused: bool
+    pub paused: bool,
 }
 
 impl SdpAttributeSimulcastId {
@@ -163,12 +169,12 @@ impl SdpAttributeSimulcastId {
         if idstr.starts_with('~') {
             SdpAttributeSimulcastId {
                 id: idstr[1..].to_string(),
-                paused: true
+                paused: true,
             }
         } else {
             SdpAttributeSimulcastId {
                 id: idstr,
-                paused: false
+                paused: false,
             }
         }
     }
@@ -176,16 +182,17 @@ impl SdpAttributeSimulcastId {
 
 #[derive(Clone)]
 pub struct SdpAttributeSimulcastAlternatives {
-    pub ids: Vec<SdpAttributeSimulcastId>
+    pub ids: Vec<SdpAttributeSimulcastId>,
 }
 
 impl SdpAttributeSimulcastAlternatives {
     pub fn new(idlist: String) -> SdpAttributeSimulcastAlternatives {
         SdpAttributeSimulcastAlternatives {
-            ids: idlist.split(',')
-                 .map(|x| x.to_string())
-                 .map(SdpAttributeSimulcastId::new)
-                 .collect()
+            ids: idlist
+                .split(',')
+                .map(|x| x.to_string())
+                .map(SdpAttributeSimulcastId::new)
+                .collect(),
         }
     }
 }
@@ -193,22 +200,21 @@ impl SdpAttributeSimulcastAlternatives {
 #[derive(Clone)]
 pub struct SdpAttributeSimulcast {
     pub send: Vec<SdpAttributeSimulcastAlternatives>,
-    pub receive: Vec<SdpAttributeSimulcastAlternatives>
+    pub receive: Vec<SdpAttributeSimulcastAlternatives>,
 }
 
 impl SdpAttributeSimulcast {
-    fn parse_ids(&mut self,
-                 direction: SdpAttributeDirection,
-                 idlist: String) {
-        let list = idlist.split(';')
-                   .map(|x| x.to_string())
-                   .map(SdpAttributeSimulcastAlternatives::new)
-                   .collect();
+    fn parse_ids(&mut self, direction: SdpAttributeDirection, idlist: String) {
+        let list = idlist
+            .split(';')
+            .map(|x| x.to_string())
+            .map(SdpAttributeSimulcastAlternatives::new)
+            .collect();
         // TODO prevent over-writing existing values
         match direction {
             SdpAttributeDirection::Recvonly => self.receive = list,
             SdpAttributeDirection::Sendonly => self.send = list,
-            _ => ()
+            _ => (),
         }
     }
 }
@@ -218,7 +224,7 @@ pub struct SdpAttributeRtcp {
     pub port: u32,
     pub nettype: Option<SdpNetType>,
     pub addrtype: Option<SdpAddrType>,
-    pub unicast_addr: Option<IpAddr>
+    pub unicast_addr: Option<IpAddr>,
 }
 
 impl SdpAttributeRtcp {
@@ -227,7 +233,7 @@ impl SdpAttributeRtcp {
             port: port,
             nettype: None,
             addrtype: None,
-            unicast_addr: None
+            unicast_addr: None,
         }
     }
 
@@ -245,7 +251,7 @@ impl SdpAttributeRtcp {
 pub struct SdpAttributeRtcpFb {
     pub payload_type: u32,
     // TODO parse this and use an enum instead?
-    pub feedback_type: String
+    pub feedback_type: String,
 }
 
 #[derive(Clone)]
@@ -259,26 +265,26 @@ pub enum SdpAttributeDirection {
 pub struct SdpAttributeExtmap {
     pub id: u32,
     pub direction: Option<SdpAttributeDirection>,
-    pub url: String
+    pub url: String,
 }
 
 #[derive(Clone)]
 pub struct SdpAttributeFmtp {
     pub payload_type: u32,
-    pub tokens: Vec<String>
+    pub tokens: Vec<String>,
 }
 
 #[derive(Clone)]
 pub struct SdpAttributeFingerprint {
     // TODO turn the supported hash algorithms into an enum?
     pub hash_algorithm: String,
-    pub fingerprint: String
+    pub fingerprint: String,
 }
 
 #[derive(Clone)]
 pub struct SdpAttributeSctpmap {
     pub port: u32,
-    pub channels: u32
+    pub channels: u32,
 }
 
 #[derive(Clone)]
@@ -289,19 +295,19 @@ pub enum SdpAttributeGroupSemantic {
     AlternateNetworkAddressType,
     ForwardErrorCorrection,
     DecodingDependency,
-    Bundle
+    Bundle,
 }
 
 #[derive(Clone)]
 pub struct SdpAttributeGroup {
     pub semantics: SdpAttributeGroupSemantic,
-    pub tags: Vec<String>
+    pub tags: Vec<String>,
 }
 
 #[derive(Clone)]
 pub struct SdpAttributeMsid {
     pub id: String,
-    pub appdata: Option<String>
+    pub appdata: Option<String>,
 }
 
 #[derive(Clone)]
@@ -309,15 +315,16 @@ pub struct SdpAttributeRtpmap {
     pub payload_type: u32,
     pub codec_name: String,
     pub frequency: Option<u32>,
-    pub channels: Option<u32>
+    pub channels: Option<u32>,
 }
 
 impl SdpAttributeRtpmap {
     pub fn new(pt: u32, codec: String) -> SdpAttributeRtpmap {
-        SdpAttributeRtpmap { payload_type: pt,
-                             codec_name: codec,
-                             frequency: None,
-                             channels: None
+        SdpAttributeRtpmap {
+            payload_type: pt,
+            codec_name: codec,
+            frequency: None,
+            channels: None,
         }
     }
 
@@ -335,21 +342,22 @@ pub enum SdpAttributeSetup {
     Active,
     Actpass,
     Holdconn,
-    Passive
+    Passive,
 }
 
 #[derive(Clone)]
 pub struct SdpAttributeSsrc {
     pub id: u32,
     pub attribute: Option<String>,
-    pub value: Option<String>
+    pub value: Option<String>,
 }
 
 impl SdpAttributeSsrc {
     pub fn new(id: u32) -> SdpAttributeSsrc {
-        SdpAttributeSsrc { id: id,
-                           attribute: None,
-                           value: None
+        SdpAttributeSsrc {
+            id: id,
+            attribute: None,
+            value: None,
         }
     }
 
@@ -366,35 +374,36 @@ impl SdpAttributeSsrc {
 
 #[derive(Clone)]
 pub enum SdpAttributeValue {
-    Str {value: String},
-    Int {value: u32},
-    Vector {value: Vec<String>},
-    Candidate {value: SdpAttributeCandidate},
-    Extmap {value: SdpAttributeExtmap},
-    Fingerprint {value: SdpAttributeFingerprint},
-    Fmtp {value: SdpAttributeFmtp},
-    Group {value: SdpAttributeGroup},
-    Msid {value: SdpAttributeMsid},
-    Rtpmap {value: SdpAttributeRtpmap},
-    Rtcp {value: SdpAttributeRtcp},
-    Rtcpfb {value: SdpAttributeRtcpFb},
-    Sctpmap {value: SdpAttributeSctpmap},
-    Setup {value: SdpAttributeSetup},
-    Simulcast {value: SdpAttributeSimulcast},
-    Ssrc {value: SdpAttributeSsrc},
+    Str { value: String },
+    Int { value: u32 },
+    Vector { value: Vec<String> },
+    Candidate { value: SdpAttributeCandidate },
+    Extmap { value: SdpAttributeExtmap },
+    Fingerprint { value: SdpAttributeFingerprint },
+    Fmtp { value: SdpAttributeFmtp },
+    Group { value: SdpAttributeGroup },
+    Msid { value: SdpAttributeMsid },
+    Rtpmap { value: SdpAttributeRtpmap },
+    Rtcp { value: SdpAttributeRtcp },
+    Rtcpfb { value: SdpAttributeRtcpFb },
+    Sctpmap { value: SdpAttributeSctpmap },
+    Setup { value: SdpAttributeSetup },
+    Simulcast { value: SdpAttributeSimulcast },
+    Ssrc { value: SdpAttributeSsrc },
 }
 
 #[derive(Clone)]
 pub struct SdpAttribute {
     pub name: SdpAttributeType,
-    pub value: Option<SdpAttributeValue>
+    pub value: Option<SdpAttributeValue>,
 }
 
 impl SdpAttribute {
     pub fn new(t: SdpAttributeType) -> SdpAttribute {
-        SdpAttribute { name: t,
-                       value: None
-                     }
+        SdpAttribute {
+            name: t,
+            value: None,
+        }
     }
 
     pub fn parse_value(&mut self, v: &str) -> Result<(), SdpParserError> {
@@ -410,7 +419,7 @@ impl SdpAttribute {
             SdpAttributeType::Sendonly |
             SdpAttributeType::Sendrecv => {
                 if !v.is_empty() {
-                    return Err(SdpParserError::ParserLineError{
+                    return Err(SdpParserError::Line{
                         message: "This attribute is not allowed to have a value".to_string(),
                         line: v.to_string()})
                 }
@@ -436,7 +445,7 @@ impl SdpAttribute {
             SdpAttributeType::Candidate => {
                 let tokens: Vec<&str> = v.split_whitespace().collect();
                 if tokens.len() < 8 {
-                    return Err(SdpParserError::ParserLineError{
+                    return Err(SdpParserError::Line{
                         message: "Candidate needs to have minimum eigth tokens".to_string(),
                         line: v.to_string()})
                 }
@@ -444,7 +453,7 @@ impl SdpAttribute {
                 let transport = match tokens[2].to_lowercase().as_ref() {
                     "udp" => SdpAttributeCandidateTransport::Udp,
                     "tcp" => SdpAttributeCandidateTransport::Tcp,
-                    _ => return Err(SdpParserError::ParserLineError{
+                    _ => return Err(SdpParserError::Line{
                         message: "Unknonw candidate transport value".to_string(),
                         line: v.to_string()})
                 };
@@ -452,13 +461,13 @@ impl SdpAttribute {
                 let address = try!(parse_unicast_addr_unknown_type(tokens[4]));
                 let port = try!(tokens[5].parse::<u32>());
                 if port > 65535 {
-                    return Err(SdpParserError::ParserLineError{
+                    return Err(SdpParserError::Line{
                         message: "ICE candidate port can only be a bit 16bit number".to_string(),
                         line: v.to_string()})
                 }
                 match tokens[6].to_lowercase().as_ref() {
                     "typ" => (),
-                    _ => return Err(SdpParserError::ParserLineError{
+                    _ => return Err(SdpParserError::Line{
                             message: "Candidate attribute token must be 'typ'".to_string(),
                             line: v.to_string()})
                 };
@@ -467,7 +476,7 @@ impl SdpAttribute {
                     "srflx" => SdpAttributeCandidateType::Srflx,
                     "prflx" => SdpAttributeCandidateType::Prflx,
                     "relay" => SdpAttributeCandidateType::Relay,
-                    _ => return Err(SdpParserError::ParserLineError{
+                    _ => return Err(SdpParserError::Line{
                             message: "Unknow candidate type value".to_string(),
                             line: v.to_string()})
                 };
@@ -490,7 +499,7 @@ impl SdpAttribute {
                             "rport" => {
                                 let port = try!(tokens[index + 1].parse::<u32>());
                                 if port > 65535 {
-                                    return Err(SdpParserError::ParserLineError{
+                                    return Err(SdpParserError::Line{
                                         message: "ICE candidate rport can only be a bit 16bit number".to_string(),
                                         line: v.to_string()})
                                 }
@@ -502,13 +511,13 @@ impl SdpAttribute {
                                     "active" => SdpAttributeCandidateTcpType::Active,
                                     "passive" => SdpAttributeCandidateTcpType::Passive,
                                     "so" => SdpAttributeCandidateTcpType::Simultaneous,
-                                    _ => return Err(SdpParserError::ParserLineError{
+                                    _ => return Err(SdpParserError::Line{
                                         message: "Unknown tcptype value in candidate line".to_string(),
                                         line: v.to_string()})
                                 });
                                 index += 2;
                             },
-                            _ => return Err(SdpParserError::ParserUnsupported{
+                            _ => return Err(SdpParserError::Unsupported{
                                 message: "Uknown candidate extension name".to_string(),
                                 line: v.to_string()})
                         };
@@ -521,7 +530,7 @@ impl SdpAttribute {
             SdpAttributeType::Extmap => {
                 let tokens: Vec<&str> = v.split_whitespace().collect();
                 if tokens.len() != 2 {
-                    return Err(SdpParserError::ParserLineError{
+                    return Err(SdpParserError::Line{
                         message: "Extmap needs to have two tokens".to_string(),
                         line: v.to_string()})
                 }
@@ -536,7 +545,7 @@ impl SdpAttribute {
                         "recvonly" => SdpAttributeDirection::Recvonly,
                         "sendonly" => SdpAttributeDirection::Sendonly,
                         "sendrecv" => SdpAttributeDirection::Sendrecv,
-                        _ => return Err(SdpParserError::ParserLineError{
+                        _ => return Err(SdpParserError::Line{
                             message: "Unsupported direction in extmap value".to_string(),
                             line: v.to_string()}),
                     })
@@ -552,7 +561,7 @@ impl SdpAttribute {
             SdpAttributeType::Fingerprint => {
                 let tokens: Vec<&str> = v.split_whitespace().collect();
                 if tokens.len() != 2 {
-                    return Err(SdpParserError::ParserLineError{
+                    return Err(SdpParserError::Line{
                         message: "Fingerprint needs to have two tokens".to_string(),
                         line: v.to_string()})
                 }
@@ -566,7 +575,7 @@ impl SdpAttribute {
             SdpAttributeType::Fmtp => {
                 let tokens: Vec<&str> = v.split_whitespace().collect();
                 if tokens.len() != 2 {
-                    return Err(SdpParserError::ParserLineError{
+                    return Err(SdpParserError::Line{
                         message: "Fmtp needs to have two tokens".to_string(),
                         line: v.to_string()})
                 }
@@ -583,7 +592,7 @@ impl SdpAttribute {
             SdpAttributeType::Group => {
                 let mut tokens  = v.split_whitespace();
                 let semantics = match tokens.next() {
-                    None => return Err(SdpParserError::ParserLineError{
+                    None => return Err(SdpParserError::Line{
                         message: "Group attribute is missing semantics token".to_string(),
                         line: v.to_string()}),
                     Some(x) =>  match x.to_uppercase().as_ref() {
@@ -594,7 +603,7 @@ impl SdpAttribute {
                         "FEC" => SdpAttributeGroupSemantic::ForwardErrorCorrection,
                         "DDP" => SdpAttributeGroupSemantic::DecodingDependency,
                         "BUNDLE" => SdpAttributeGroupSemantic::Bundle,
-                        _ => return Err(SdpParserError::ParserLineError{
+                        _ => return Err(SdpParserError::Line{
                             message: "Unsupported group semantics".to_string(),
                             line: v.to_string()}),
                     }
@@ -613,7 +622,7 @@ impl SdpAttribute {
             SdpAttributeType::Msid => {
                 let mut tokens  = v.split_whitespace();
                 let id = match tokens.next() {
-                    None => return Err(SdpParserError::ParserLineError{
+                    None => return Err(SdpParserError::Line{
                         message: "Msid attribute is missing msid-id token".to_string(),
                         line: v.to_string()}),
                     Some(x) => x.to_string()
@@ -632,13 +641,13 @@ impl SdpAttribute {
             SdpAttributeType::Rtcp => {
                 let mut tokens = v.split_whitespace();
                 let port = match tokens.next() {
-                    None => return Err(SdpParserError::ParserLineError{
+                    None => return Err(SdpParserError::Line{
                         message: "Rtcp attribute is missing port number".to_string(),
                         line: v.to_string()}),
                     Some(x) => try!(x.parse::<u32>())
                 };
                 if port > 65535 {
-                    return Err(SdpParserError::ParserLineError{
+                    return Err(SdpParserError::Line{
                         message: "Rtcp port can only be a bit 16bit number".to_string(),
                         line: v.to_string()})
                 };
@@ -648,13 +657,13 @@ impl SdpAttribute {
                     Some(x) => {
                         rtcp.set_nettype(try!(parse_nettype(x)));
                         match tokens.next() {
-                            None => return Err(SdpParserError::ParserLineError{
+                            None => return Err(SdpParserError::Line{
                                 message: "Rtcp attribute is missing address type token".to_string(),
                                 line: v.to_string()}),
                             Some(x) => {
                                 let addrtype = try!(parse_addrtype(x));
                                 let addr = match tokens.next() {
-                                    None => return Err(SdpParserError::ParserLineError{
+                                    None => return Err(SdpParserError::Line{
                                         message: "Rtcp attribute is missing ip address token".to_string(),
                                         line: v.to_string()}),
                                     Some(x) =>
@@ -680,7 +689,7 @@ impl SdpAttribute {
             SdpAttributeType::Rtpmap => {
                 let tokens: Vec<&str> = v.split_whitespace().collect();
                 if tokens.len() != 2 {
-                    return Err(SdpParserError::ParserLineError{
+                    return Err(SdpParserError::Line{
                         message: "Rtpmap needs to have two tokens".to_string(),
                         line: v.to_string()})
                 }
@@ -688,7 +697,7 @@ impl SdpAttribute {
                 let payload_type: u32 = try!(tokens[0].parse::<u32>());
                 let split: Vec<&str> = tokens[1].split('/').collect();
                 if split.len() > 3 {
-                    return Err(SdpParserError::ParserLineError{
+                    return Err(SdpParserError::Line{
                         message: "Rtpmap codec token can max 3 subtokens".to_string(),
                         line: v.to_string()})
                 }
@@ -705,18 +714,18 @@ impl SdpAttribute {
             SdpAttributeType::Sctpmap => {
                 let tokens: Vec<&str> = v.split_whitespace().collect();
                 if tokens.len() != 3 {
-                    return Err(SdpParserError::ParserLineError{
+                    return Err(SdpParserError::Line{
                         message: "Sctpmap needs to have three tokens".to_string(),
                         line: v.to_string()})
                 }
                 let port = try!(tokens[0].parse::<u32>());
                 if port > 65535 {
-                    return Err(SdpParserError::ParserLineError{
+                    return Err(SdpParserError::Line{
                         message: "Sctpmap port can only be a bit 16bit number".to_string(),
                         line: v.to_string()})
                 }
                 if tokens[1].to_lowercase() != "webrtc-datachannel" {
-                    return Err(SdpParserError::ParserLineError{
+                    return Err(SdpParserError::Line{
                         message: "Unsupported sctpmap type token".to_string(),
                         line: v.to_string()})
                 }
@@ -730,7 +739,7 @@ impl SdpAttribute {
             SdpAttributeType::SctpPort => {
                 let port = try!(v.parse::<u32>());
                 if port > 65535 {
-                    return Err(SdpParserError::ParserLineError{
+                    return Err(SdpParserError::Line{
                         message: "Sctpport port can only be a bit 16bit number".to_string(),
                         line: v.to_string()})
                 }
@@ -741,7 +750,7 @@ impl SdpAttribute {
             SdpAttributeType::Simulcast => {
                 let mut tokens = v.split_whitespace();
                 let mut token = match tokens.next() {
-                    None => return Err(SdpParserError::ParserLineError{
+                    None => return Err(SdpParserError::Line{
                         message: "Simulcast attribute is missing send/recv value".to_string(),
                         line: v.to_string()}),
                     Some(x) => x,
@@ -754,12 +763,12 @@ impl SdpAttribute {
                     let sendrecv = match token.to_lowercase().as_ref() {
                         "send" => SdpAttributeDirection::Sendonly,
                         "recv" => SdpAttributeDirection::Recvonly,
-                        _ => return Err(SdpParserError::ParserLineError{
+                        _ => return Err(SdpParserError::Line{
                         message: "Unsupported send/recv value in simulcast attribute".to_string(),
                         line: v.to_string()}),
                     };
                     match tokens.next() {
-                        None => return Err(SdpParserError::ParserLineError{
+                        None => return Err(SdpParserError::Line{
                             message: "Simulcast attribute is missing id list".to_string(),
                             line: v.to_string()}),
                         Some(x) => sc.parse_ids(sendrecv, x.to_string()),
@@ -780,7 +789,7 @@ impl SdpAttribute {
                         "actpass" => SdpAttributeSetup::Actpass,
                         "holdconn" => SdpAttributeSetup::Holdconn,
                         "passive" => SdpAttributeSetup::Passive,
-                        _ => return Err(SdpParserError::ParserLineError{
+                        _ => return Err(SdpParserError::Line{
                             message: "Unsupported setup value".to_string(),
                             line: v.to_string()}),
                     }
@@ -789,7 +798,7 @@ impl SdpAttribute {
             SdpAttributeType::Ssrc => {
                 let mut tokens  = v.split_whitespace();
                 let ssrc_id = match tokens.next() {
-                    None => return Err(SdpParserError::ParserLineError{
+                    None => return Err(SdpParserError::Line{
                         message: "Ssrc attribute is missing ssrc-id value".to_string(),
                         line: v.to_string()}),
                     Some(x) => try!(x.parse::<u32>())
@@ -853,9 +862,12 @@ pub fn parse_attribute(value: &str) -> Result<SdpLine, SdpParserError> {
         "simulcast" => SdpAttributeType::Simulcast,
         "ssrc" => SdpAttributeType::Ssrc,
         "ssrc-group" => SdpAttributeType::SsrcGroup,
-        _ => return Err(SdpParserError::ParserUnsupported {
-              message: "unsupported attribute value".to_string(),
-              line: name.to_string() }),
+        _ => {
+            return Err(SdpParserError::Unsupported {
+                           message: "unsupported attribute value".to_string(),
+                           line: name.to_string(),
+                       })
+        }
     };
     let mut attr = SdpAttribute::new(attrtype);
     try!(attr.parse_value(val.trim()));
@@ -869,7 +881,8 @@ pub fn parse_attribute(value: &str) -> Result<SdpLine, SdpParserError> {
 #[test]
 fn test_parse_attribute_candidate() {
     assert!(parse_attribute("candidate:0 1 UDP 2122252543 172.16.156.106 49760 typ host").is_ok());
-    assert!(parse_attribute("candidate:foo 1 UDP 2122252543 172.16.156.106 49760 typ host").is_ok());
+    assert!(parse_attribute("candidate:foo 1 UDP 2122252543 172.16.156.106 49760 typ host")
+                .is_ok());
     assert!(parse_attribute("candidate:0 1 TCP 2122252543 172.16.156.106 49760 typ host").is_ok());
     assert!(parse_attribute("candidate:0 1 TCP 2122252543 ::1 49760 typ host").is_ok());
     assert!(parse_attribute("candidate:0 1 UDP 2122252543 172.16.156.106 49760 typ srflx").is_ok());
@@ -882,12 +895,14 @@ fn test_parse_attribute_candidate() {
     assert!(parse_attribute("candidate:1 1 TCP 1685987071 24.23.204.141 54609 typ srflx raddr 192.168.1.4 rport 61665 tcptype passive").is_ok());
 
     assert!(parse_attribute("candidate:0 1 UDP 2122252543 172.16.156.106 49760 typ").is_err());
-    assert!(parse_attribute("candidate:0 foo UDP 2122252543 172.16.156.106 49760 typ host").is_err());
+    assert!(parse_attribute("candidate:0 foo UDP 2122252543 172.16.156.106 49760 typ host")
+                .is_err());
     assert!(parse_attribute("candidate:0 1 FOO 2122252543 172.16.156.106 49760 typ host").is_err());
     assert!(parse_attribute("candidate:0 1 UDP foo 172.16.156.106 49760 typ host").is_err());
     assert!(parse_attribute("candidate:0 1 UDP 2122252543 172.16.156 49760 typ host").is_err());
     assert!(parse_attribute("candidate:0 1 UDP 2122252543 172.16.156.106 70000 typ host").is_err());
-    assert!(parse_attribute("candidate:0 1 UDP 2122252543 172.16.156.106 49760 type host").is_err());
+    assert!(parse_attribute("candidate:0 1 UDP 2122252543 172.16.156.106 49760 type host")
+                .is_err());
     assert!(parse_attribute("candidate:0 1 UDP 2122252543 172.16.156.106 49760 typ fost").is_err());
     assert!(parse_attribute("candidate:1 1 UDP 1685987071 24.23.204.141 54609 typ srflx raddr 192.168.1 rport 61665").is_err());
     assert!(parse_attribute("candidate:1 1 UDP 1685987071 24.23.204.141 54609 typ srflx raddr 192.168.1.4 rport 70000").is_err());
@@ -900,8 +915,10 @@ fn test_parse_attribute_end_of_candidates() {
 
 #[test]
 fn test_parse_attribute_extmap() {
-    assert!(parse_attribute("extmap:1/sendonly urn:ietf:params:rtp-hdrext:ssrc-audio-level").is_ok());
-    assert!(parse_attribute("extmap:3 http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time").is_ok());
+    assert!(parse_attribute("extmap:1/sendonly urn:ietf:params:rtp-hdrext:ssrc-audio-level")
+                .is_ok());
+    assert!(parse_attribute("extmap:3 http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time")
+                .is_ok());
 }
 
 #[test]
@@ -1060,7 +1077,8 @@ fn test_parse_attribute_simulcast() {
 fn test_parse_attribute_ssrc() {
     assert!(parse_attribute("ssrc:2655508255").is_ok());
     assert!(parse_attribute("ssrc:2655508255 foo").is_ok());
-    assert!(parse_attribute("ssrc:2655508255 cname:{735484ea-4f6c-f74a-bd66-7425f8476c2e}").is_ok());
+    assert!(parse_attribute("ssrc:2655508255 cname:{735484ea-4f6c-f74a-bd66-7425f8476c2e}")
+                .is_ok());
 
     assert!(parse_attribute("ssrc:").is_err());
     assert!(parse_attribute("ssrc:foo").is_err());

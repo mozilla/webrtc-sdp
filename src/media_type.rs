@@ -146,7 +146,7 @@ fn parse_media_token(value: &str) -> Result<SdpMediaValue, SdpParserError> {
            "video" => SdpMediaValue::Video,
            "application" => SdpMediaValue::Application,
            _ => {
-               return Err(SdpParserError::ParserUnsupported {
+               return Err(SdpParserError::Unsupported {
                               message: "unsupported media value".to_string(),
                               line: value.to_string(),
                           })
@@ -180,7 +180,7 @@ fn parse_protocol_token(value: &str) -> Result<SdpProtocolValue, SdpParserError>
            "UDP/DTLS/SCTP" => SdpProtocolValue::UdpDtlsSctp,
            "TCP/DTLS/SCTP" => SdpProtocolValue::TcpDtlsSctp,
            _ => {
-               return Err(SdpParserError::ParserUnsupported {
+               return Err(SdpParserError::Unsupported {
                               message: "unsupported protocol value".to_string(),
                               line: value.to_string(),
                           })
@@ -216,7 +216,7 @@ fn test_parse_protocol_token() {
 pub fn parse_media(value: &str) -> Result<SdpLine, SdpParserError> {
     let mv: Vec<&str> = value.split_whitespace().collect();
     if mv.len() < 4 {
-        return Err(SdpParserError::ParserLineError {
+        return Err(SdpParserError::Line {
                        message: "media attribute must have at least four tokens".to_string(),
                        line: value.to_string(),
                    });
@@ -224,7 +224,7 @@ pub fn parse_media(value: &str) -> Result<SdpLine, SdpParserError> {
     let media = try!(parse_media_token(mv[0]));
     let port = try!(mv[1].parse::<u32>());
     if port > 65535 {
-        return Err(SdpParserError::ParserLineError {
+        return Err(SdpParserError::Line {
                        message: "media port token is too big".to_string(),
                        line: value.to_string(),
                    });
@@ -242,7 +242,7 @@ pub fn parse_media(value: &str) -> Result<SdpLine, SdpParserError> {
                     9  |  // G722
                     13 |  // Comfort Noise
                     96 ... 127 => (),  // dynamic range
-                    _ => return Err(SdpParserError::ParserLineError {
+                    _ => return Err(SdpParserError::Line {
                           message: "format number in media line is out of range".to_string(),
                           line: value.to_string() }),
                 };
@@ -310,7 +310,7 @@ pub fn parse_media_vector(lines: &[SdpLine]) -> Result<Vec<SdpMedia>, SdpParserE
     let mut sdp_media = match lines[0] {
         SdpLine::Media { value: ref v } => SdpMedia::new(v.clone()),
         _ => {
-            return Err(SdpParserError::ParserSequence {
+            return Err(SdpParserError::Sequence {
                            message: "first line in media section needs to be a media line"
                                .to_string(),
                            line: None,
@@ -342,7 +342,7 @@ pub fn parse_media_vector(lines: &[SdpLine]) -> Result<Vec<SdpMedia>, SdpParserE
             SdpLine::Uri { .. } |
             SdpLine::Version { .. } |
             SdpLine::Zone { .. } => {
-                return Err(SdpParserError::ParserSequence {
+                return Err(SdpParserError::Sequence {
                                message: "invalid type in media section".to_string(),
                                line: None,
                            })
