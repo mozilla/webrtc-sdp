@@ -33,9 +33,9 @@ script:
   - cargo test --verbose --all
   - |
       if [[ "$TRAVIS_RUST_VERSION" == "nightly" ]]; then
-        echo "nightly rust"
-        echo $CLIPPY
+        echo "nightly rust";
+        echo $CLIPPY;
         if [[ "$CLIPPY"]]; then
-          cargo clippy
+          cargo clippy;
         fi
       fi
