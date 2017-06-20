@@ -1,0 +1,12 @@
+language: rust
+
+rust: nightly
+
+os:
+  - linux
+  - osx
+
+sudo: false
+
+cache:
+  cargo: true
