@@ -4,7 +4,8 @@ cache: cargo
 sudo: false
 os:
   - linux
-  - osx
+# Taken out temporarily because it's to slow
+#  - osx
 
 rust:
   - stable
