@@ -32,11 +32,11 @@ pub struct SdpBandwidth {
 
 #[derive(Clone)]
 pub struct SdpConnection {
-    nettype: SdpNetType,
-    addrtype: SdpAddrType,
-    addr: IpAddr,
-    ttl: Option<u32>,
-    amount: Option<u32>,
+    pub nettype: SdpNetType,
+    pub addrtype: SdpAddrType,
+    pub addr: IpAddr,
+    pub ttl: Option<u32>,
+    pub amount: Option<u32>,
 }
 
 #[derive(Clone)]
