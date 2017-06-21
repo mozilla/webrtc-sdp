@@ -41,10 +41,10 @@ pub struct SdpConnection {
 
 #[derive(Clone)]
 pub struct SdpOrigin {
-    username: String,
-    session_id: u64,
-    session_version: u64,
-    unicast_addr: IpAddr,
+    pub username: String,
+    pub session_id: u64,
+    pub session_version: u64,
+    pub unicast_addr: IpAddr,
 }
 
 #[derive(Clone)]
