@@ -25,9 +25,9 @@ pub enum SdpBandwidthType {
 
 #[derive(Clone)]
 pub struct SdpBandwidth {
-    bwtype: SdpBandwidthType,
-    unknown_type: Option<String>,
-    bandwidth: u64,
+    pub bwtype: SdpBandwidthType,
+    pub unknown_type: Option<String>,
+    pub bandwidth: u64,
 }
 
 #[derive(Clone)]
@@ -49,8 +49,8 @@ pub struct SdpOrigin {
 
 #[derive(Clone)]
 pub struct SdpTiming {
-    start: u64,
-    stop: u64,
+    pub start: u64,
+    pub stop: u64,
 }
 
 pub enum SdpLine {
