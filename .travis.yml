@@ -3,9 +3,9 @@ language: rust
 dist: trusty
 
 rust:
+  - nightly
 #  - stable
 #  - beta
-  - nightly
 
 os:
   - linux
