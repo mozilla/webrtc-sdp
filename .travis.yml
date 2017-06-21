@@ -31,11 +31,11 @@ before_script:
 script:
   - cargo build --verbose --all
   - cargo test --verbose --all
-  - |
-      if [[ "$TRAVIS_RUST_VERSION" == "nightly" ]]; then
-        echo "nightly rust";
-        echo $CLIPPY;
-        if [[ "$CLIPPY"]]; then
-          cargo clippy;
-        fi
-      fi
+#  - |
+#      if [[ "$TRAVIS_RUST_VERSION" == "nightly" ]]; then
+#        echo "nightly rust";
+#        echo $CLIPPY;
+#        if [[ "$CLIPPY"]]; then
+#          cargo clippy;
+#        fi
+#      fi
