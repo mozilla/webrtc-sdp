@@ -21,8 +21,9 @@ matrix:
 before_script:
   - |
       if [[ "$TRAVIS_RUST_VERSION" == "nightly-2017-06-19" ]]; then
-        ( ( cargo install clippy && export CLIPPY=true ) || export CLIPPY=false );
+        ( ( cargo install clippy && export CLIPPY=1 ) || export CLIPPY=0 );
       fi
+  - echo "Test Y$CLIPPY"
   - export PATH=$PATH:~/.cargo/bin
 
 script:
@@ -31,6 +32,6 @@ script:
   - echo "Rust version $TRAVIS_RUST_VERSION"
   - echo "Test X$CLIPPY"
   - |
-      if [[ "$TRAVIS_RUST_VERSION" == "nightly-2017-06-19" && $CLIPPY ]]; then
+      if [[ "$TRAVIS_RUST_VERSION" == "nightly-2017-06-19" && "$CLIPPY" -eq 1 ]]; then
         cargo clippy;
       fi
