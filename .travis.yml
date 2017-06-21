@@ -3,11 +3,12 @@ language: rust
 dist: trusty
 
 rust:
+  - stable
+  - beta
   - nightly
 
 os:
   - linux
-  - osx
 
 sudo: false
 
