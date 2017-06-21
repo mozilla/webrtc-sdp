@@ -5,7 +5,7 @@ dist: trusty
 rust:
   - stable
   - beta
-  - nightly
+  - nightly-2017-04-11
 
 os:
   - linux
