@@ -22,8 +22,7 @@ before_script:
   - export PATH=$PATH:~/.cargo/bin
   - export CLIPPYBIN=~/.cargo/bin/cargo-clippy
   - |
-    if [[ "$TRAVIS_RUST_VERSION" == "nightly-2017-06-19" &&
-         ! -f "$CLIPPYBIN" ]]; then
+    if [[ "$TRAVIS_RUST_VERSION" == "nightly-2017-06-19" ]]; then
       cargo install clippy;
     fi
 
@@ -33,6 +32,8 @@ script:
   - echo "Rust version $TRAVIS_RUST_VERSION"
   - echo "Test X$CLIPPY"
   - echo "Path $PATH"
-  - test "$TRAVIS_RUST_VERSION" == "nightly-2017-06-19" \
-    && test -f ~/.cargo/bin/cargo-clippy \
-      && cargo clippy;
+  - |
+    if [[ "$TRAVIS_RUST_VERSION" == "nightly-2017-06-19" &&
+      -f ~/.cargo/bin/cargo-clippy ]]; then
+      cargo clippy;
+    fi
