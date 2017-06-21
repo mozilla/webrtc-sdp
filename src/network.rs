@@ -15,6 +15,13 @@ pub enum SdpAddrType {
     IP6 = 6,
 }
 
+impl SdpAddrType {
+    pub fn same_protocol(&self, addr: &IpAddr) -> bool {
+        (addr.is_ipv6() && *self == SdpAddrType::IP6) ||
+            (addr.is_ipv4() && *self == SdpAddrType::IP4)
+    }
+}
+
 impl fmt::Display for SdpNetType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "IN")
@@ -77,22 +84,7 @@ fn test_parse_addrtype() {
     assert!(parse_addrtype("IP5").is_err());
 }
 
-pub fn parse_unicast_addr(addrtype: &SdpAddrType, value: &str) -> Result<IpAddr, SdpParserError> {
-    let ip_addr = parse_unicast_addr_unknown_type(value)?;
-    if (ip_addr.is_ipv6() && *addrtype == SdpAddrType::IP6) ||
-        (ip_addr.is_ipv4() && *addrtype == SdpAddrType::IP4) {
-            Ok(ip_addr)
-        } else {
-            Err(SdpParserError::Line {
-                message: "Failed to parse unicast address attribute.\
-                          addrtype does not match address."
-                    .to_string(),
-                line: value.to_string()
-            })
-        }
-}
-
-pub fn parse_unicast_addr_unknown_type(value: &str) -> Result<IpAddr, SdpParserError> {
+pub fn parse_unicast_addr(value: &str) -> Result<IpAddr, SdpParserError> {
     IpAddr::from_str(value).map_err(|_| SdpParserError::Line {
         message: "Failed to parse unicast address attribute"
             .to_string(),
@@ -102,8 +94,8 @@ pub fn parse_unicast_addr_unknown_type(value: &str) -> Result<IpAddr, SdpParserE
 
 #[test]
 fn test_parse_unicast_addr_unknown_type() {
-    let ip4 = parse_unicast_addr_unknown_type("127.0.0.1");
+    let ip4 = parse_unicast_addr("127.0.0.1");
     assert!(ip4.is_ok());
-    let ip6 = parse_unicast_addr_unknown_type("::1");
+    let ip6 = parse_unicast_addr("::1");
     assert!(ip6.is_ok());
 }

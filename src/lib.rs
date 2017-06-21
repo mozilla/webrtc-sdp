@@ -235,7 +235,15 @@ fn parse_origin(value: &str) -> Result<SdpLine, SdpParserError> {
     let session_version = try!(ot[2].parse::<u64>());
     let nettype = try!(parse_nettype(ot[3]));
     let addrtype = try!(parse_addrtype(ot[4]));
-    let unicast_addr = try!(parse_unicast_addr(&addrtype, ot[5]));
+    let unicast_addr = parse_unicast_addr(ot[5])?;
+    if !addrtype.same_protocol(&unicast_addr) {
+            return Err(SdpParserError::Line {
+                message: "Failed to parse unicast address attribute.\
+                          addrtype does not match address."
+                    .to_string(),
+                line: value.to_string()
+            });
+        }
     let o = SdpOrigin {
         username: String::from(username),
         session_id: session_id,
@@ -306,7 +314,15 @@ fn parse_connection(value: &str) -> Result<SdpLine, SdpParserError> {
         ttl = Some(try!(addr_tokens[1].parse::<u32>()));
         addr_token = addr_tokens[0];
     }
-    let addr = try!(parse_unicast_addr(&addrtype, addr_token));
+    let addr = try!(parse_unicast_addr(addr_token));
+    if !addrtype.same_protocol(&addr) {
+            return Err(SdpParserError::Line {
+                message: "Failed to parse unicast address attribute.\
+                          addrtype does not match address."
+                    .to_string(),
+                line: value.to_string()
+            });
+        }
     let c = SdpConnection {
         nettype,
         addrtype,
