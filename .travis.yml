@@ -23,7 +23,7 @@ before_script:
   - export CLIPPYBIN=~/.cargo/bin/cargo-clippy
   - |
     if [[ "$TRAVIS_RUST_VERSION" == "nightly-2017-06-19" ]]; then
-      cargo install clippy;
+      cargo install --force clippy;
     fi
 
 script:
