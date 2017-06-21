@@ -3,8 +3,7 @@ use std::net::IpAddr;
 
 use SdpLine;
 use error::SdpParserError;
-use network::{SdpAddrType, SdpNetType, parse_nettype, parse_addrtype, parse_unicast_addr,
-              parse_unicast_addr_unknown_type};
+use network::{SdpAddrType, SdpNetType, parse_nettype, parse_addrtype, parse_unicast_addr};
 
 #[derive(Clone)]
 pub enum SdpAttributeType {
@@ -458,7 +457,7 @@ impl SdpAttribute {
                         line: v.to_string()})
                 };
                 let priority = try!(tokens[3].parse::<u64>());
-                let address = try!(parse_unicast_addr_unknown_type(tokens[4]));
+                let address = try!(parse_unicast_addr(tokens[4]));
                 let port = try!(tokens[5].parse::<u32>());
                 if port > 65535 {
                     return Err(SdpParserError::Line{
@@ -492,7 +491,7 @@ impl SdpAttribute {
                     while tokens.len() > index + 1 {
                         match tokens[index].to_lowercase().as_ref() {
                             "raddr" => {
-                                let addr = try!(parse_unicast_addr_unknown_type(tokens[index + 1]));
+                                let addr = try!(parse_unicast_addr(tokens[index + 1]));
                                 cand.set_remote_address(addr);
                                 index += 2;
                             },
@@ -666,8 +665,18 @@ impl SdpAttribute {
                                     None => return Err(SdpParserError::Line{
                                         message: "Rtcp attribute is missing ip address token".to_string(),
                                         line: v.to_string()}),
-                                    Some(x) =>
-                                        try!(parse_unicast_addr(&addrtype, x)),
+                                    Some(x) => {
+                                        let addr = parse_unicast_addr(x)?;
+                                        if !addrtype.same_protocol(&addr) {
+                                            return Err(SdpParserError::Line {
+                                                message: "Failed to parse unicast address attribute.\
+                                                          addrtype does not match address."
+                                                    .to_string(),
+                                                line: x.to_string()
+                                            });
+                                        }
+                                        addr
+                                    },
                                 };
                                 rtcp.set_addr(addrtype, addr);
                             },
