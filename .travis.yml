@@ -3,8 +3,8 @@ language: rust
 dist: trusty
 
 rust:
-  - stable
-  - beta
+#  - stable
+#  - beta
   - nightly
 
 os:
@@ -31,11 +31,8 @@ before_script:
 script:
   - cargo build --verbose --all
   - cargo test --verbose --all
-#  - |
-#      if [[ "$TRAVIS_RUST_VERSION" == "nightly" ]]; then
-#        echo "nightly rust";
-#        echo $CLIPPY;
-#        if [[ "$CLIPPY"]]; then
-#          cargo clippy;
-#        fi
-#      fi
+  - |
+      echo "X$CLIPPY" &&
+      if [[ "$TRAVIS_RUST_VERSION" == "nightly" && $CLIPPY ]]; then
+        cargo clippy;
+      fi
