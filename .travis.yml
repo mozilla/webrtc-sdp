@@ -6,7 +6,7 @@ os:
   - linux
 
 rust:
-  - release
+  - stable
   - beta
   - nightly-2017-06-19
 
