@@ -20,9 +20,10 @@ matrix:
 # Add clippy
 before_script:
   - export PATH=$PATH:~/.cargo/bin
+  - export CLIPPYBIN=~/.cargo/bin/cargo-clippy
   - |
     if [[ "$TRAVIS_RUST_VERSION" == "nightly-2017-06-19" &&
-         ! -f ~/.cargo/bin/cargo-clippy ]]; then
+         ! -f "$CLIPPYBIN" ]]; then
       cargo install clippy;
     fi
 
