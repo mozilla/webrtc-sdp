@@ -1,17 +1,14 @@
 language: rust
-
 dist: trusty
-
-rust:
-  - nightly-2017-06-19
-
+cache: cargo
+sudo: false
 os:
   - linux
 
-sudo: false
-
-cache:
-  cargo: true
+rust:
+  - release
+  - beta
+  - nightly-2017-06-19
 
 matrix:
   allow_failures:
@@ -20,7 +17,6 @@ matrix:
 # Add clippy
 before_script:
   - export PATH=$PATH:~/.cargo/bin
-  - export CLIPPYBIN=~/.cargo/bin/cargo-clippy
   - |
     if [[ "$TRAVIS_RUST_VERSION" == "nightly-2017-06-19" ]]; then
       cargo install --force clippy;
@@ -28,12 +24,9 @@ before_script:
 
 script:
   - cargo build --verbose --all
-  - cargo test --verbose --all
-  - echo "Rust version $TRAVIS_RUST_VERSION"
-  - echo "Test X$CLIPPY"
-  - echo "Path $PATH"
   - |
     if [[ "$TRAVIS_RUST_VERSION" == "nightly-2017-06-19" &&
       -f ~/.cargo/bin/cargo-clippy ]]; then
       cargo clippy;
     fi
+  - cargo test --verbose --all
