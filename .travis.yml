@@ -4,8 +4,6 @@ dist: trusty
 
 rust:
   - nightly
-#  - stable
-#  - beta
 
 os:
   - linux
