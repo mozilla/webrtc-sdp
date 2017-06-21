@@ -93,7 +93,7 @@ pub fn parse_unicast_addr(value: &str) -> Result<IpAddr, SdpParserError> {
 }
 
 #[test]
-fn test_parse_unicast_addr_unknown_type() {
+fn test_parse_unicast_addr() {
     let ip4 = parse_unicast_addr("127.0.0.1");
     assert!(ip4.is_ok());
     let ip6 = parse_unicast_addr("::1");
