@@ -5,7 +5,7 @@ dist: trusty
 rust:
   - stable
   - beta
-  - nightly-2017-04-11
+  - nightly-2017-06-19
 
 os:
   - linux
@@ -30,8 +30,8 @@ before_script:
 script:
   - cargo build --verbose --all
   - cargo test --verbose --all
+  - echo "Test X$CLIPPY"
   - |
-      echo "X$CLIPPY" &&
       if [[ "$TRAVIS_RUST_VERSION" == "nightly" && $CLIPPY ]]; then
         cargo clippy;
       fi
