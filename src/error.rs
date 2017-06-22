@@ -2,6 +2,7 @@ use std::num::ParseIntError;
 use std::net::AddrParseError;
 use std::fmt;
 use std::error;
+use std::error::Error;
 
 #[derive(Debug)]
 pub enum SdpParserError {
@@ -30,14 +31,10 @@ impl fmt::Display for SdpParserError {
                 write!(f, "Sequence error: {}", message)
             }
             SdpParserError::Integer(ref err) => {
-                write!(f,
-                       "Integer parsing error: {}",
-                       error::Error::description(err))
+                write!(f, "Integer parsing error: {}", err.description())
             }
             SdpParserError::Address(ref err) => {
-                write!(f,
-                       "IP address parsing error: {}",
-                       error::Error::description(err))
+                write!(f, "IP address parsing error: {}", err.description())
             }
         }
     }
@@ -49,8 +46,8 @@ impl error::Error for SdpParserError {
             SdpParserError::Line { ref message, .. } |
             SdpParserError::Unsupported { ref message, .. } |
             SdpParserError::Sequence { ref message, .. } => message,
-            SdpParserError::Integer(ref err) => error::Error::description(err),
-            SdpParserError::Address(ref err) => error::Error::description(err),
+            SdpParserError::Integer(ref err) => err.description(),
+            SdpParserError::Address(ref err) => err.description(),
         }
     }
 
