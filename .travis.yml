@@ -1,11 +1,8 @@
 language: rust
-dist: trusty
 cache: cargo
 sudo: true
 os:
   - linux
-# Taken out temporarily because it's to slow
-#  - osx
 
 rust:
   - stable
