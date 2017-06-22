@@ -18,7 +18,7 @@ pub enum SdpAddrType {
 impl SdpAddrType {
     pub fn same_protocol(&self, addr: &IpAddr) -> bool {
         (addr.is_ipv6() && *self == SdpAddrType::IP6) ||
-            (addr.is_ipv4() && *self == SdpAddrType::IP4)
+        (addr.is_ipv4() && *self == SdpAddrType::IP4)
     }
 }
 
@@ -85,11 +85,13 @@ fn test_parse_addrtype() {
 }
 
 pub fn parse_unicast_addr(value: &str) -> Result<IpAddr, SdpParserError> {
-    IpAddr::from_str(value).map_err(|_| SdpParserError::Line {
-        message: "Failed to parse unicast address attribute"
-            .to_string(),
-        line: value.to_string()
-    })
+    IpAddr::from_str(value).map_err(|_| {
+                                        SdpParserError::Line {
+                                            message: "Failed to parse unicast address attribute"
+                                                .to_string(),
+                                            line: value.to_string(),
+                                        }
+                                    })
 }
 
 #[test]
