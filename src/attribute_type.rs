@@ -913,18 +913,22 @@ fn test_parse_attribute_candidate() {
     assert!(parse_attribute("candidate:0 1 UDP 2122252543 172.16.156.106 49760 type host")
                 .is_err());
     assert!(parse_attribute("candidate:0 1 UDP 2122252543 172.16.156.106 49760 typ fost").is_err());
+    assert!(parse_attribute("candidate:0 1 TCP 2122252543 172.16.156.106 49760 typ host tcptype foobar").is_err());
     assert!(parse_attribute("candidate:1 1 UDP 1685987071 24.23.204.141 54609 typ srflx raddr 192.168.1 rport 61665").is_err());
     assert!(parse_attribute("candidate:1 1 UDP 1685987071 24.23.204.141 54609 typ srflx raddr 192.168.1.4 rport 70000").is_err());
 }
 
 #[test]
 fn test_parse_attribute_end_of_candidates() {
-    assert!(parse_attribute("end-of-candidates").is_ok())
+    assert!(parse_attribute("end-of-candidates").is_ok());
+    assert!(parse_attribute("end-of-candidates foobar").is_err());
 }
 
 #[test]
 fn test_parse_attribute_extmap() {
     assert!(parse_attribute("extmap:1/sendonly urn:ietf:params:rtp-hdrext:ssrc-audio-level")
+                .is_ok());
+    assert!(parse_attribute("extmap:2/sendrecv urn:ietf:params:rtp-hdrext:ssrc-audio-level")
                 .is_ok());
     assert!(parse_attribute("extmap:3 http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time")
                 .is_ok());
@@ -952,17 +956,20 @@ fn test_parse_attribute_group() {
 
 #[test]
 fn test_parse_attribute_bundle_only() {
-    assert!(parse_attribute("bundle-only").is_ok())
+    assert!(parse_attribute("bundle-only").is_ok());
+    assert!(parse_attribute("bundle-only foobar").is_err());
 }
 
 #[test]
 fn test_parse_attribute_ice_lite() {
-    assert!(parse_attribute("ice-lite").is_ok())
+    assert!(parse_attribute("ice-lite").is_ok());
+    assert!(parse_attribute("ice-lite foobar").is_err());
 }
 
 #[test]
 fn test_parse_attribute_ice_mismatch() {
-    assert!(parse_attribute("ice-mismatch").is_ok())
+    assert!(parse_attribute("ice-mismatch").is_ok());
+    assert!(parse_attribute("ice-mismatch foobar").is_err());
 }
 
 #[test]
@@ -982,7 +989,8 @@ fn test_parse_attribute_ice_ufrag() {
 
 #[test]
 fn test_parse_attribute_inactive() {
-    assert!(parse_attribute("inactive").is_ok())
+    assert!(parse_attribute("inactive").is_ok());
+    assert!(parse_attribute("inactive foobar").is_err());
 }
 
 #[test]
@@ -1020,13 +1028,40 @@ fn test_parse_attribute_rid() {
 
 #[test]
 fn test_parse_attribute_recvonly() {
-    assert!(parse_attribute("recvonly").is_ok())
+    assert!(parse_attribute("recvonly").is_ok());
+    assert!(parse_attribute("recvonly foobar").is_err());
+}
+
+#[test]
+fn test_parse_attribute_sendonly() {
+    assert!(parse_attribute("sendonly").is_ok());
+    assert!(parse_attribute("sendonly foobar").is_err());
+}
+
+#[test]
+fn test_parse_attribute_sendrecv() {
+    assert!(parse_attribute("sendrecv").is_ok());
+    assert!(parse_attribute("sendrecv foobar").is_err());
+}
+
+#[test]
+fn test_parse_attribute_setup() {
+    assert!(parse_attribute("setup:active").is_ok());
+    assert!(parse_attribute("setup:passive").is_ok());
+    assert!(parse_attribute("setup:actpass").is_ok());
+    assert!(parse_attribute("setup:holdconn").is_ok());
+
+    assert!(parse_attribute("setup:").is_err());
+    assert!(parse_attribute("setup:foobar").is_err());
 }
 
 #[test]
 fn test_parse_attribute_rtcp() {
     assert!(parse_attribute("rtcp:5000").is_ok());
     assert!(parse_attribute("rtcp:9 IN IP4 0.0.0.0").is_ok());
+
+    assert!(parse_attribute("rtcp:").is_err());
+    assert!(parse_attribute("rtcp:7000").is_ok());
 }
 
 #[test]
@@ -1036,12 +1071,14 @@ fn test_parse_attribute_rtcp_fb() {
 
 #[test]
 fn test_parse_attribute_rtcp_mux() {
-    assert!(parse_attribute("rtcp-mux").is_ok())
+    assert!(parse_attribute("rtcp-mux").is_ok());
+    assert!(parse_attribute("rtcp-mux foobar").is_err());
 }
 
 #[test]
 fn test_parse_attribute_rtcp_rsize() {
-    assert!(parse_attribute("rtcp-rsize").is_ok())
+    assert!(parse_attribute("rtcp-rsize").is_ok());
+    assert!(parse_attribute("rtcp-rsize foobar").is_err());
 }
 
 #[test]
@@ -1096,4 +1133,9 @@ fn test_parse_attribute_ssrc() {
 #[test]
 fn test_parse_attribute_ssrc_group() {
     assert!(parse_attribute("ssrc-group:FID 3156517279 2673335628").is_ok())
+}
+
+#[test]
+fn test_parse_unknown_attribute() {
+    assert!(parse_attribute("unknown").is_err())
 }
