@@ -73,13 +73,7 @@ fn test_parse_addrtype() {
 }
 
 pub fn parse_unicast_addr(value: &str) -> Result<IpAddr, SdpParserError> {
-    IpAddr::from_str(value).map_err(|_| {
-                                        SdpParserError::Line {
-                                            message: "Failed to parse unicast address attribute"
-                                                .to_string(),
-                                            line: value.to_string(),
-                                        }
-                                    })
+    Ok(try!(IpAddr::from_str(value)))
 }
 
 #[test]

@@ -11,7 +11,7 @@ pub mod unsupported_types;
 use attribute_type::{SdpAttribute, parse_attribute};
 use error::SdpParserError;
 use media_type::{SdpMedia, SdpMediaLine, parse_media, parse_media_vector};
-use network::{SdpAddrType, parse_addrtype, parse_nettype, parse_unicast_addr};
+use network::{parse_addrtype, parse_nettype, parse_unicast_addr};
 use unsupported_types::{parse_email, parse_information, parse_key, parse_phone, parse_repeat,
                         parse_uri, parse_zone};
 
@@ -32,7 +32,6 @@ pub struct SdpBandwidth {
 
 #[derive(Clone)]
 pub struct SdpConnection {
-    pub addrtype: SdpAddrType,
     pub addr: IpAddr,
     pub ttl: Option<u32>,
     pub amount: Option<u32>,
@@ -321,13 +320,8 @@ fn parse_connection(value: &str) -> Result<SdpLine, SdpParserError> {
                        line: value.to_string(),
                    });
     }
-    let c = SdpConnection {
-        addrtype,
-        addr,
-        ttl,
-        amount,
-    };
-    println!("connection: {}, {}", c.addrtype, c.addr);
+    let c = SdpConnection { addr, ttl, amount };
+    println!("connection: {}", c.addr);
     Ok(SdpLine::Connection { value: c })
 }
 
@@ -684,6 +678,7 @@ pub fn parse_sdp(sdp: &str, fail_on_warning: bool) -> Result<SdpSession, SdpPars
                                     })
                     }
                     SdpParserError::Integer(err) => errors.push(SdpParserError::Integer(err)),
+                    SdpParserError::Address(err) => errors.push(SdpParserError::Address(err)),
                 }
             }
         };
@@ -701,6 +696,7 @@ pub fn parse_sdp(sdp: &str, fail_on_warning: bool) -> Result<SdpSession, SdpPars
             };
         };
     }
+    // We just return the last of the errors here
     if let Some(e) = errors.pop() {
         return Err(e);
     };

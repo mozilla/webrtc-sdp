@@ -3,7 +3,7 @@ use std::net::IpAddr;
 
 use SdpLine;
 use error::SdpParserError;
-use network::{SdpAddrType, parse_nettype, parse_addrtype, parse_unicast_addr};
+use network::{parse_nettype, parse_addrtype, parse_unicast_addr};
 
 #[derive(Clone)]
 pub enum SdpAttributeType {
@@ -221,7 +221,6 @@ impl SdpAttributeSimulcast {
 #[derive(Clone)]
 pub struct SdpAttributeRtcp {
     pub port: u32,
-    pub addrtype: Option<SdpAddrType>,
     pub unicast_addr: Option<IpAddr>,
 }
 
@@ -229,13 +228,11 @@ impl SdpAttributeRtcp {
     pub fn new(port: u32) -> SdpAttributeRtcp {
         SdpAttributeRtcp {
             port: port,
-            addrtype: None,
             unicast_addr: None,
         }
     }
 
-    fn set_addr(&mut self, at: SdpAddrType, addr: IpAddr) {
-        self.addrtype = Some(at);
+    fn set_addr(&mut self, addr: IpAddr) {
         self.unicast_addr = Some(addr)
     }
 }
@@ -672,7 +669,7 @@ impl SdpAttribute {
                                         addr
                                     },
                                 };
-                                rtcp.set_addr(addrtype, addr);
+                                rtcp.set_addr(addr);
                             },
                         };
                     },
