@@ -5,11 +5,6 @@ use std::net::IpAddr;
 use error::SdpParserError;
 
 #[derive(Clone,Copy,Debug,PartialEq)]
-pub enum SdpNetType {
-    Internet,
-}
-
-#[derive(Clone,Copy,Debug,PartialEq)]
 pub enum SdpAddrType {
     IP4 = 4,
     IP6 = 6,
@@ -18,13 +13,7 @@ pub enum SdpAddrType {
 impl SdpAddrType {
     pub fn same_protocol(&self, addr: &IpAddr) -> bool {
         (addr.is_ipv6() && *self == SdpAddrType::IP6) ||
-            (addr.is_ipv4() && *self == SdpAddrType::IP4)
-    }
-}
-
-impl fmt::Display for SdpNetType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "IN")
+        (addr.is_ipv4() && *self == SdpAddrType::IP4)
     }
 }
 
@@ -38,21 +27,20 @@ impl fmt::Display for SdpAddrType {
     }
 }
 
-pub fn parse_nettype(value: &str) -> Result<SdpNetType, SdpParserError> {
+pub fn parse_nettype(value: &str) -> Result<(), SdpParserError> {
     if value.to_uppercase() != "IN" {
         return Err(SdpParserError::Line {
                        message: "nettype needs to be IN".to_string(),
                        line: value.to_string(),
                    });
     };
-    Ok(SdpNetType::Internet)
+    Ok(())
 }
 
 #[test]
 fn test_parse_nettype() {
     let internet = parse_nettype("iN");
     assert!(internet.is_ok());
-    assert_eq!(internet.unwrap(), SdpNetType::Internet);
 
     assert!(parse_nettype("").is_err());
     assert!(parse_nettype("FOO").is_err());
@@ -85,11 +73,13 @@ fn test_parse_addrtype() {
 }
 
 pub fn parse_unicast_addr(value: &str) -> Result<IpAddr, SdpParserError> {
-    IpAddr::from_str(value).map_err(|_| SdpParserError::Line {
-        message: "Failed to parse unicast address attribute"
-            .to_string(),
-        line: value.to_string()
-    })
+    IpAddr::from_str(value).map_err(|_| {
+                                        SdpParserError::Line {
+                                            message: "Failed to parse unicast address attribute"
+                                                .to_string(),
+                                            line: value.to_string(),
+                                        }
+                                    })
 }
 
 #[test]
