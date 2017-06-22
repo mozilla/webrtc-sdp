@@ -26,6 +26,7 @@ addons:
       - cmake
       - gcc
       - binutils-dev
+      - libbfd-dev
 
 # Add clippy
 before_script:
