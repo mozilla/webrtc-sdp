@@ -57,6 +57,7 @@ after_success:
         sudo make install &&
         cd ../.. &&
         rm -rf kcov-master &&
+        kcov --version &&
         for file in target/debug/rsdparsa-*[^\.d]; do mkdir -p "target/cov/$(basename $file)"; kcov --exclude-pattern=/.cargo,/usr/lib "target/cov/$(basename $file)" "$file"; done &&
         bash <(curl -s https://codecov.io/bash) &&
         echo "Uploaded code coverage"
