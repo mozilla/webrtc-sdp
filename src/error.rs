@@ -1,6 +1,8 @@
 use std::num::ParseIntError;
+use std::net::AddrParseError;
 use std::fmt;
 use std::error;
+use std::error::Error;
 
 #[derive(Debug)]
 pub enum SdpParserError {
@@ -11,6 +13,7 @@ pub enum SdpParserError {
         line: Option<usize>,
     },
     Integer(ParseIntError),
+    Address(AddrParseError),
 }
 
 impl fmt::Display for SdpParserError {
@@ -28,9 +31,10 @@ impl fmt::Display for SdpParserError {
                 write!(f, "Sequence error: {}", message)
             }
             SdpParserError::Integer(ref err) => {
-                write!(f,
-                       "Integer parsing error: {}",
-                       error::Error::description(err))
+                write!(f, "Integer parsing error: {}", err.description())
+            }
+            SdpParserError::Address(ref err) => {
+                write!(f, "IP address parsing error: {}", err.description())
             }
         }
     }
@@ -42,14 +46,16 @@ impl error::Error for SdpParserError {
             SdpParserError::Line { ref message, .. } |
             SdpParserError::Unsupported { ref message, .. } |
             SdpParserError::Sequence { ref message, .. } => message,
-            SdpParserError::Integer(ref err) => error::Error::description(err),
+            SdpParserError::Integer(ref err) => err.description(),
+            SdpParserError::Address(ref err) => err.description(),
         }
     }
 
     fn cause(&self) -> Option<&error::Error> {
         match *self {
             SdpParserError::Integer(ref err) => Some(err),
-            // TODO is None really the right thing for our own errors?
+            SdpParserError::Address(ref err) => Some(err),
+            // Can't tell much more about our internal errors
             _ => None,
         }
     }
@@ -58,5 +64,11 @@ impl error::Error for SdpParserError {
 impl From<ParseIntError> for SdpParserError {
     fn from(err: ParseIntError) -> SdpParserError {
         SdpParserError::Integer(err)
+    }
+}
+
+impl From<AddrParseError> for SdpParserError {
+    fn from(err: AddrParseError) -> SdpParserError {
+        SdpParserError::Address(err)
     }
 }

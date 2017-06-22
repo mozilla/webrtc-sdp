@@ -3,7 +3,7 @@ use std::net::IpAddr;
 
 use SdpLine;
 use error::SdpParserError;
-use network::{SdpAddrType, SdpNetType, parse_nettype, parse_addrtype, parse_unicast_addr};
+use network::{parse_nettype, parse_addrtype, parse_unicast_addr};
 
 #[derive(Clone)]
 pub enum SdpAttributeType {
@@ -221,8 +221,6 @@ impl SdpAttributeSimulcast {
 #[derive(Clone)]
 pub struct SdpAttributeRtcp {
     pub port: u32,
-    pub nettype: Option<SdpNetType>,
-    pub addrtype: Option<SdpAddrType>,
     pub unicast_addr: Option<IpAddr>,
 }
 
@@ -230,18 +228,11 @@ impl SdpAttributeRtcp {
     pub fn new(port: u32) -> SdpAttributeRtcp {
         SdpAttributeRtcp {
             port: port,
-            nettype: None,
-            addrtype: None,
             unicast_addr: None,
         }
     }
 
-    fn set_nettype(&mut self, nt: SdpNetType) {
-        self.nettype = Some(nt)
-    }
-
-    fn set_addr(&mut self, at: SdpAddrType, addr: IpAddr) {
-        self.addrtype = Some(at);
+    fn set_addr(&mut self, addr: IpAddr) {
         self.unicast_addr = Some(addr)
     }
 }
@@ -654,7 +645,7 @@ impl SdpAttribute {
                 match tokens.next() {
                     None => (),
                     Some(x) => {
-                        rtcp.set_nettype(try!(parse_nettype(x)));
+                        try!(parse_nettype(x));
                         match tokens.next() {
                             None => return Err(SdpParserError::Line{
                                 message: "Rtcp attribute is missing address type token".to_string(),
@@ -678,7 +669,7 @@ impl SdpAttribute {
                                         addr
                                     },
                                 };
-                                rtcp.set_addr(addrtype, addr);
+                                rtcp.set_addr(addr);
                             },
                         };
                     },
