@@ -40,6 +40,7 @@ impl fmt::Display for SdpParserError {
     }
 }
 
+
 impl error::Error for SdpParserError {
     fn description(&self) -> &str {
         match *self {
@@ -71,4 +72,49 @@ impl From<AddrParseError> for SdpParserError {
     fn from(err: AddrParseError) -> SdpParserError {
         SdpParserError::Address(err)
     }
+}
+
+#[test]
+fn test_sdp_parser_error_line() {
+    let line = SdpParserError::Line {
+        message: "test message".to_string(),
+        line: "test line".to_string(),
+    };
+    // TODO how to verify the output of fmt::Display() ?
+    println!("{}", line);
+    assert_eq!(line.description(), "test message");
+    assert!(line.cause().is_none());
+}
+
+#[test]
+fn test_sdp_parser_error_unsupported() {
+    let unsupported = SdpParserError::Unsupported {
+        message: "unsupported message".to_string(),
+        line: "unsupported line".to_string(),
+    };
+    // TODO how to verify the output of fmt::Display() ?
+    println!("{}", unsupported);
+    assert_eq!(unsupported.description(), "unsupported message");
+    assert!(unsupported.cause().is_none());
+}
+
+#[test]
+fn test_sdp_parser_error_sequence() {
+    let sequence1 = SdpParserError::Sequence {
+        message: "sequence message".to_string(),
+        line: None,
+    };
+    // TODO how to verify the output of fmt::Display() ?
+    println!("{}", sequence1);
+    assert_eq!(sequence1.description(), "sequence message");
+    assert!(sequence1.cause().is_none());
+
+    let sequence2 = SdpParserError::Sequence {
+        message: "another sequence message".to_string(),
+        line: Some(5),
+    };
+    // TODO how to verify the output of fmt::Display() ?
+    println!("{}", sequence2);
+    assert_eq!(sequence2.description(), "another sequence message");
+    assert!(sequence2.cause().is_none());
 }
