@@ -221,21 +221,21 @@ pub fn parse_media(value: &str) -> Result<SdpLine, SdpParserError> {
                        line: value.to_string(),
                    });
     }
-    let media = try!(parse_media_token(mv[0]));
-    let port = try!(mv[1].parse::<u32>());
+    let media = parse_media_token(mv[0])?;
+    let port = mv[1].parse::<u32>()?;
     if port > 65535 {
         return Err(SdpParserError::Line {
                        message: "media port token is too big".to_string(),
                        line: value.to_string(),
                    });
     }
-    let proto = try!(parse_protocol_token(mv[2]));
+    let proto = parse_protocol_token(mv[2])?;
     let fmt_slice: &[&str] = &mv[3..];
     let formats = match media {
         SdpMediaValue::Audio | SdpMediaValue::Video => {
             let mut fmt_vec: Vec<u32> = vec![];
             for num in fmt_slice {
-                let fmt_num = try!(num.parse::<u32>());
+                let fmt_num = num.parse::<u32>()?;
                 match fmt_num {
                     0  |  // PCMU
                     8  |  // PCMA

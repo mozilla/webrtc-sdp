@@ -73,7 +73,7 @@ fn test_parse_addrtype() {
 }
 
 pub fn parse_unicast_addr(value: &str) -> Result<IpAddr, SdpParserError> {
-    Ok(try!(IpAddr::from_str(value)))
+    Ok(IpAddr::from_str(value)?)
 }
 
 #[test]
