@@ -1,6 +1,6 @@
 language: rust
 cache: cargo
-sudo: false
+sudo: true
 os:
   - linux
 # Taken out temporarily because it's to slow
