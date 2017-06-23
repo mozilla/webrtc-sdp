@@ -717,3 +717,71 @@ fn test_parse_sdp_zero_length_string_fails() {
 fn test_parse_sdp_to_short_string() {
     assert!(parse_sdp("fooooobarrrr", true).is_err());
 }
+
+#[test]
+fn test_parse_sdp_line_error() {
+    assert!(parse_sdp("v=0\r\n
+o=- 0 0 IN IP4 0.0.0.0\r\n
+s=-\r\n
+t=0 foobar\r\n
+m=audio 0 UDP/TLS/RTP/SAVPF 0\r\n",
+                      true)
+                    .is_err());
+}
+
+#[test]
+fn test_parse_sdp_unsupported_error() {
+    assert!(parse_sdp("v=0\r\n
+o=- 0 0 IN IP4 0.0.0.0\r\n
+s=-\r\n
+t=0 0\r\n
+m=foobar 0 UDP/TLS/RTP/SAVPF 0\r\n",
+                      true)
+                    .is_err());
+}
+
+#[test]
+fn test_parse_sdp_unsupported_warning() {
+    assert!(parse_sdp("v=0\r\n
+o=- 0 0 IN IP4 0.0.0.0\r\n
+s=-\r\n
+t=0 0\r\n
+m=audio 0 UDP/TLS/RTP/SAVPF 0\r\n
+a=unsupported\r\n",
+                      false)
+                    .is_ok());
+}
+
+#[test]
+fn test_parse_sdp_sequence_error() {
+    assert!(parse_sdp("v=0\r\n
+o=- 0 0 IN IP4 0.0.0.0\r\n
+t=0 0\r\n
+s=-\r\n
+m=audio 0 UDP/TLS/RTP/SAVPF 0\r\n",
+                      true)
+                    .is_err());
+}
+
+#[test]
+fn test_parse_sdp_integer_error() {
+    assert!(parse_sdp("v=0\r\n
+o=- 0 0 IN IP4 0.0.0.0\r\n
+s=-\r\n
+t=0 0\r\n
+m=audio 0 UDP/TLS/RTP/SAVPF 0\r\n
+a=rtcp:34er21\r\n",
+                      true)
+                    .is_err());
+}
+
+#[test]
+fn test_parse_sdp_ipaddr_error() {
+    assert!(parse_sdp("v=0\r\n
+o=- 0 0 IN IP4 0.a.b.0\r\n
+s=-\r\n
+t=0 0\r\n
+m=audio 0 UDP/TLS/RTP/SAVPF 0\r\n",
+                      true)
+                    .is_err());
+}
