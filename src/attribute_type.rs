@@ -865,7 +865,7 @@ pub fn parse_attribute(value: &str) -> Result<SdpLine, SdpParserError> {
     println!("attribute: {}, {}", 
              a.name, a.value.some());
              */
-    Ok(SdpLine::Attribute { value: attr })
+    Ok(SdpLine::Attribute(attr))
 }
 
 #[test]

@@ -266,7 +266,7 @@ pub fn parse_media(value: &str) -> Result<SdpLine, SdpParserError> {
         formats,
     };
     println!("media: {}, {}, {}, {}", m.media, m.port, m.proto, m.formats);
-    Ok(SdpLine::Media { value: m })
+    Ok(SdpLine::Media(m))
 }
 
 #[test]
@@ -308,7 +308,7 @@ fn test_media_invalid_payload() {
 pub fn parse_media_vector(lines: &[SdpLine]) -> Result<Vec<SdpMedia>, SdpParserError> {
     let mut media_sections: Vec<SdpMedia> = Vec::new();
     let mut sdp_media = match lines[0] {
-        SdpLine::Media { value: ref v } => SdpMedia::new(v.clone()),
+        SdpLine::Media(ref v) => SdpMedia::new(v.clone()),
         _ => {
             return Err(SdpParserError::Sequence {
                            message: "first line in media section needs to be a media line"
@@ -319,29 +319,29 @@ pub fn parse_media_vector(lines: &[SdpLine]) -> Result<Vec<SdpMedia>, SdpParserE
     };
     for line in lines.iter().skip(1) {
         match *line {
-            SdpLine::Information { value: ref v } => sdp_media.set_information(v.clone()),
-            SdpLine::Connection { value: ref v } => sdp_media.set_connection(v.clone()),
-            SdpLine::Bandwidth { value: ref v } => {
+            SdpLine::Information(ref v) => sdp_media.set_information(v.clone()),
+            SdpLine::Connection(ref v) => sdp_media.set_connection(v.clone()),
+            SdpLine::Bandwidth(ref v) => {
                 sdp_media.add_bandwidth(v.clone());
             }
-            SdpLine::Key { value: ref v } => sdp_media.set_key(v.clone()),
-            SdpLine::Attribute { value: ref v } => {
+            SdpLine::Key(ref v) => sdp_media.set_key(v.clone()),
+            SdpLine::Attribute(ref v) => {
                 sdp_media.add_attribute(v.clone());
             }
-            SdpLine::Media { value: ref v } => {
+            SdpLine::Media(ref v) => {
                 media_sections.push(sdp_media);
                 sdp_media = SdpMedia::new(v.clone());
             }
 
-            SdpLine::Email { .. } |
-            SdpLine::Phone { .. } |
-            SdpLine::Origin { .. } |
-            SdpLine::Repeat { .. } |
-            SdpLine::Session { .. } |
-            SdpLine::Timing { .. } |
-            SdpLine::Uri { .. } |
-            SdpLine::Version { .. } |
-            SdpLine::Zone { .. } => {
+            SdpLine::Email(_) |
+            SdpLine::Phone(_) |
+            SdpLine::Origin(_) |
+            SdpLine::Repeat(_) |
+            SdpLine::Session(_) |
+            SdpLine::Timing(_) |
+            SdpLine::Uri(_) |
+            SdpLine::Version(_) |
+            SdpLine::Zone(_) => {
                 return Err(SdpParserError::Sequence {
                                message: "invalid type in media section".to_string(),
                                line: None,

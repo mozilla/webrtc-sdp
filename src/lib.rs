@@ -52,21 +52,21 @@ pub struct SdpTiming {
 }
 
 pub enum SdpLine {
-    Attribute { value: SdpAttribute },
-    Bandwidth { value: SdpBandwidth },
-    Connection { value: SdpConnection },
-    Email { value: String },
-    Information { value: String },
-    Key { value: String },
-    Media { value: SdpMediaLine },
-    Phone { value: String },
-    Origin { value: SdpOrigin },
-    Repeat { value: String },
-    Session { value: String },
-    Timing { value: SdpTiming },
-    Uri { value: String },
-    Version { value: u64 },
-    Zone { value: String },
+    Attribute(SdpAttribute),
+    Bandwidth(SdpBandwidth),
+    Connection(SdpConnection),
+    Email(String),
+    Information(String),
+    Key(String),
+    Media(SdpMediaLine),
+    Phone(String),
+    Origin(SdpOrigin),
+    Repeat(String),
+    Session(String),
+    Timing(SdpTiming),
+    Uri(String),
+    Version(u64),
+    Zone(String),
 }
 
 pub struct SdpSession {
@@ -187,7 +187,7 @@ impl SdpSession {
 
 fn parse_session(value: &str) -> Result<SdpLine, SdpParserError> {
     println!("session: {}", value);
-    Ok(SdpLine::Session { value: String::from(value) })
+    Ok(SdpLine::Session(String::from(value)))
 }
 
 #[test]
@@ -205,7 +205,7 @@ fn parse_version(value: &str) -> Result<SdpLine, SdpParserError> {
                    });
     };
     println!("version: {}", ver);
-    Ok(SdpLine::Version { value: ver })
+    Ok(SdpLine::Version(ver))
 }
 
 #[test]
@@ -254,7 +254,7 @@ fn parse_origin(value: &str) -> Result<SdpLine, SdpParserError> {
              o.session_version,
              addrtype,
              o.unicast_addr);
-    Ok(SdpLine::Origin { value: o })
+    Ok(SdpLine::Origin(o))
 }
 
 #[test]
@@ -322,7 +322,7 @@ fn parse_connection(value: &str) -> Result<SdpLine, SdpParserError> {
     }
     let c = SdpConnection { addr, ttl, amount };
     println!("connection: {}", c.addr);
-    Ok(SdpLine::Connection { value: c })
+    Ok(SdpLine::Connection(c))
 }
 
 #[test]
@@ -388,7 +388,7 @@ fn parse_bandwidth(value: &str) -> Result<SdpLine, SdpParserError> {
         bandwidth,
     };
     println!("bandwidth: {}, {}", bv[0], b.bandwidth);
-    Ok(SdpLine::Bandwidth { value: b })
+    Ok(SdpLine::Bandwidth(b))
 }
 
 #[test]
@@ -424,7 +424,7 @@ fn parse_timing(value: &str) -> Result<SdpLine, SdpParserError> {
         stop: stop_time,
     };
     println!("timing: {}, {}", t.start, t.stop);
-    Ok(SdpLine::Timing { value: t })
+    Ok(SdpLine::Timing(t))
 }
 
 #[test]
@@ -552,7 +552,7 @@ fn parse_sdp_vector(lines: &[SdpLine]) -> Result<SdpSession, SdpParserError> {
 
     // TODO are these mataches really the only way to verify the types?
     let version: u64 = match lines[0] {
-        SdpLine::Version { value: v } => v,
+        SdpLine::Version(v) => v,
         _ => {
             return Err(SdpParserError::Sequence {
                            message: "first line needs to be version number".to_string(),
@@ -561,7 +561,7 @@ fn parse_sdp_vector(lines: &[SdpLine]) -> Result<SdpSession, SdpParserError> {
         }
     };
     let origin: SdpOrigin = match lines[1] {
-        SdpLine::Origin { value: ref v } => v.clone(),
+        SdpLine::Origin(ref v) => v.clone(),
         _ => {
             return Err(SdpParserError::Sequence {
                            message: "second line needs to be origin".to_string(),
@@ -570,7 +570,7 @@ fn parse_sdp_vector(lines: &[SdpLine]) -> Result<SdpSession, SdpParserError> {
         }
     };
     let session: String = match lines[2] {
-        SdpLine::Session { value: ref v } => v.clone(),
+        SdpLine::Session(ref v) => v.clone(),
         _ => {
             return Err(SdpParserError::Sequence {
                            message: "third line needs to be session".to_string(),
@@ -581,27 +581,27 @@ fn parse_sdp_vector(lines: &[SdpLine]) -> Result<SdpSession, SdpParserError> {
     let mut sdp_session = SdpSession::new(version, origin, session);
     for (i, line) in lines.iter().enumerate().skip(3) {
         match *line {
-            SdpLine::Attribute { value: ref v } => sdp_session.add_attribute(v.clone()),
-            SdpLine::Bandwidth { value: ref v } => sdp_session.add_bandwidth(v.clone()),
-            SdpLine::Timing { value: ref v } => sdp_session.set_timing(v.clone()),
-            SdpLine::Media { .. } => sdp_session.extend_media(parse_media_vector(&lines[i..])?),
-            SdpLine::Origin { .. } |
-            SdpLine::Session { .. } |
-            SdpLine::Version { .. } => {
+            SdpLine::Attribute(ref v) => sdp_session.add_attribute(v.clone()),
+            SdpLine::Bandwidth(ref v) => sdp_session.add_bandwidth(v.clone()),
+            SdpLine::Timing(ref v) => sdp_session.set_timing(v.clone()),
+            SdpLine::Media(_) => sdp_session.extend_media(parse_media_vector(&lines[i..])?),
+            SdpLine::Origin(_) |
+            SdpLine::Session(_) |
+            SdpLine::Version(_) => {
                 return Err(SdpParserError::Sequence {
                                message: "internal parser error".to_string(),
                                line: Some(i),
                            })
             }
             // TODO does anyone really ever need these?
-            SdpLine::Connection { .. } |
-            SdpLine::Email { .. } |
-            SdpLine::Information { .. } |
-            SdpLine::Key { .. } |
-            SdpLine::Phone { .. } |
-            SdpLine::Repeat { .. } |
-            SdpLine::Uri { .. } |
-            SdpLine::Zone { .. } => (),
+            SdpLine::Connection(_) |
+            SdpLine::Email(_) |
+            SdpLine::Information(_) |
+            SdpLine::Key(_) |
+            SdpLine::Phone(_) |
+            SdpLine::Repeat(_) |
+            SdpLine::Uri(_) |
+            SdpLine::Zone(_) => (),
         };
         if sdp_session.has_media() {
             break;
