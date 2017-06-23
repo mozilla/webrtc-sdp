@@ -364,22 +364,22 @@ impl SdpAttributeSsrc {
 
 #[derive(Clone)]
 pub enum SdpAttributeValue {
-    Str { value: String },
-    Int { value: u32 },
-    Vector { value: Vec<String> },
-    Candidate { value: SdpAttributeCandidate },
-    Extmap { value: SdpAttributeExtmap },
-    Fingerprint { value: SdpAttributeFingerprint },
-    Fmtp { value: SdpAttributeFmtp },
-    Group { value: SdpAttributeGroup },
-    Msid { value: SdpAttributeMsid },
-    Rtpmap { value: SdpAttributeRtpmap },
-    Rtcp { value: SdpAttributeRtcp },
-    Rtcpfb { value: SdpAttributeRtcpFb },
-    Sctpmap { value: SdpAttributeSctpmap },
-    Setup { value: SdpAttributeSetup },
-    Simulcast { value: SdpAttributeSimulcast },
-    Ssrc { value: SdpAttributeSsrc },
+    Str(String),
+    Int(u32),
+    Vector(Vec<String>),
+    Candidate(SdpAttributeCandidate),
+    Extmap(SdpAttributeExtmap),
+    Fingerprint(SdpAttributeFingerprint),
+    Fmtp(SdpAttributeFmtp),
+    Group(SdpAttributeGroup),
+    Msid(SdpAttributeMsid),
+    Rtpmap(SdpAttributeRtpmap),
+    Rtcp(SdpAttributeRtcp),
+    Rtcpfb(SdpAttributeRtcpFb),
+    Sctpmap(SdpAttributeSctpmap),
+    Setup(SdpAttributeSetup),
+    Simulcast(SdpAttributeSimulcast),
+    Ssrc(SdpAttributeSsrc),
 }
 
 #[derive(Clone)]
@@ -418,9 +418,7 @@ impl SdpAttribute {
             SdpAttributeType::MaxMessageSize |
             SdpAttributeType::MaxPtime |
             SdpAttributeType::Ptime => {
-                self.value = Some(SdpAttributeValue::Int {
-                    value: try!(v.parse::<u32>())
-                })
+                self.value = Some(SdpAttributeValue::Int(try!(v.parse::<u32>())))
             },
 
             SdpAttributeType::IcePwd |
@@ -429,7 +427,7 @@ impl SdpAttribute {
             SdpAttributeType::MsidSemantic | // mmusic-msid-16 doesnt have this
             SdpAttributeType::Rid |
             SdpAttributeType::SsrcGroup => { // not in JSEP any more...
-                self.value = Some(SdpAttributeValue::Str {value: v.to_string()})
+                self.value = Some(SdpAttributeValue::Str(v.to_string()))
             },
 
             SdpAttributeType::Candidate => {
@@ -513,9 +511,7 @@ impl SdpAttribute {
                         };
                     }
                 }
-                self.value = Some(SdpAttributeValue::Candidate {value:
-                    cand
-                })
+                self.value = Some(SdpAttributeValue::Candidate(cand))
             },
             SdpAttributeType::Extmap => {
                 let tokens: Vec<&str> = v.split_whitespace().collect();
@@ -540,13 +536,13 @@ impl SdpAttribute {
                             line: v.to_string()}),
                     })
                 }
-                self.value = Some(SdpAttributeValue::Extmap {value:
+                self.value = Some(SdpAttributeValue::Extmap(
                     SdpAttributeExtmap {
                         id: id,
                         direction: dir,
                         url: tokens[1].to_string()
                     }
-                })
+                ))
             },
             SdpAttributeType::Fingerprint => {
                 let tokens: Vec<&str> = v.split_whitespace().collect();
@@ -555,12 +551,12 @@ impl SdpAttribute {
                         message: "Fingerprint needs to have two tokens".to_string(),
                         line: v.to_string()})
                 }
-                self.value = Some(SdpAttributeValue::Fingerprint {value:
+                self.value = Some(SdpAttributeValue::Fingerprint(
                     SdpAttributeFingerprint {
                         hash_algorithm: tokens[0].to_string(),
                         fingerprint: tokens[1].to_string()
                     }
-                })
+                ))
             },
             SdpAttributeType::Fmtp => {
                 let tokens: Vec<&str> = v.split_whitespace().collect();
@@ -569,7 +565,7 @@ impl SdpAttribute {
                         message: "Fmtp needs to have two tokens".to_string(),
                         line: v.to_string()})
                 }
-                self.value = Some(SdpAttributeValue::Fmtp {value:
+                self.value = Some(SdpAttributeValue::Fmtp(
                     SdpAttributeFmtp {
                         // TODO check for dynamic PT range
                         payload_type: try!(tokens[0].parse::<u32>()),
@@ -577,7 +573,7 @@ impl SdpAttribute {
                         // plus a list of unknown tokens
                         tokens: v.split(';').map(|x| x.to_string()).collect()
                     }
-                })
+                ))
             },
             SdpAttributeType::Group => {
                 let mut tokens  = v.split_whitespace();
@@ -598,16 +594,16 @@ impl SdpAttribute {
                             line: v.to_string()}),
                     }
                 };
-                self.value = Some(SdpAttributeValue::Group {value:
+                self.value = Some(SdpAttributeValue::Group(
                     SdpAttributeGroup {
                         semantics: semantics,
                         tags: tokens.map(|x| x.to_string()).collect()
                     }
-                })
+                ))
             },
             SdpAttributeType::IceOptions => {
-                self.value = Some(SdpAttributeValue::Vector {
-                    value: v.split_whitespace().map(|x| x.to_string()).collect()})
+                self.value = Some(SdpAttributeValue::Vector (
+                    v.split_whitespace().map(|x| x.to_string()).collect()))
             },
             SdpAttributeType::Msid => {
                 let mut tokens  = v.split_whitespace();
@@ -621,12 +617,12 @@ impl SdpAttribute {
                     None => None,
                     Some(x) => Some(x.to_string())
                 };
-                self.value = Some(SdpAttributeValue::Msid {value:
+                self.value = Some(SdpAttributeValue::Msid(
                     SdpAttributeMsid {
                         id: id,
                         appdata: appdata
                     }
-                })
+                ))
             },
             SdpAttributeType::Rtcp => {
                 let mut tokens = v.split_whitespace();
@@ -674,17 +670,17 @@ impl SdpAttribute {
                         };
                     },
                 };
-                self.value = Some(SdpAttributeValue::Rtcp {value: rtcp})
+                self.value = Some(SdpAttributeValue::Rtcp(rtcp))
             },
             SdpAttributeType::RtcpFb => {
                 let tokens: Vec<&str> = v.splitn(2, ' ').collect();
-                self.value = Some(SdpAttributeValue::Rtcpfb {value:
+                self.value = Some(SdpAttributeValue::Rtcpfb(
                     SdpAttributeRtcpFb {
                         // TODO limit this to dymaic PTs
                         payload_type: try!(tokens[0].parse::<u32>()),
                         feedback_type: tokens[1].to_string()
                     }
-                });
+                ));
             },
             SdpAttributeType::Rtpmap => {
                 let tokens: Vec<&str> = v.split_whitespace().collect();
@@ -709,7 +705,7 @@ impl SdpAttribute {
                 if split.len() > 2 {
                     rtpmap.set_channels(try!(split[2].parse::<u32>()));
                 }
-                self.value = Some(SdpAttributeValue::Rtpmap {value: rtpmap})
+                self.value = Some(SdpAttributeValue::Rtpmap(rtpmap))
             },
             SdpAttributeType::Sctpmap => {
                 let tokens: Vec<&str> = v.split_whitespace().collect();
@@ -729,12 +725,12 @@ impl SdpAttribute {
                         message: "Unsupported sctpmap type token".to_string(),
                         line: v.to_string()})
                 }
-                self.value = Some(SdpAttributeValue::Sctpmap {value:
+                self.value = Some(SdpAttributeValue::Sctpmap(
                     SdpAttributeSctpmap {
                         port: port,
                         channels: try!(tokens[2].parse::<u32>())
                     }
-                });
+                ));
             },
             SdpAttributeType::SctpPort => {
                 let port = try!(v.parse::<u32>());
@@ -743,9 +739,7 @@ impl SdpAttribute {
                         message: "Sctpport port can only be a bit 16bit number".to_string(),
                         line: v.to_string()})
                 }
-                self.value = Some(SdpAttributeValue::Int {
-                    value: port
-                })
+                self.value = Some(SdpAttributeValue::Int(port))
             }
             SdpAttributeType::Simulcast => {
                 let mut tokens = v.split_whitespace();
@@ -778,12 +772,10 @@ impl SdpAttribute {
                         Some(x) => x,
                     };
                 }
-                self.value = Some(SdpAttributeValue::Simulcast {
-                    value: sc
-                })
+                self.value = Some(SdpAttributeValue::Simulcast(sc))
             },
             SdpAttributeType::Setup => {
-                self.value = Some(SdpAttributeValue::Setup {value:
+                self.value = Some(SdpAttributeValue::Setup(
                     match v.to_lowercase().as_ref() {
                         "active" => SdpAttributeSetup::Active,
                         "actpass" => SdpAttributeSetup::Actpass,
@@ -793,7 +785,7 @@ impl SdpAttribute {
                             message: "Unsupported setup value".to_string(),
                             line: v.to_string()}),
                     }
-                })
+                ))
             },
             SdpAttributeType::Ssrc => {
                 let mut tokens  = v.split_whitespace();
@@ -808,9 +800,7 @@ impl SdpAttribute {
                     None => (),
                     Some(x) => ssrc.set_attribute(x),
                 };
-                self.value = Some(SdpAttributeValue::Ssrc {
-                    value: ssrc
-                })
+                self.value = Some(SdpAttributeValue::Ssrc(ssrc))
             },
         }
         Ok(())
