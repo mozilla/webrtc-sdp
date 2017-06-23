@@ -333,15 +333,15 @@ pub fn parse_media_vector(lines: &[SdpLine]) -> Result<Vec<SdpMedia>, SdpParserE
                 sdp_media = SdpMedia::new(v.clone());
             }
 
-            SdpLine::Email(..) |
-            SdpLine::Phone(..) |
-            SdpLine::Origin(..) |
-            SdpLine::Repeat(..) |
-            SdpLine::Session(..) |
-            SdpLine::Timing(..) |
-            SdpLine::Uri(..) |
-            SdpLine::Version(..) |
-            SdpLine::Zone(..) => {
+            SdpLine::Email(_) |
+            SdpLine::Phone(_) |
+            SdpLine::Origin(_) |
+            SdpLine::Repeat(_) |
+            SdpLine::Session(_) |
+            SdpLine::Timing(_) |
+            SdpLine::Uri(_) |
+            SdpLine::Version(_) |
+            SdpLine::Zone(_) => {
                 return Err(SdpParserError::Sequence {
                                message: "invalid type in media section".to_string(),
                                line: None,

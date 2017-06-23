@@ -584,24 +584,24 @@ fn parse_sdp_vector(lines: &[SdpLine]) -> Result<SdpSession, SdpParserError> {
             SdpLine::Attribute(ref v) => sdp_session.add_attribute(v.clone()),
             SdpLine::Bandwidth(ref v) => sdp_session.add_bandwidth(v.clone()),
             SdpLine::Timing(ref v) => sdp_session.set_timing(v.clone()),
-            SdpLine::Media(..) => sdp_session.extend_media(parse_media_vector(&lines[i..])?),
-            SdpLine::Origin(..) |
-            SdpLine::Session(..) |
-            SdpLine::Version(..) => {
+            SdpLine::Media(_) => sdp_session.extend_media(parse_media_vector(&lines[i..])?),
+            SdpLine::Origin(_) |
+            SdpLine::Session(_) |
+            SdpLine::Version(_) => {
                 return Err(SdpParserError::Sequence {
                                message: "internal parser error".to_string(),
                                line: Some(i),
                            })
             }
             // TODO does anyone really ever need these?
-            SdpLine::Connection(..) |
-            SdpLine::Email(..) |
-            SdpLine::Information(..) |
-            SdpLine::Key(..) |
-            SdpLine::Phone(..) |
-            SdpLine::Repeat(..) |
-            SdpLine::Uri(..) |
-            SdpLine::Zone(..) => (),
+            SdpLine::Connection(_) |
+            SdpLine::Email(_) |
+            SdpLine::Information(_) |
+            SdpLine::Key(_) |
+            SdpLine::Phone(_) |
+            SdpLine::Repeat(_) |
+            SdpLine::Uri(_) |
+            SdpLine::Zone(_) => (),
         };
         if sdp_session.has_media() {
             break;
