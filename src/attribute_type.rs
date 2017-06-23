@@ -418,7 +418,7 @@ impl SdpAttribute {
             SdpAttributeType::MaxMessageSize |
             SdpAttributeType::MaxPtime |
             SdpAttributeType::Ptime => {
-                self.value = Some(SdpAttributeValue::Int(try!(v.parse::<u32>())))
+                self.value = Some(SdpAttributeValue::Int(v.parse::<u32>()?))
             },
 
             SdpAttributeType::IcePwd |
@@ -437,7 +437,7 @@ impl SdpAttribute {
                         message: "Candidate needs to have minimum eigth tokens".to_string(),
                         line: v.to_string()})
                 }
-                let component = try!(tokens[1].parse::<u32>());
+                let component = tokens[1].parse::<u32>()?;
                 let transport = match tokens[2].to_lowercase().as_ref() {
                     "udp" => SdpAttributeCandidateTransport::Udp,
                     "tcp" => SdpAttributeCandidateTransport::Tcp,
@@ -445,9 +445,9 @@ impl SdpAttribute {
                         message: "Unknonw candidate transport value".to_string(),
                         line: v.to_string()})
                 };
-                let priority = try!(tokens[3].parse::<u64>());
-                let address = try!(parse_unicast_addr(tokens[4]));
-                let port = try!(tokens[5].parse::<u32>());
+                let priority = tokens[3].parse::<u64>()?;
+                let address = parse_unicast_addr(tokens[4])?;
+                let port = tokens[5].parse::<u32>()?;
                 if port > 65535 {
                     return Err(SdpParserError::Line{
                         message: "ICE candidate port can only be a bit 16bit number".to_string(),
@@ -480,12 +480,12 @@ impl SdpAttribute {
                     while tokens.len() > index + 1 {
                         match tokens[index].to_lowercase().as_ref() {
                             "raddr" => {
-                                let addr = try!(parse_unicast_addr(tokens[index + 1]));
+                                let addr = parse_unicast_addr(tokens[index + 1])?;
                                 cand.set_remote_address(addr);
                                 index += 2;
                             },
                             "rport" => {
-                                let port = try!(tokens[index + 1].parse::<u32>());
+                                let port = tokens[index + 1].parse::<u32>()?;
                                 if port > 65535 {
                                     return Err(SdpParserError::Line{
                                         message: "ICE candidate rport can only be a bit 16bit number".to_string(),
@@ -523,10 +523,10 @@ impl SdpAttribute {
                 let id: u32;
                 let mut dir: Option<SdpAttributeDirection> = None;
                 if tokens[0].find('/') == None {
-                    id = try!(tokens[0].parse::<u32>());
+                    id = tokens[0].parse::<u32>()?;
                 } else {
                     let id_dir: Vec<&str> = tokens[0].splitn(2, '/').collect();
-                    id = try!(id_dir[0].parse::<u32>());
+                    id = id_dir[0].parse::<u32>()?;
                     dir = Some(match id_dir[1].to_lowercase().as_ref() {
                         "recvonly" => SdpAttributeDirection::Recvonly,
                         "sendonly" => SdpAttributeDirection::Sendonly,
@@ -568,7 +568,7 @@ impl SdpAttribute {
                 self.value = Some(SdpAttributeValue::Fmtp(
                     SdpAttributeFmtp {
                         // TODO check for dynamic PT range
-                        payload_type: try!(tokens[0].parse::<u32>()),
+                        payload_type: tokens[0].parse::<u32>()?,
                         // TODO this should probably be slit into known tokens
                         // plus a list of unknown tokens
                         tokens: v.split(';').map(|x| x.to_string()).collect()
@@ -630,7 +630,7 @@ impl SdpAttribute {
                     None => return Err(SdpParserError::Line{
                         message: "Rtcp attribute is missing port number".to_string(),
                         line: v.to_string()}),
-                    Some(x) => try!(x.parse::<u32>())
+                    Some(x) => x.parse::<u32>()?
                 };
                 if port > 65535 {
                     return Err(SdpParserError::Line{
@@ -641,13 +641,13 @@ impl SdpAttribute {
                 match tokens.next() {
                     None => (),
                     Some(x) => {
-                        try!(parse_nettype(x));
+                        parse_nettype(x)?;
                         match tokens.next() {
                             None => return Err(SdpParserError::Line{
                                 message: "Rtcp attribute is missing address type token".to_string(),
                                 line: v.to_string()}),
                             Some(x) => {
-                                let addrtype = try!(parse_addrtype(x));
+                                let addrtype = parse_addrtype(x)?;
                                 let addr = match tokens.next() {
                                     None => return Err(SdpParserError::Line{
                                         message: "Rtcp attribute is missing ip address token".to_string(),
@@ -677,7 +677,7 @@ impl SdpAttribute {
                 self.value = Some(SdpAttributeValue::Rtcpfb(
                     SdpAttributeRtcpFb {
                         // TODO limit this to dymaic PTs
-                        payload_type: try!(tokens[0].parse::<u32>()),
+                        payload_type: tokens[0].parse::<u32>()?,
                         feedback_type: tokens[1].to_string()
                     }
                 ));
@@ -690,7 +690,7 @@ impl SdpAttribute {
                         line: v.to_string()})
                 }
                 // TODO limit this to dymaic PTs
-                let payload_type: u32 = try!(tokens[0].parse::<u32>());
+                let payload_type: u32 = tokens[0].parse::<u32>()?;
                 let split: Vec<&str> = tokens[1].split('/').collect();
                 if split.len() > 3 {
                     return Err(SdpParserError::Line{
@@ -700,10 +700,10 @@ impl SdpAttribute {
                 let mut rtpmap = SdpAttributeRtpmap::new(payload_type,
                                                          split[0].to_string());
                 if split.len() > 1 {
-                    rtpmap.set_frequency(try!(split[1].parse::<u32>()));
+                    rtpmap.set_frequency(split[1].parse::<u32>()?);
                 }
                 if split.len() > 2 {
-                    rtpmap.set_channels(try!(split[2].parse::<u32>()));
+                    rtpmap.set_channels(split[2].parse::<u32>()?);
                 }
                 self.value = Some(SdpAttributeValue::Rtpmap(rtpmap))
             },
@@ -714,7 +714,7 @@ impl SdpAttribute {
                         message: "Sctpmap needs to have three tokens".to_string(),
                         line: v.to_string()})
                 }
-                let port = try!(tokens[0].parse::<u32>());
+                let port = tokens[0].parse::<u32>()?;
                 if port > 65535 {
                     return Err(SdpParserError::Line{
                         message: "Sctpmap port can only be a bit 16bit number".to_string(),
@@ -728,12 +728,12 @@ impl SdpAttribute {
                 self.value = Some(SdpAttributeValue::Sctpmap(
                     SdpAttributeSctpmap {
                         port: port,
-                        channels: try!(tokens[2].parse::<u32>())
+                        channels: tokens[2].parse::<u32>()?
                     }
                 ));
             },
             SdpAttributeType::SctpPort => {
-                let port = try!(v.parse::<u32>());
+                let port = v.parse::<u32>()?;
                 if port > 65535 {
                     return Err(SdpParserError::Line{
                         message: "Sctpport port can only be a bit 16bit number".to_string(),
@@ -793,7 +793,7 @@ impl SdpAttribute {
                     None => return Err(SdpParserError::Line{
                         message: "Ssrc attribute is missing ssrc-id value".to_string(),
                         line: v.to_string()}),
-                    Some(x) => try!(x.parse::<u32>())
+                    Some(x) => x.parse::<u32>()?
                 };
                 let mut ssrc = SdpAttributeSsrc::new(ssrc_id);
                 match tokens.next() {
@@ -860,7 +860,7 @@ pub fn parse_attribute(value: &str) -> Result<SdpLine, SdpParserError> {
         }
     };
     let mut attr = SdpAttribute::new(attrtype);
-    try!(attr.parse_value(val.trim()));
+    attr.parse_value(val.trim())?;
     /*
     println!("attribute: {}, {}", 
              a.name, a.value.some());

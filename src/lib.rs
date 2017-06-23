@@ -197,7 +197,7 @@ fn test_session_works() {
 
 
 fn parse_version(value: &str) -> Result<SdpLine, SdpParserError> {
-    let ver = try!(value.parse::<u64>());
+    let ver = value.parse::<u64>()?;
     if ver != 0 {
         return Err(SdpParserError::Line {
                        message: "unsupported version in v field".to_string(),
@@ -229,10 +229,10 @@ fn parse_origin(value: &str) -> Result<SdpLine, SdpParserError> {
                    });
     }
     let username = ot[0];
-    let session_id = try!(ot[1].parse::<u64>());
-    let session_version = try!(ot[2].parse::<u64>());
-    try!(parse_nettype(ot[3]));
-    let addrtype = try!(parse_addrtype(ot[4]));
+    let session_id = ot[1].parse::<u64>()?;
+    let session_version = ot[2].parse::<u64>()?;
+    parse_nettype(ot[3])?;
+    let addrtype = parse_addrtype(ot[4])?;
     let unicast_addr = parse_unicast_addr(ot[5])?;
     if !addrtype.same_protocol(&unicast_addr) {
         return Err(SdpParserError::Line {
@@ -298,20 +298,20 @@ fn parse_connection(value: &str) -> Result<SdpLine, SdpParserError> {
                        line: value.to_string(),
                    });
     }
-    try!(parse_nettype(cv[0]));
-    let addrtype = try!(parse_addrtype(cv[1]));
+    parse_nettype(cv[0])?;
+    let addrtype = parse_addrtype(cv[1])?;
     let mut ttl = None;
     let mut amount = None;
     let mut addr_token = cv[2];
     if addr_token.find('/') != None {
         let addr_tokens: Vec<&str> = addr_token.split('/').collect();
         if addr_tokens.len() >= 3 {
-            amount = Some(try!(addr_tokens[2].parse::<u32>()));
+            amount = Some(addr_tokens[2].parse::<u32>()?);
         }
-        ttl = Some(try!(addr_tokens[1].parse::<u32>()));
+        ttl = Some(addr_tokens[1].parse::<u32>()?);
         addr_token = addr_tokens[0];
     }
-    let addr = try!(parse_unicast_addr(addr_token));
+    let addr = parse_unicast_addr(addr_token)?;
     if !addrtype.same_protocol(&addr) {
         return Err(SdpParserError::Line {
                        message: "Failed to parse unicast address attribute.\
@@ -381,7 +381,7 @@ fn parse_bandwidth(value: &str) -> Result<SdpLine, SdpParserError> {
             SdpBandwidthType::Unknown
         }
     };
-    let bandwidth = try!(bv[1].parse::<u64>());
+    let bandwidth = bv[1].parse::<u64>()?;
     let b = SdpBandwidth {
         bwtype,
         unknown_type,
@@ -417,8 +417,8 @@ fn parse_timing(value: &str) -> Result<SdpLine, SdpParserError> {
                        line: value.to_string(),
                    });
     }
-    let start_time = try!(tv[0].parse::<u64>());
-    let stop_time = try!(tv[1].parse::<u64>());
+    let start_time = tv[0].parse::<u64>()?;
+    let stop_time = tv[1].parse::<u64>()?;
     let t = SdpTiming {
         start: start_time,
         stop: stop_time,
@@ -584,9 +584,7 @@ fn parse_sdp_vector(lines: &[SdpLine]) -> Result<SdpSession, SdpParserError> {
             SdpLine::Attribute { value: ref v } => sdp_session.add_attribute(v.clone()),
             SdpLine::Bandwidth { value: ref v } => sdp_session.add_bandwidth(v.clone()),
             SdpLine::Timing { value: ref v } => sdp_session.set_timing(v.clone()),
-            SdpLine::Media { .. } => {
-                sdp_session.extend_media(try!(parse_media_vector(&lines[i..])))
-            }
+            SdpLine::Media { .. } => sdp_session.extend_media(parse_media_vector(&lines[i..])?),
             SdpLine::Origin { .. } |
             SdpLine::Session { .. } |
             SdpLine::Version { .. } => {
@@ -706,7 +704,7 @@ pub fn parse_sdp(sdp: &str, fail_on_warning: bool) -> Result<SdpSession, SdpPars
     if let Some(e) = errors.pop() {
         return Err(e);
     };
-    let session = try!(parse_sdp_vector(&sdp_lines));
+    let session = parse_sdp_vector(&sdp_lines)?;
     Ok(session)
 }
 
