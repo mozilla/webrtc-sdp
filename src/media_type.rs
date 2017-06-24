@@ -80,7 +80,7 @@ pub struct SdpMedia {
 impl SdpMedia {
     pub fn new(media: SdpMediaLine) -> SdpMedia {
         SdpMedia {
-            media: media,
+            media,
             information: None,
             connection: None,
             bandwidth: Vec::new(),

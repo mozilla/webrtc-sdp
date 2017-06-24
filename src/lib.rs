@@ -90,9 +90,9 @@ pub struct SdpSession {
 impl SdpSession {
     pub fn new(version: u64, origin: SdpOrigin, session: String) -> SdpSession {
         SdpSession {
-            version: version,
-            origin: origin,
-            session: session,
+            version,
+            origin,
+            session,
             information: None,
             uri: None,
             email: None,
@@ -244,9 +244,9 @@ fn parse_origin(value: &str) -> Result<SdpLine, SdpParserError> {
     }
     let o = SdpOrigin {
         username: String::from(username),
-        session_id: session_id,
-        session_version: session_version,
-        unicast_addr: unicast_addr,
+        session_id,
+        session_version,
+        unicast_addr,
     };
     println!("origin: {}, {}, {}, {}, {}",
              o.username,
@@ -417,12 +417,9 @@ fn parse_timing(value: &str) -> Result<SdpLine, SdpParserError> {
                        line: value.to_string(),
                    });
     }
-    let start_time = tv[0].parse::<u64>()?;
-    let stop_time = tv[1].parse::<u64>()?;
-    let t = SdpTiming {
-        start: start_time,
-        stop: stop_time,
-    };
+    let start = tv[0].parse::<u64>()?;
+    let stop = tv[1].parse::<u64>()?;
+    let t = SdpTiming { start, stop };
     println!("timing: {}, {}", t.start, t.stop);
     Ok(SdpLine::Timing(t))
 }

@@ -122,22 +122,22 @@ pub struct SdpAttributeCandidate {
 }
 
 impl SdpAttributeCandidate {
-    pub fn new(fd: String,
-               comp: u32,
-               transp: SdpAttributeCandidateTransport,
-               prio: u64,
-               addr: IpAddr,
+    pub fn new(foundation: String,
+               component: u32,
+               transport: SdpAttributeCandidateTransport,
+               priority: u64,
+               address: IpAddr,
                port: u32,
-               ctyp: SdpAttributeCandidateType)
+               c_type: SdpAttributeCandidateType)
                -> SdpAttributeCandidate {
         SdpAttributeCandidate {
-            foundation: fd,
-            component: comp,
-            transport: transp,
-            priority: prio,
-            address: addr,
-            port: port,
-            c_type: ctyp,
+            foundation,
+            component,
+            transport,
+            priority,
+            address,
+            port,
+            c_type,
             raddr: None,
             rport: None,
             tcp_type: None,
@@ -227,7 +227,7 @@ pub struct SdpAttributeRtcp {
 impl SdpAttributeRtcp {
     pub fn new(port: u32) -> SdpAttributeRtcp {
         SdpAttributeRtcp {
-            port: port,
+            port,
             unicast_addr: None,
         }
     }
@@ -309,10 +309,10 @@ pub struct SdpAttributeRtpmap {
 }
 
 impl SdpAttributeRtpmap {
-    pub fn new(pt: u32, codec: String) -> SdpAttributeRtpmap {
+    pub fn new(payload_type: u32, codec_name: String) -> SdpAttributeRtpmap {
         SdpAttributeRtpmap {
-            payload_type: pt,
-            codec_name: codec,
+            payload_type,
+            codec_name,
             frequency: None,
             channels: None,
         }
@@ -345,7 +345,7 @@ pub struct SdpAttributeSsrc {
 impl SdpAttributeSsrc {
     pub fn new(id: u32) -> SdpAttributeSsrc {
         SdpAttributeSsrc {
-            id: id,
+            id,
             attribute: None,
             value: None,
         }
@@ -389,11 +389,8 @@ pub struct SdpAttribute {
 }
 
 impl SdpAttribute {
-    pub fn new(t: SdpAttributeType) -> SdpAttribute {
-        SdpAttribute {
-            name: t,
-            value: None,
-        }
+    pub fn new(name: SdpAttributeType) -> SdpAttribute {
+        SdpAttribute { name, value: None }
     }
 
     pub fn parse_value(&mut self, v: &str) -> Result<(), SdpParserError> {
@@ -521,13 +518,13 @@ impl SdpAttribute {
                         line: v.to_string()})
                 }
                 let id: u32;
-                let mut dir: Option<SdpAttributeDirection> = None;
+                let mut direction: Option<SdpAttributeDirection> = None;
                 if tokens[0].find('/') == None {
                     id = tokens[0].parse::<u32>()?;
                 } else {
                     let id_dir: Vec<&str> = tokens[0].splitn(2, '/').collect();
                     id = id_dir[0].parse::<u32>()?;
-                    dir = Some(match id_dir[1].to_lowercase().as_ref() {
+                    direction = Some(match id_dir[1].to_lowercase().as_ref() {
                         "recvonly" => SdpAttributeDirection::Recvonly,
                         "sendonly" => SdpAttributeDirection::Sendonly,
                         "sendrecv" => SdpAttributeDirection::Sendrecv,
@@ -538,8 +535,8 @@ impl SdpAttribute {
                 }
                 self.value = Some(SdpAttributeValue::Extmap(
                     SdpAttributeExtmap {
-                        id: id,
-                        direction: dir,
+                        id,
+                        direction,
                         url: tokens[1].to_string()
                     }
                 ))
@@ -596,7 +593,7 @@ impl SdpAttribute {
                 };
                 self.value = Some(SdpAttributeValue::Group(
                     SdpAttributeGroup {
-                        semantics: semantics,
+                        semantics,
                         tags: tokens.map(|x| x.to_string()).collect()
                     }
                 ))
@@ -619,8 +616,8 @@ impl SdpAttribute {
                 };
                 self.value = Some(SdpAttributeValue::Msid(
                     SdpAttributeMsid {
-                        id: id,
-                        appdata: appdata
+                        id,
+                        appdata
                     }
                 ))
             },
@@ -727,7 +724,7 @@ impl SdpAttribute {
                 }
                 self.value = Some(SdpAttributeValue::Sctpmap(
                     SdpAttributeSctpmap {
-                        port: port,
+                        port,
                         channels: tokens[2].parse::<u32>()?
                     }
                 ));
