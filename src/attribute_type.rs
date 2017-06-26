@@ -20,6 +20,7 @@ pub enum SdpAttributeType {
     IceOptions,
     IcePwd,
     IceUfrag,
+    Identity,
     Inactive,
     MaxMessageSize,
     MaxPtime,
@@ -59,6 +60,7 @@ impl fmt::Display for SdpAttributeType {
             SdpAttributeType::IceOptions => "Ice-Options",
             SdpAttributeType::IcePwd => "Ice-Pwd",
             SdpAttributeType::IceUfrag => "Ice-Ufrag",
+            SdpAttributeType::Identity => "Identity",
             SdpAttributeType::Inactive => "Inactive",
             SdpAttributeType::MaxMessageSize => "Max-Message-Size",
             SdpAttributeType::MaxPtime => "Max-Ptime",
@@ -365,7 +367,7 @@ impl SdpAttributeSsrc {
 #[derive(Clone)]
 pub enum SdpAttributeValue {
     Str(String),
-    Int(u32),
+    Int(u64),
     Vector(Vec<String>),
     Candidate(SdpAttributeCandidate),
     Extmap(SdpAttributeExtmap),
@@ -415,15 +417,21 @@ impl SdpAttribute {
             SdpAttributeType::MaxMessageSize |
             SdpAttributeType::MaxPtime |
             SdpAttributeType::Ptime => {
-                self.value = Some(SdpAttributeValue::Int(v.parse::<u32>()?))
+                self.value = Some(SdpAttributeValue::Int(v.parse::<u64>()?))
             },
 
             SdpAttributeType::IcePwd |
             SdpAttributeType::IceUfrag |
+            SdpAttributeType::Identity |
             SdpAttributeType::Mid |
             SdpAttributeType::MsidSemantic | // mmusic-msid-16 doesnt have this
             SdpAttributeType::Rid |
             SdpAttributeType::SsrcGroup => { // not in JSEP any more...
+                if v.is_empty() {
+                    return Err(SdpParserError::Line{
+                        message: "This attribute is required to have a value".to_string(),
+                        line: v.to_string()})
+                }
                 self.value = Some(SdpAttributeValue::Str(v.to_string()))
             },
 
@@ -599,6 +607,11 @@ impl SdpAttribute {
                 ))
             },
             SdpAttributeType::IceOptions => {
+                if v.is_empty() {
+                    return Err(SdpParserError::Line{
+                        message: "ice-options is required to have a value".to_string(),
+                        line: v.to_string()})
+                }
                 self.value = Some(SdpAttributeValue::Vector (
                     v.split_whitespace().map(|x| x.to_string()).collect()))
             },
@@ -730,7 +743,7 @@ impl SdpAttribute {
                 ));
             },
             SdpAttributeType::SctpPort => {
-                let port = v.parse::<u32>()?;
+                let port = v.parse::<u64>()?;
                 if port > 65535 {
                     return Err(SdpParserError::Line{
                         message: "Sctpport port can only be a bit 16bit number".to_string(),
@@ -827,6 +840,7 @@ pub fn parse_attribute(value: &str) -> Result<SdpLine, SdpParserError> {
         "ice-options" => SdpAttributeType::IceOptions,
         "ice-pwd" => SdpAttributeType::IcePwd,
         "ice-ufrag" => SdpAttributeType::IceUfrag,
+        "identity" => SdpAttributeType::Identity,
         "inactive" => SdpAttributeType::Inactive,
         "max-message-size" => SdpAttributeType::MaxMessageSize,
         "maxptime" => SdpAttributeType::MaxPtime,
@@ -941,28 +955,43 @@ fn test_parse_attribute_bundle_only() {
 #[test]
 fn test_parse_attribute_ice_lite() {
     assert!(parse_attribute("ice-lite").is_ok());
+
     assert!(parse_attribute("ice-lite foobar").is_err());
 }
 
 #[test]
 fn test_parse_attribute_ice_mismatch() {
     assert!(parse_attribute("ice-mismatch").is_ok());
+
     assert!(parse_attribute("ice-mismatch foobar").is_err());
 }
 
 #[test]
 fn test_parse_attribute_ice_options() {
-    assert!(parse_attribute("ice-options:trickle").is_ok())
+    assert!(parse_attribute("ice-options:trickle").is_ok());
+
+    assert!(parse_attribute("ice-options:").is_err());
 }
 
 #[test]
 fn test_parse_attribute_ice_pwd() {
-    assert!(parse_attribute("ice-pwd:e3baa26dd2fa5030d881d385f1e36cce").is_ok())
+    assert!(parse_attribute("ice-pwd:e3baa26dd2fa5030d881d385f1e36cce").is_ok());
+
+    assert!(parse_attribute("ice-pwd:").is_err());
 }
 
 #[test]
 fn test_parse_attribute_ice_ufrag() {
-    assert!(parse_attribute("ice-ufrag:58b99ead").is_ok())
+    assert!(parse_attribute("ice-ufrag:58b99ead").is_ok());
+
+    assert!(parse_attribute("ice-ufrag:").is_err());
+}
+
+#[test]
+fn test_parse_attribute_identity() {
+    assert!(parse_attribute("identity:abcd").is_ok());
+
+    assert!(parse_attribute("identity:").is_err());
 }
 
 #[test]
@@ -973,12 +1002,17 @@ fn test_parse_attribute_inactive() {
 
 #[test]
 fn test_parse_attribute_maxptime() {
-    assert!(parse_attribute("maxptime:60").is_ok())
+    assert!(parse_attribute("maxptime:60").is_ok());
+
+    assert!(parse_attribute("maxptime:").is_err());
 }
 
 #[test]
 fn test_parse_attribute_mid() {
-    assert!(parse_attribute("mid:sdparta_0").is_ok())
+    assert!(parse_attribute("mid:sdparta_0").is_ok());
+    assert!(parse_attribute("mid:sdparta_0 sdparta_1 sdparta_2").is_ok());
+
+    assert!(parse_attribute("mid:").is_err());
 }
 
 #[test]
@@ -996,12 +1030,17 @@ fn test_parse_attribute_msid_semantics() {
 
 #[test]
 fn test_parse_attribute_ptime() {
-    assert!(parse_attribute("ptime:30").is_ok())
+    assert!(parse_attribute("ptime:30").is_ok());
+
+    assert!(parse_attribute("ptime:").is_err());
 }
 
 #[test]
 fn test_parse_attribute_rid() {
-    assert!(parse_attribute("rid:foo send").is_ok())
+    assert!(parse_attribute("rid:foo send").is_ok());
+    assert!(parse_attribute("rid:foo").is_ok());
+
+    assert!(parse_attribute("rid:").is_err());
 }
 
 #[test]
@@ -1076,7 +1115,13 @@ fn test_parse_attribute_sctp_port() {
 
 #[test]
 fn test_parse_attribute_max_message_size() {
-    assert!(parse_attribute("max-message-size:1").is_ok())
+    assert!(parse_attribute("max-message-size:1").is_ok());
+    assert!(parse_attribute("max-message-size:100000").is_ok());
+    assert!(parse_attribute("max-message-size:4294967297").is_ok());
+    assert!(parse_attribute("max-message-size:0").is_ok());
+
+    assert!(parse_attribute("max-message-size:").is_err());
+    assert!(parse_attribute("max-message-size:abc").is_err());
 }
 
 #[test]
