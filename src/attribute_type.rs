@@ -989,7 +989,7 @@ fn test_parse_attribute_ice_ufrag() {
 
 #[test]
 fn test_parse_attribute_identity() {
-    assert!(parse_attribute("identity:abcd").is_ok());
+    assert!(parse_attribute("identity:eyJpZHAiOnsiZG9tYWluIjoiZXhhbXBsZS5vcmciLCJwcm90b2NvbCI6ImJvZ3VzIn0sImFzc2VydGlvbiI6IntcImlkZW50aXR5XCI6XCJib2JAZXhhbXBsZS5vcmdcIixcImNvbnRlbnRzXCI6XCJhYmNkZWZnaGlqa2xtbm9wcXJzdHV2d3l6XCIsXCJzaWduYXR1cmVcIjpcIjAxMDIwMzA0MDUwNlwifSJ9").is_ok());
 
     assert!(parse_attribute("identity:").is_err());
 }
