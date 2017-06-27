@@ -905,6 +905,9 @@ fn test_parse_attribute_candidate() {
     assert!(parse_attribute("candidate:0 1 UDP 2122252543 172.16.156.106 49760 type host")
                 .is_err());
     assert!(parse_attribute("candidate:0 1 UDP 2122252543 172.16.156.106 49760 typ fost").is_err());
+    // FIXME this should fail without the extra 'foobar' at the end
+    assert!(parse_attribute("candidate:0 1 TCP 2122252543 172.16.156.106 49760 typ host unsupported foobar").is_err());
+    assert!(parse_attribute("candidate:1 1 UDP 1685987071 24.23.204.141 54609 typ srflx raddr 192.168.1 rport 61665").is_err());
     assert!(parse_attribute("candidate:0 1 TCP 2122252543 172.16.156.106 49760 typ host tcptype foobar").is_err());
     assert!(parse_attribute("candidate:1 1 UDP 1685987071 24.23.204.141 54609 typ srflx raddr 192.168.1 rport 61665").is_err());
     assert!(parse_attribute("candidate:1 1 UDP 1685987071 24.23.204.141 54609 typ srflx raddr 192.168.1.4 rport 70000").is_err());
@@ -924,6 +927,11 @@ fn test_parse_attribute_extmap() {
                 .is_ok());
     assert!(parse_attribute("extmap:3 http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time")
                 .is_ok());
+
+    assert!(parse_attribute("extmap:a/sendrecv urn:ietf:params:rtp-hdrext:ssrc-audio-level")
+                .is_err());
+    assert!(parse_attribute("extmap:4/unsupported urn:ietf:params:rtp-hdrext:ssrc-audio-level")
+                .is_err());
 }
 
 #[test]
@@ -1078,7 +1086,10 @@ fn test_parse_attribute_rtcp() {
     assert!(parse_attribute("rtcp:9 IN IP4 0.0.0.0").is_ok());
 
     assert!(parse_attribute("rtcp:").is_err());
-    assert!(parse_attribute("rtcp:7000").is_ok());
+    assert!(parse_attribute("rtcp:70000").is_err());
+    assert!(parse_attribute("rtcp:9 IN").is_err());
+    assert!(parse_attribute("rtcp:9 IN IP4").is_err());
+    assert!(parse_attribute("rtcp:9 IN IP4 ::1").is_err());
 }
 
 #[test]
@@ -1105,12 +1116,19 @@ fn test_parse_attribute_rtpmap() {
 
 #[test]
 fn test_parse_attribute_sctpmap() {
-    assert!(parse_attribute("sctpmap:5000 webrtc-datachannel 256").is_ok())
+    assert!(parse_attribute("sctpmap:5000 webrtc-datachannel 256").is_ok());
+
+    assert!(parse_attribute("sctpmap:70000 webrtc-datachannel 256").is_err());
+    assert!(parse_attribute("sctpmap:5000 unsupported 256").is_err());
+    assert!(parse_attribute("sctpmap:5000 webrtc-datachannel 2a").is_err());
 }
 
 #[test]
 fn test_parse_attribute_sctp_port() {
-    assert!(parse_attribute("sctp-port:5000").is_ok())
+    assert!(parse_attribute("sctp-port:5000").is_ok());
+
+    assert!(parse_attribute("sctp-port:").is_err());
+    assert!(parse_attribute("sctp-port:70000").is_err());
 }
 
 #[test]
@@ -1137,6 +1155,7 @@ fn test_parse_attribute_simulcast() {
     // old draft 03 notation used by Firefox 55
     assert!(parse_attribute("simulcast: send rid=foo;bar").is_ok());
 
+    assert!(parse_attribute("simulcast:").is_err());
     assert!(parse_attribute("simulcast:send").is_err());
     assert!(parse_attribute("simulcast:foobar 1").is_err());
     assert!(parse_attribute("simulcast:send 1 foobar 2").is_err());

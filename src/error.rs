@@ -118,3 +118,29 @@ fn test_sdp_parser_error_sequence() {
     assert_eq!(sequence2.description(), "another sequence message");
     assert!(sequence2.cause().is_none());
 }
+
+#[test]
+fn test_sdp_parser_error_integer() {
+    let v = "12a";
+    let integer = v.parse::<u64>();
+    assert!(integer.is_err());
+    // TODO how to verify the output of fmt::Display() ?
+    let int_err = integer.err().unwrap();
+    println!("{}", int_err);
+    println!("{}", int_err.description());
+    assert!(int_err.cause().is_none());
+}
+
+#[test]
+fn test_sdp_parser_error_address() {
+    let v = "127.0.0.a";
+    use std::str::FromStr;
+    use std::net::IpAddr;
+    let addr = IpAddr::from_str(v);
+    assert!(addr.is_err());
+    // TODO how to verify the output of fmt::Display() ?
+    let addr_err = addr.err().unwrap();
+    println!("{}", addr_err);
+    println!("{}", addr_err.description());
+    assert!(addr_err.cause().is_none());
+}
