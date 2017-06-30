@@ -32,6 +32,7 @@ pub enum SdpAttributeType {
     Ptime,
     Rid,
     Recvonly,
+    RemoteCandidate,
     Rtcp,
     RtcpFb,
     RtcpMux,
@@ -74,6 +75,7 @@ impl fmt::Display for SdpAttributeType {
             SdpAttributeType::Ptime => "Ptime",
             SdpAttributeType::Rid => "Rid",
             SdpAttributeType::Recvonly => "Recvonly",
+            SdpAttributeType::RemoteCandidate => "RemoteCandidate",
             SdpAttributeType::Rtcp => "Rtcp",
             SdpAttributeType::RtcpFb => "Rtcp-Fb",
             SdpAttributeType::RtcpMux => "Rtcp-Mux",
@@ -161,6 +163,13 @@ impl SdpAttributeCandidate {
     fn set_tcp_type(&mut self, t: SdpAttributeCandidateTcpType) {
         self.tcp_type = Some(t)
     }
+}
+
+#[derive(Clone)]
+pub struct SdpAttributeRemoteCandidate {
+    pub component: u32,
+    pub address: IpAddr,
+    pub port: u32,
 }
 
 #[derive(Clone)]
@@ -379,6 +388,7 @@ pub enum SdpAttributeValue {
     Fmtp(SdpAttributeFmtp),
     Group(SdpAttributeGroup),
     Msid(SdpAttributeMsid),
+    RemoteCandidate(SdpAttributeRemoteCandidate),
     Rtpmap(SdpAttributeRtpmap),
     Rtcp(SdpAttributeRtcp),
     Rtcpfb(SdpAttributeRtcpFb),
@@ -640,6 +650,39 @@ impl SdpAttribute {
                     }
                 ))
             },
+            SdpAttributeType::RemoteCandidate => {
+                let mut tokens = v.split_whitespace();
+                let component = match tokens.next() {
+                    None => return Err(SdpParserError::Line{
+                        message: "Remote-candidate attribute is missing component ID".to_string(),
+                        line: v.to_string()}),
+                    Some(x) => x.parse::<u32>()?
+                };
+                let address = match tokens.next() {
+                    None => return Err(SdpParserError::Line{
+                        message: "Remote-candidate attribute is missing connection address".to_string(),
+                        line: v.to_string()}),
+                    Some(x) => parse_unicast_addr(x)?
+                };
+                let port = match tokens.next() {
+                    None => return Err(SdpParserError::Line{
+                        message: "Remote-candidate attribute is missing port number".to_string(),
+                        line: v.to_string()}),
+                    Some(x) => x.parse::<u32>()?
+                };
+                if port > 65535 {
+                    return Err(SdpParserError::Line{
+                        message: "Remote-candidate port can only be a bit 16bit number".to_string(),
+                        line: v.to_string()})
+                };
+                self.value = Some(SdpAttributeValue::RemoteCandidate(
+                        SdpAttributeRemoteCandidate {
+                            component,
+                            address,
+                            port
+                        }
+                ))
+            }
             SdpAttributeType::Rtcp => {
                 let mut tokens = v.split_whitespace();
                 let port = match tokens.next() {
@@ -858,6 +901,7 @@ pub fn parse_attribute(value: &str) -> Result<SdpLine, SdpParserError> {
         "ptime" => SdpAttributeType::Ptime,
         "rid" => SdpAttributeType::Rid,
         "recvonly" => SdpAttributeType::Recvonly,
+        "remote-candidates" => SdpAttributeType::RemoteCandidate,
         "rtcp" => SdpAttributeType::Rtcp,
         "rtcp-fb" => SdpAttributeType::RtcpFb,
         "rtcp-mux" => SdpAttributeType::RtcpMux,
@@ -1082,6 +1126,19 @@ fn test_parse_attribute_rid() {
 fn test_parse_attribute_recvonly() {
     assert!(parse_attribute("recvonly").is_ok());
     assert!(parse_attribute("recvonly foobar").is_err());
+}
+
+#[test]
+fn test_parse_attribute_remote_candidate() {
+    assert!(parse_attribute("remote-candidates:0 10.0.0.1 5555").is_ok());
+    assert!(parse_attribute("remote-candidates:12345 ::1 5555").is_ok());
+
+    assert!(parse_attribute("remote-candidates:abc 10.0.0.1 5555").is_err());
+    assert!(parse_attribute("remote-candidates:0 10.a.0.1 5555").is_err());
+    assert!(parse_attribute("remote-candidates:0 10.0.0.1 70000").is_err());
+    assert!(parse_attribute("remote-candidates:0 10.0.0.1").is_err());
+    assert!(parse_attribute("remote-candidates:0").is_err());
+    assert!(parse_attribute("remote-candidates:").is_err());
 }
 
 #[test]
