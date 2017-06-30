@@ -23,6 +23,7 @@ pub enum SdpAttributeType {
     Identity,
     ImageAttr,
     Inactive,
+    Label,
     MaxMessageSize,
     MaxPtime,
     Mid,
@@ -64,6 +65,7 @@ impl fmt::Display for SdpAttributeType {
             SdpAttributeType::Identity => "Identity",
             SdpAttributeType::ImageAttr => "Imageattr",
             SdpAttributeType::Inactive => "Inactive",
+            SdpAttributeType::Label => "Label",
             SdpAttributeType::MaxMessageSize => "Max-Message-Size",
             SdpAttributeType::MaxPtime => "Max-Ptime",
             SdpAttributeType::Mid => "Mid",
@@ -426,6 +428,7 @@ impl SdpAttribute {
             SdpAttributeType::IceUfrag |
             SdpAttributeType::Identity |
             SdpAttributeType::ImageAttr | // TODO implemente if needed
+            SdpAttributeType::Label |
             SdpAttributeType::Mid |
             SdpAttributeType::MsidSemantic | // mmusic-msid-16 doesnt have this
             SdpAttributeType::Rid |
@@ -846,6 +849,7 @@ pub fn parse_attribute(value: &str) -> Result<SdpLine, SdpParserError> {
         "identity" => SdpAttributeType::Identity,
         "imageattr" => SdpAttributeType::ImageAttr,
         "inactive" => SdpAttributeType::Inactive,
+        "label" => SdpAttributeType::Label,
         "max-message-size" => SdpAttributeType::MaxMessageSize,
         "maxptime" => SdpAttributeType::MaxPtime,
         "mid" => SdpAttributeType::Mid,
@@ -1020,6 +1024,15 @@ fn test_parse_attribute_imageattr() {
 fn test_parse_attribute_inactive() {
     assert!(parse_attribute("inactive").is_ok());
     assert!(parse_attribute("inactive foobar").is_err());
+}
+
+#[test]
+fn test_parse_attribute_label() {
+    assert!(parse_attribute("label:1").is_ok());
+    assert!(parse_attribute("label:foobar").is_ok());
+    assert!(parse_attribute("label:foobar barfoo").is_ok());
+
+    assert!(parse_attribute("label:").is_err());
 }
 
 #[test]
