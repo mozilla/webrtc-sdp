@@ -127,6 +127,9 @@ pub struct SdpAttributeCandidate {
     pub raddr: Option<IpAddr>,
     pub rport: Option<u32>,
     pub tcp_type: Option<SdpAttributeCandidateTcpType>,
+    pub generation: Option<u32>,
+    pub ufrag: Option<String>,
+    pub networkcost: Option<u32>,
 }
 
 impl SdpAttributeCandidate {
@@ -149,6 +152,9 @@ impl SdpAttributeCandidate {
             raddr: None,
             rport: None,
             tcp_type: None,
+            generation: None,
+            ufrag: None,
+            networkcost: None,
         }
     }
 
@@ -162,6 +168,18 @@ impl SdpAttributeCandidate {
 
     fn set_tcp_type(&mut self, t: SdpAttributeCandidateTcpType) {
         self.tcp_type = Some(t)
+    }
+
+    fn set_generation(&mut self, g: u32) {
+        self.generation = Some(g)
+    }
+
+    fn set_ufrag(&mut self, u: String) {
+        self.ufrag = Some(u)
+    }
+
+    fn set_network_cost(&mut self, n: u32) {
+        self.networkcost = Some(n)
     }
 }
 
@@ -500,6 +518,16 @@ impl SdpAttribute {
                     let mut index = 8;
                     while tokens.len() > index + 1 {
                         match tokens[index].to_lowercase().as_ref() {
+                            "generation" => {
+                                let generation = tokens[index + 1].parse::<u32>()?;
+                                cand.set_generation(generation);
+                                index += 2;
+                            },
+                            "network-cost" => {
+                                let cost = tokens[index + 1].parse::<u32>()?;
+                                cand.set_network_cost(cost);
+                                index += 2;
+                            },
                             "raddr" => {
                                 let addr = parse_unicast_addr(tokens[index + 1])?;
                                 cand.set_remote_address(addr);
@@ -524,6 +552,11 @@ impl SdpAttribute {
                                         message: "Unknown tcptype value in candidate line".to_string(),
                                         line: v.to_string()})
                                 });
+                                index += 2;
+                            },
+                            "ufrag" => {
+                                let ufrag = tokens[index + 1];
+                                cand.set_ufrag(ufrag.to_string());
                                 index += 2;
                             },
                             _ => return Err(SdpParserError::Unsupported{
@@ -944,8 +977,14 @@ fn test_parse_attribute_candidate() {
     assert!(parse_attribute("candidate:0 1 TCP 2122252543 172.16.156.106 49760 typ host tcptype active").is_ok());
     assert!(parse_attribute("candidate:0 1 TCP 2122252543 172.16.156.106 49760 typ host tcptype passive").is_ok());
     assert!(parse_attribute("candidate:0 1 TCP 2122252543 172.16.156.106 49760 typ host tcptype so").is_ok());
+    assert!(parse_attribute("candidate:0 1 TCP 2122252543 172.16.156.106 49760 typ host ufrag foobar").is_ok());
+    assert!(parse_attribute("candidate:0 1 TCP 2122252543 172.16.156.106 49760 typ host network-cost 50").is_ok());
+    assert!(parse_attribute("candidate:1 1 UDP 1685987071 24.23.204.141 54609 typ srflx raddr 192.168.1.4 rport 61665 generation 0").is_ok());
     assert!(parse_attribute("candidate:1 1 UDP 1685987071 24.23.204.141 54609 typ srflx raddr 192.168.1.4 rport 61665").is_ok());
     assert!(parse_attribute("candidate:1 1 TCP 1685987071 24.23.204.141 54609 typ srflx raddr 192.168.1.4 rport 61665 tcptype passive").is_ok());
+    assert!(parse_attribute("candidate:1 1 TCP 1685987071 24.23.204.141 54609 typ srflx raddr 192.168.1.4 rport 61665 tcptype passive generation 1").is_ok());
+    assert!(parse_attribute("candidate:1 1 TCP 1685987071 24.23.204.141 54609 typ srflx raddr 192.168.1.4 rport 61665 tcptype passive generation 1 ufrag +DGd").is_ok());
+    assert!(parse_attribute("candidate:1 1 TCP 1685987071 24.23.204.141 54609 typ srflx raddr 192.168.1.4 rport 61665 tcptype passive generation 1 ufrag +DGd network-cost 1").is_ok());
 
     assert!(parse_attribute("candidate:0 1 UDP 2122252543 172.16.156.106 49760 typ").is_err());
     assert!(parse_attribute("candidate:0 foo UDP 2122252543 172.16.156.106 49760 typ host")
@@ -959,6 +998,8 @@ fn test_parse_attribute_candidate() {
     assert!(parse_attribute("candidate:0 1 UDP 2122252543 172.16.156.106 49760 typ fost").is_err());
     // FIXME this should fail without the extra 'foobar' at the end
     assert!(parse_attribute("candidate:0 1 TCP 2122252543 172.16.156.106 49760 typ host unsupported foobar").is_err());
+    assert!(parse_attribute("candidate:1 1 UDP 1685987071 24.23.204.141 54609 typ srflx raddr 192.168.1.4 rport 61665 generation B").is_err());
+    assert!(parse_attribute("candidate:0 1 TCP 2122252543 172.16.156.106 49760 typ host network-cost C").is_err());
     assert!(parse_attribute("candidate:1 1 UDP 1685987071 24.23.204.141 54609 typ srflx raddr 192.168.1 rport 61665").is_err());
     assert!(parse_attribute("candidate:0 1 TCP 2122252543 172.16.156.106 49760 typ host tcptype foobar").is_err());
     assert!(parse_attribute("candidate:1 1 UDP 1685987071 24.23.204.141 54609 typ srflx raddr 192.168.1 rport 61665").is_err());
