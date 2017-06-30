@@ -21,6 +21,7 @@ pub enum SdpAttributeType {
     IcePwd,
     IceUfrag,
     Identity,
+    ImageAttr,
     Inactive,
     MaxMessageSize,
     MaxPtime,
@@ -61,6 +62,7 @@ impl fmt::Display for SdpAttributeType {
             SdpAttributeType::IcePwd => "Ice-Pwd",
             SdpAttributeType::IceUfrag => "Ice-Ufrag",
             SdpAttributeType::Identity => "Identity",
+            SdpAttributeType::ImageAttr => "Imageattr",
             SdpAttributeType::Inactive => "Inactive",
             SdpAttributeType::MaxMessageSize => "Max-Message-Size",
             SdpAttributeType::MaxPtime => "Max-Ptime",
@@ -423,6 +425,7 @@ impl SdpAttribute {
             SdpAttributeType::IcePwd |
             SdpAttributeType::IceUfrag |
             SdpAttributeType::Identity |
+            SdpAttributeType::ImageAttr | // TODO implemente if needed
             SdpAttributeType::Mid |
             SdpAttributeType::MsidSemantic | // mmusic-msid-16 doesnt have this
             SdpAttributeType::Rid |
@@ -841,6 +844,7 @@ pub fn parse_attribute(value: &str) -> Result<SdpLine, SdpParserError> {
         "ice-pwd" => SdpAttributeType::IcePwd,
         "ice-ufrag" => SdpAttributeType::IceUfrag,
         "identity" => SdpAttributeType::Identity,
+        "imageattr" => SdpAttributeType::ImageAttr,
         "inactive" => SdpAttributeType::Inactive,
         "max-message-size" => SdpAttributeType::MaxMessageSize,
         "maxptime" => SdpAttributeType::MaxPtime,
@@ -1000,6 +1004,16 @@ fn test_parse_attribute_identity() {
     assert!(parse_attribute("identity:eyJpZHAiOnsiZG9tYWluIjoiZXhhbXBsZS5vcmciLCJwcm90b2NvbCI6ImJvZ3VzIn0sImFzc2VydGlvbiI6IntcImlkZW50aXR5XCI6XCJib2JAZXhhbXBsZS5vcmdcIixcImNvbnRlbnRzXCI6XCJhYmNkZWZnaGlqa2xtbm9wcXJzdHV2d3l6XCIsXCJzaWduYXR1cmVcIjpcIjAxMDIwMzA0MDUwNlwifSJ9").is_ok());
 
     assert!(parse_attribute("identity:").is_err());
+}
+
+#[test]
+fn test_parse_attribute_imageattr() {
+    assert!(parse_attribute("imageattr:120 send * recv *").is_ok());
+    assert!(parse_attribute("imageattr:97 send [x=800,y=640,sar=1.1,q=0.6] [x=480,y=320] recv [x=330,y=250]").is_ok());
+    assert!(parse_attribute("imageattr:97 recv [x=800,y=640,sar=1.1] send [x=330,y=250]").is_ok());
+    assert!(parse_attribute("imageattr:97 send [x=[480:16:800],y=[320:16:640],par=[1.2-1.3],q=0.6] [x=[176:8:208],y=[144:8:176],par=[1.2-1.3]] recv *").is_ok());
+
+    assert!(parse_attribute("imageattr:").is_err());
 }
 
 #[test]
