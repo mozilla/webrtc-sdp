@@ -6,6 +6,8 @@
 
 A SDP parser written in Rust specifically aimed for WebRTC
 
+Requires minimum Rust 1.17
+
 ## License
 
 Licensed under [MPL](https://www.mozilla.org/MPL/2.0/).

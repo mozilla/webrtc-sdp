@@ -7,13 +7,15 @@ os:
 #  - osx
 
 rust:
-  - stable
+  - nightly
   - beta
-  - nightly-2017-06-19
+  - stable
+  # mimimum stable version because we use init shorthand
+  - 1.17.0
 
 matrix:
   allow_failures:
-    - rust: nightly-2017-06-19
+    - rust: nightly
 
 before_install:
   - sudo apt-get update
@@ -32,14 +34,14 @@ addons:
 before_script:
   - export PATH=$PATH:~/.cargo/bin
   - |
-    if [[ "$TRAVIS_RUST_VERSION" == "nightly-2017-06-19" ]]; then
+    if [[ "$TRAVIS_RUST_VERSION" == "nightly" ]]; then
       cargo install --force clippy;
     fi
 
 script:
   - cargo build --verbose --all
   - |
-    if [[ "$TRAVIS_RUST_VERSION" == "nightly-2017-06-19" &&
+    if [[ "$TRAVIS_RUST_VERSION" == "nightly" &&
       -f ~/.cargo/bin/cargo-clippy ]]; then
       cargo clippy;
     fi
