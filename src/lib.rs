@@ -16,18 +16,11 @@ use unsupported_types::{parse_email, parse_information, parse_key, parse_phone, 
                         parse_uri, parse_zone};
 
 #[derive(Clone)]
-pub enum SdpBandwidthType {
-    As,
-    Ct,
-    Tias,
-    Unknown,
-}
-
-#[derive(Clone)]
-pub struct SdpBandwidth {
-    pub bwtype: SdpBandwidthType,
-    pub unknown_type: Option<String>,
-    pub bandwidth: u64,
+pub enum SdpBandwidth {
+    As(u32),
+    Ct(u32),
+    Tias(u32),
+    Unknown(String, u32),
 }
 
 #[derive(Clone)]
@@ -371,24 +364,15 @@ fn parse_bandwidth(value: &str) -> Result<SdpLine, SdpParserError> {
                        line: value.to_string(),
                    });
     }
-    let mut unknown_type = None;
-    let bwtype = match bv[0].to_uppercase().as_ref() {
-        "AS" => SdpBandwidthType::As,
-        "CT" => SdpBandwidthType::Ct,
-        "TIAS" => SdpBandwidthType::Tias,
-        _ => {
-            unknown_type = Some(String::from(bv[0]));
-            SdpBandwidthType::Unknown
-        }
+    let bandwidth = bv[1].parse::<u32>()?;
+    let bw = match bv[0].to_uppercase().as_ref() {
+        "AS" => SdpBandwidth::As(bandwidth),
+        "CT" => SdpBandwidth::Ct(bandwidth),
+        "TIAS" => SdpBandwidth::Tias(bandwidth),
+        _ => SdpBandwidth::Unknown(String::from(bv[0]), bandwidth)
     };
-    let bandwidth = bv[1].parse::<u64>()?;
-    let b = SdpBandwidth {
-        bwtype,
-        unknown_type,
-        bandwidth,
-    };
-    println!("bandwidth: {}, {}", bv[0], b.bandwidth);
-    Ok(SdpLine::Bandwidth(b))
+    println!("bandwidth: {}, {}", bv[0], bandwidth);
+    Ok(SdpLine::Bandwidth(bw))
 }
 
 #[test]
