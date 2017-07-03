@@ -1,6 +1,7 @@
 #![cfg_attr(feature="clippy", feature(plugin))]
 
 use std::net::IpAddr;
+use std::fmt;
 
 pub mod attribute_type;
 pub mod error;
@@ -36,6 +37,17 @@ pub struct SdpOrigin {
     pub session_id: u64,
     pub session_version: u64,
     pub unicast_addr: IpAddr,
+}
+
+impl fmt::Display for SdpOrigin {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f,
+               "origin: {}, {}, {}, {}",
+               self.username,
+               self.session_id,
+               self.session_version,
+               self.unicast_addr)
+    }
 }
 
 #[derive(Clone)]
@@ -283,12 +295,7 @@ fn parse_origin(value: &str) -> Result<SdpLine, SdpParserError> {
         session_version,
         unicast_addr,
     };
-    println!("origin: {}, {}, {}, {}, {}",
-             o.username,
-             o.session_id,
-             o.session_version,
-             addrtype,
-             o.unicast_addr);
+    println!("{}", o);
     Ok(SdpLine::Origin(o))
 }
 
