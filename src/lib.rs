@@ -17,10 +17,10 @@ use unsupported_types::{parse_email, parse_information, parse_key, parse_phone, 
 
 #[derive(Clone)]
 pub enum SdpBandwidth {
-    As(u64),
-    Ct(u64),
-    Tias(u64),
-    Unknown(String, u64),
+    As(u32),
+    Ct(u32),
+    Tias(u32),
+    Unknown(String, u32),
 }
 
 #[derive(Clone)]
@@ -364,7 +364,7 @@ fn parse_bandwidth(value: &str) -> Result<SdpLine, SdpParserError> {
                        line: value.to_string(),
                    });
     }
-    let bandwidth = bv[1].parse::<u64>()?;
+    let bandwidth = bv[1].parse::<u32>()?;
     let bw = match bv[0].to_uppercase().as_ref() {
         "AS" => SdpBandwidth::As(bandwidth),
         "CT" => SdpBandwidth::Ct(bandwidth),
