@@ -214,19 +214,61 @@ fn test_version_unsupported_input() {
 }
 
 fn parse_origin(value: &str) -> Result<SdpLine, SdpParserError> {
-    let ot: Vec<&str> = value.split_whitespace().collect();
-    if ot.len() != 6 {
-        return Err(SdpParserError::Line {
-                       message: "origin field must have six tokens".to_string(),
-                       line: value.to_string(),
-                   });
-    }
-    let username = ot[0];
-    let session_id = ot[1].parse::<u64>()?;
-    let session_version = ot[2].parse::<u64>()?;
-    parse_nettype(ot[3])?;
-    let addrtype = parse_addrtype(ot[4])?;
-    let unicast_addr = parse_unicast_addr(ot[5])?;
+    let mut tokens = value.split_whitespace();
+    let username = match tokens.next() {
+        None => {
+            return Err(SdpParserError::Line {
+                           message: "Origin field is missing username token".to_string(),
+                           line: value.to_string(),
+                       })
+        }
+        Some(x) => x,
+    };
+    let session_id = match tokens.next() {
+        None => {
+            return Err(SdpParserError::Line {
+                           message: "Origin field is missing session ID token".to_string(),
+                           line: value.to_string(),
+                       })
+        }
+        Some(x) => x.parse::<u64>()?,
+    };
+    let session_version = match tokens.next() {
+        None => {
+            return Err(SdpParserError::Line {
+                           message: "Origin field is missing session version token".to_string(),
+                           line: value.to_string(),
+                       })
+        }
+        Some(x) => x.parse::<u64>()?,
+    };
+    match tokens.next() {
+        None => {
+            return Err(SdpParserError::Line {
+                           message: "Origin field is missing session version token".to_string(),
+                           line: value.to_string(),
+                       })
+        }
+        Some(x) => parse_nettype(x)?,
+    };
+    let addrtype = match tokens.next() {
+        None => {
+            return Err(SdpParserError::Line {
+                           message: "Origin field is missing address type token".to_string(),
+                           line: value.to_string(),
+                       })
+        }
+        Some(x) => parse_addrtype(x)?,
+    };
+    let unicast_addr = match tokens.next() {
+        None => {
+            return Err(SdpParserError::Line {
+                           message: "Origin field is missing IP address token".to_string(),
+                           line: value.to_string(),
+                       })
+        }
+        Some(x) => parse_unicast_addr(x)?,
+    };
     if !addrtype.same_protocol(&unicast_addr) {
         return Err(SdpParserError::Line {
                        message: "Failed to parse unicast address attribute.\
