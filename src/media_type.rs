@@ -55,15 +55,15 @@ impl fmt::Display for SdpProtocolValue {
 
 #[derive(Clone)]
 pub enum SdpFormatList {
-    Integers { list: Vec<u32> },
-    Strings { list: Vec<String> },
+    Integers(Vec<u32>),
+    Strings(Vec<String>),
 }
 
 impl fmt::Display for SdpFormatList {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            SdpFormatList::Integers { list: ref x } => write!(f, "{:?}", x),
-            SdpFormatList::Strings { list: ref x } => write!(f, "{:?}", x),
+            SdpFormatList::Integers(ref x) => write!(f, "{:?}", x),
+            SdpFormatList::Strings(ref x) => write!(f, "{:?}", x),
         }
     }
 }
@@ -248,7 +248,7 @@ pub fn parse_media(value: &str) -> Result<SdpLine, SdpParserError> {
                 };
                 fmt_vec.push(fmt_num);
             }
-            SdpFormatList::Integers { list: fmt_vec }
+            SdpFormatList::Integers(fmt_vec)
         }
         SdpMediaValue::Application => {
             let mut fmt_vec: Vec<String> = vec![];
@@ -256,7 +256,7 @@ pub fn parse_media(value: &str) -> Result<SdpLine, SdpParserError> {
             for token in fmt_slice {
                 fmt_vec.push(String::from(*token));
             }
-            SdpFormatList::Strings { list: fmt_vec }
+            SdpFormatList::Strings(fmt_vec)
         }
     };
     let m = SdpMediaLine {
