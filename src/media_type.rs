@@ -313,7 +313,7 @@ pub fn parse_media_vector(lines: &[SdpLine]) -> Result<Vec<SdpMedia>, SdpParserE
             return Err(SdpParserError::Sequence {
                            message: "first line in media section needs to be a media line"
                                .to_string(),
-                           line: None,
+                           line_number: None,
                        })
         }
     };
@@ -344,7 +344,7 @@ pub fn parse_media_vector(lines: &[SdpLine]) -> Result<Vec<SdpMedia>, SdpParserE
             SdpLine::Zone(_) => {
                 return Err(SdpParserError::Sequence {
                                message: "invalid type in media section".to_string(),
-                               line: None,
+                               line_number: None,
                            })
             }
         };

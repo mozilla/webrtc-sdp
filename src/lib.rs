@@ -418,7 +418,7 @@ fn parse_bandwidth(value: &str) -> Result<SdpLine, SdpParserError> {
         "AS" => SdpBandwidth::As(bandwidth),
         "CT" => SdpBandwidth::Ct(bandwidth),
         "TIAS" => SdpBandwidth::Tias(bandwidth),
-        _ => SdpBandwidth::Unknown(String::from(bv[0]), bandwidth)
+        _ => SdpBandwidth::Unknown(String::from(bv[0]), bandwidth),
     };
     println!("bandwidth: {}, {}", bv[0], bandwidth);
     Ok(SdpLine::Bandwidth(bw))
@@ -474,7 +474,7 @@ fn test_timing_wrong_amount_of_tokens() {
     assert!(parse_timing("0 0 0").is_err());
 }
 
-fn parse_sdp_line(line: &str) -> Result<SdpLine, SdpParserError> {
+fn parse_sdp_line(line: &str, line_number: usize) -> Result<SdpLine, SdpParserError> {
     if line.find('=') == None {
         return Err(SdpParserError::Line {
                        message: "missing = character in line".to_string(),
@@ -484,21 +484,21 @@ fn parse_sdp_line(line: &str) -> Result<SdpLine, SdpParserError> {
     let v: Vec<&str> = line.splitn(2, '=').collect();
     if v.len() < 2 {
         return Err(SdpParserError::Line {
-                       message: "failed to split field and attribute".to_string(),
+                       message: "failed to split type and value".to_string(),
                        line: line.to_string(),
                    });
     };
     let name = v[0].trim();
     if name.is_empty() || name.len() > 1 {
         return Err(SdpParserError::Line {
-                       message: "field name empty or too long".to_string(),
+                       message: "type name empty or too long".to_string(),
                        line: line.to_string(),
                    });
     };
     let value = v[1].trim();
     if value.is_empty() {
         return Err(SdpParserError::Line {
-                       message: "attribute value has zero length".to_string(),
+                       message: "value has zero length".to_string(),
                        line: line.to_string(),
                    });
     }
@@ -529,46 +529,46 @@ fn parse_sdp_line(line: &str) -> Result<SdpLine, SdpParserError> {
 
 #[test]
 fn test_parse_sdp_line_works() {
-    assert!(parse_sdp_line("v=0").is_ok());
-    assert!(parse_sdp_line("z=somekey").is_ok());
+    assert!(parse_sdp_line("v=0", 0).is_ok());
+    assert!(parse_sdp_line("z=somekey", 0).is_ok());
 }
 
 #[test]
 fn test_parse_sdp_line_empty_line() {
-    assert!(parse_sdp_line("").is_err());
+    assert!(parse_sdp_line("", 0).is_err());
 }
 
 #[test]
 fn test_parse_sdp_line_unknown_key() {
-    assert!(parse_sdp_line("y=foobar").is_err());
+    assert!(parse_sdp_line("y=foobar", 0).is_err());
 }
 
 #[test]
 fn test_parse_sdp_line_without_equal() {
-    assert!(parse_sdp_line("abcd").is_err());
-    assert!(parse_sdp_line("ab cd").is_err());
+    assert!(parse_sdp_line("abcd", 0).is_err());
+    assert!(parse_sdp_line("ab cd", 0).is_err());
 }
 
 #[test]
 fn test_parse_sdp_line_empty_value() {
-    assert!(parse_sdp_line("v=").is_err());
-    assert!(parse_sdp_line("o=").is_err());
-    assert!(parse_sdp_line("s=").is_err());
+    assert!(parse_sdp_line("v=", 0).is_err());
+    assert!(parse_sdp_line("o=", 0).is_err());
+    assert!(parse_sdp_line("s=", 0).is_err());
 }
 
 #[test]
 fn test_parse_sdp_line_empty_name() {
-    assert!(parse_sdp_line("=abc").is_err());
+    assert!(parse_sdp_line("=abc", 0).is_err());
 }
 
 #[test]
 fn test_parse_sdp_line_valid_a_line() {
-    assert!(parse_sdp_line("a=rtpmap:8 PCMA/8000").is_ok());
+    assert!(parse_sdp_line("a=rtpmap:8 PCMA/8000", 0).is_ok());
 }
 
 #[test]
 fn test_parse_sdp_line_invalid_a_line() {
-    assert!(parse_sdp_line("a=rtpmap:8 PCMA/8000 1").is_err());
+    assert!(parse_sdp_line("a=rtpmap:8 PCMA/8000 1", 0).is_err());
 }
 
 // TODO add unit tests
@@ -576,7 +576,7 @@ fn parse_sdp_vector(lines: &[SdpLine]) -> Result<SdpSession, SdpParserError> {
     if lines.len() < 5 {
         return Err(SdpParserError::Sequence {
                        message: "SDP neeeds at least 5 lines".to_string(),
-                       line: None,
+                       line_number: None,
                    });
     }
 
@@ -586,7 +586,7 @@ fn parse_sdp_vector(lines: &[SdpLine]) -> Result<SdpSession, SdpParserError> {
         _ => {
             return Err(SdpParserError::Sequence {
                            message: "first line needs to be version number".to_string(),
-                           line: None,
+                           line_number: None,
                        })
         }
     };
@@ -595,7 +595,7 @@ fn parse_sdp_vector(lines: &[SdpLine]) -> Result<SdpSession, SdpParserError> {
         _ => {
             return Err(SdpParserError::Sequence {
                            message: "second line needs to be origin".to_string(),
-                           line: None,
+                           line_number: None,
                        })
         }
     };
@@ -604,7 +604,7 @@ fn parse_sdp_vector(lines: &[SdpLine]) -> Result<SdpSession, SdpParserError> {
         _ => {
             return Err(SdpParserError::Sequence {
                            message: "third line needs to be session".to_string(),
-                           line: None,
+                           line_number: None,
                        })
         }
     };
@@ -620,7 +620,7 @@ fn parse_sdp_vector(lines: &[SdpLine]) -> Result<SdpSession, SdpParserError> {
             SdpLine::Version(_) => {
                 return Err(SdpParserError::Sequence {
                                message: "internal parser error".to_string(),
-                               line: Some(i),
+                               line_number: Some(i),
                            })
             }
             // TODO does anyone really ever need these?
@@ -640,13 +640,13 @@ fn parse_sdp_vector(lines: &[SdpLine]) -> Result<SdpSession, SdpParserError> {
     if !sdp_session.has_timing() {
         return Err(SdpParserError::Sequence {
                        message: "Missing timing".to_string(),
-                       line: None,
+                       line_number: None,
                    });
     }
     if !sdp_session.has_media() {
         return Err(SdpParserError::Sequence {
                        message: "Missing media".to_string(),
-                       line: None,
+                       line_number: None,
                    });
     }
     Ok(sdp_session)
@@ -669,12 +669,12 @@ pub fn parse_sdp(sdp: &str, fail_on_warning: bool) -> Result<SdpSession, SdpPars
     let mut errors: Vec<SdpParserError> = Vec::new();
     let mut warnings: Vec<SdpParserError> = Vec::new();
     let mut sdp_lines: Vec<SdpLine> = Vec::new();
-    for line in lines {
+    for (line_number, line) in lines.enumerate() {
         let stripped_line = line.trim();
         if stripped_line.is_empty() {
             continue;
         }
-        match parse_sdp_line(stripped_line) {
+        match parse_sdp_line(stripped_line, line_number) {
             Ok(n) => {
                 sdp_lines.push(n);
             }
@@ -704,11 +704,11 @@ pub fn parse_sdp(sdp: &str, fail_on_warning: bool) -> Result<SdpSession, SdpPars
                     }
                     SdpParserError::Sequence {
                         message: x,
-                        line: y,
+                        line_number: y,
                     } => {
                         errors.push(SdpParserError::Sequence {
                                         message: x,
-                                        line: y,
+                                        line_number: y,
                                     })
                     }
                     SdpParserError::Integer(err) => errors.push(SdpParserError::Integer(err)),

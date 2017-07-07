@@ -6,11 +6,19 @@ use std::error::Error;
 
 #[derive(Debug)]
 pub enum SdpParserError {
-    Line { message: String, line: String },
-    Unsupported { message: String, line: String },
+    Line {
+        message: String,
+        line: String,
+        //line_number: Option<usize>,
+    },
+    Unsupported {
+        message: String,
+        line: String,
+        //line_number: Option<usize>,
+    },
     Sequence {
         message: String,
-        line: Option<usize>,
+        line_number: Option<usize>,
     },
     Integer(ParseIntError),
     Address(AddrParseError),
@@ -22,10 +30,12 @@ impl fmt::Display for SdpParserError {
             SdpParserError::Line {
                 ref message,
                 ref line,
+                ..
             } => write!(f, "Line error: {} in line: {}", message, line),
             SdpParserError::Unsupported {
                 ref message,
                 ref line,
+                ..
             } => write!(f, "Unsupported: {} in line: {}", message, line),
             SdpParserError::Sequence { ref message, .. } => {
                 write!(f, "Sequence error: {}", message)
@@ -79,6 +89,7 @@ fn test_sdp_parser_error_line() {
     let line = SdpParserError::Line {
         message: "test message".to_string(),
         line: "test line".to_string(),
+        //line_number: None,
     };
     // TODO how to verify the output of fmt::Display() ?
     println!("{}", line);
@@ -91,6 +102,7 @@ fn test_sdp_parser_error_unsupported() {
     let unsupported = SdpParserError::Unsupported {
         message: "unsupported message".to_string(),
         line: "unsupported line".to_string(),
+        //line_number: None,
     };
     // TODO how to verify the output of fmt::Display() ?
     println!("{}", unsupported);
@@ -102,7 +114,7 @@ fn test_sdp_parser_error_unsupported() {
 fn test_sdp_parser_error_sequence() {
     let sequence1 = SdpParserError::Sequence {
         message: "sequence message".to_string(),
-        line: None,
+        line_number: None,
     };
     // TODO how to verify the output of fmt::Display() ?
     println!("{}", sequence1);
@@ -111,7 +123,7 @@ fn test_sdp_parser_error_sequence() {
 
     let sequence2 = SdpParserError::Sequence {
         message: "another sequence message".to_string(),
-        line: Some(5),
+        line_number: Some(5),
     };
     // TODO how to verify the output of fmt::Display() ?
     println!("{}", sequence2);
