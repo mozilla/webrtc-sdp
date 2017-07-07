@@ -481,43 +481,65 @@ fn parse_sdp_line(line: &str, line_number: usize) -> Result<SdpLine, SdpParserEr
                        line: line.to_string(),
                    });
     }
-    let v: Vec<&str> = line.splitn(2, '=').collect();
-    if v.len() < 2 {
-        return Err(SdpParserError::Line {
-                       message: "failed to split type and value".to_string(),
-                       line: line.to_string(),
-                   });
+    let mut splitted_line = line.splitn(2, '=');
+    let line_type = match splitted_line.next() {
+        None => {
+            return Err(SdpParserError::Line {
+                           message: "missing type".to_string(),
+                           line: line.to_string(),
+                       })
+        }
+        Some(t) => {
+            let trimmed = t.trim();
+            if trimmed.len() > 1 {
+                return Err(SdpParserError::Line {
+                               message: "type to long".to_string(),
+                               line: line.to_string(),
+                           });
+            }
+            if trimmed.is_empty() {
+                return Err(SdpParserError::Line {
+                               message: "type is empty".to_string(),
+                               line: line.to_string(),
+                           });
+            }
+            trimmed
+        }
     };
-    let name = v[0].trim();
-    if name.is_empty() || name.len() > 1 {
-        return Err(SdpParserError::Line {
-                       message: "type name empty or too long".to_string(),
-                       line: line.to_string(),
-                   });
+    let line_value = match splitted_line.next() {
+        None => {
+            return Err(SdpParserError::Line {
+                           message: "missing value".to_string(),
+                           line: line.to_string(),
+                       })
+        }
+        Some(v) => {
+            let trimmed = v.trim();
+            if trimmed.is_empty() {
+                return Err(SdpParserError::Line {
+                               message: "value is empty".to_string(),
+                               line: line.to_string(),
+                           });
+            }
+            trimmed
+        }
     };
-    let value = v[1].trim();
-    if value.is_empty() {
-        return Err(SdpParserError::Line {
-                       message: "value has zero length".to_string(),
-                       line: line.to_string(),
-                   });
-    }
-    match name.to_lowercase().as_ref() {
-        "a" => parse_attribute(value),
-        "b" => parse_bandwidth(value),
-        "c" => parse_connection(value),
-        "e" => parse_email(value),
-        "i" => parse_information(value),
-        "k" => parse_key(value),
-        "m" => parse_media(value),
-        "o" => parse_origin(value),
-        "p" => parse_phone(value),
-        "r" => parse_repeat(value),
-        "s" => parse_session(value),
-        "t" => parse_timing(value),
-        "u" => parse_uri(value),
-        "v" => parse_version(value),
-        "z" => parse_zone(value),
+    match line_type.to_lowercase().as_ref() {
+        "a" => parse_attribute(line_value),
+        "b" => parse_bandwidth(line_value),
+        "c" => parse_connection(line_value),
+        "e" => parse_email(line_value),
+        "i" => parse_information(line_value),
+        "k" => parse_key(line_value),
+        "m" => parse_media(line_value),
+        "o" => parse_origin(line_value),
+        "p" => parse_phone(line_value),
+        "r" => parse_repeat(line_value),
+        "s" => parse_session(line_value),
+        "t" => parse_timing(line_value),
+        "u" => parse_uri(line_value),
+        "v" => parse_version(line_value),
+        "z" => parse_zone(line_value),
         _ => {
             Err(SdpParserError::Line {
                     message: "unsupported sdp field".to_string(),
@@ -541,6 +563,11 @@ fn test_parse_sdp_line_empty_line() {
 #[test]
 fn test_parse_sdp_line_unknown_key() {
     assert!(parse_sdp_line("y=foobar", 0).is_err());
+}
+
+#[test]
+fn test_parse_sdp_line_too_long_type() {
+    assert!(parse_sdp_line("ab=foobar", 0).is_err());
 }
 
 #[test]
