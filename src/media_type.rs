@@ -7,6 +7,7 @@ use error::SdpParserError;
 pub struct SdpMediaLine {
     pub media: SdpMediaValue,
     pub port: u32,
+    pub port_count: u32,
     pub proto: SdpProtocolValue,
     pub formats: SdpFormatList,
 }
@@ -222,13 +223,26 @@ pub fn parse_media(value: &str) -> Result<SdpLine, SdpParserError> {
                    });
     }
     let media = parse_media_token(mv[0])?;
-    let port = mv[1].parse::<u32>()?;
+    let mut ptokens = mv[1].split('/');
+    let port = match ptokens.next() {
+        None => {
+            return Err(SdpParserError::Line {
+                           message: "missing port token".to_string(),
+                           line: value.to_string(),
+                       })
+        }
+        Some(p) => p.parse::<u32>()?,
+    };
     if port > 65535 {
         return Err(SdpParserError::Line {
                        message: "media port token is too big".to_string(),
                        line: value.to_string(),
                    });
     }
+    let port_count = match ptokens.next() {
+        None => 0,
+        Some(c) => c.parse::<u32>()?,
+    };
     let proto = parse_protocol_token(mv[2])?;
     let fmt_slice: &[&str] = &mv[3..];
     let formats = match media {
@@ -262,6 +276,7 @@ pub fn parse_media(value: &str) -> Result<SdpLine, SdpParserError> {
     let m = SdpMediaLine {
         media,
         port,
+        port_count,
         proto,
         formats,
     };
@@ -278,6 +293,7 @@ fn test_media_works() {
 
     assert!(parse_media("audio 9 UDP/TLS/RTP/SAVPF 109 9 0 8").is_ok());
     assert!(parse_media("audio 0 UDP/TLS/RTP/SAVPF 8").is_ok());
+    assert!(parse_media("audio 9/2 UDP/TLS/RTP/SAVPF 8").is_ok());
 }
 
 #[test]
@@ -293,6 +309,11 @@ fn test_media_invalid_port_number() {
 #[test]
 fn test_media_invalid_type() {
     assert!(parse_media("invalid 9 UDP/TLS/RTP/SAVPF 8").is_err());
+}
+
+#[test]
+fn test_media_invalid_port() {
+    assert!(parse_media("audio / UDP/TLS/RTP/SAVPF 8").is_err());
 }
 
 #[test]
