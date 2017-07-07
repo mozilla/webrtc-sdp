@@ -113,6 +113,10 @@ impl SdpMedia {
         !self.bandwidth.is_empty()
     }
 
+    pub fn get_bandwidth(&self) -> &Vec<SdpBandwidth> {
+        &self.bandwidth
+    }
+
     pub fn has_attributes(&self) -> bool {
         !self.attribute.is_empty()
     }
