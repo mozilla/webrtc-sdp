@@ -161,7 +161,7 @@ fn test_sdp_parser_error_integer() {
     // TODO how to verify the output of fmt::Display() ?
     println!("{}", int_err);
     println!("{}", int_err.description());
-    //assert!(int_err.cause().is_none());
+    assert!(!int_err.cause().is_none());
 }
 
 #[test]
@@ -178,5 +178,5 @@ fn test_sdp_parser_error_address() {
     };
     println!("{}", addr_err);
     println!("{}", addr_err.description());
-    //assert!(addr_err.cause().is_none());
+    assert!(!addr_err.cause().is_none());
 }
