@@ -154,6 +154,7 @@ fn parse_media_token(value: &str) -> Result<SdpMediaValue, SdpParserError> {
                return Err(SdpParserError::Unsupported {
                               message: "unsupported media value".to_string(),
                               line: value.to_string(),
+                              line_number: None,
                           })
            }
        })
@@ -188,6 +189,7 @@ fn parse_protocol_token(value: &str) -> Result<SdpProtocolValue, SdpParserError>
                return Err(SdpParserError::Unsupported {
                               message: "unsupported protocol value".to_string(),
                               line: value.to_string(),
+                              line_number: None,
                           })
            }
        })

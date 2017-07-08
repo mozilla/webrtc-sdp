@@ -561,7 +561,8 @@ impl SdpAttribute {
                             },
                             _ => return Err(SdpParserError::Unsupported{
                                 message: "Uknown candidate extension name".to_string(),
-                                line: v.to_string()})
+                                line: v.to_string(),
+                                line_number: None})
                         };
                     }
                 }
@@ -952,6 +953,7 @@ pub fn parse_attribute(value: &str) -> Result<SdpLine, SdpParserError> {
             return Err(SdpParserError::Unsupported {
                            message: "unsupported attribute value".to_string(),
                            line: name.to_string(),
+                           line_number: None,
                        })
         }
     };

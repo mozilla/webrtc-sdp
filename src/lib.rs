@@ -552,7 +552,7 @@ fn parse_sdp_line(line: &str, line_number: usize) -> Result<SdpLine, SdpParserEr
 #[test]
 fn test_parse_sdp_line_works() {
     assert!(parse_sdp_line("v=0", 0).is_ok());
-    assert!(parse_sdp_line("z=somekey", 0).is_ok());
+    assert!(parse_sdp_line("s=somesession", 0).is_ok());
 }
 
 #[test]
@@ -636,18 +636,20 @@ fn parse_sdp_vector(lines: &[SdpLine]) -> Result<SdpSession, SdpParserError> {
         }
     };
     let mut sdp_session = SdpSession::new(version, origin, session);
-    for (i, line) in lines.iter().enumerate().skip(3) {
+    for (line_number, line) in lines.iter().enumerate().skip(3) {
         match *line {
             SdpLine::Attribute(ref v) => sdp_session.add_attribute(v.clone()),
             SdpLine::Bandwidth(ref v) => sdp_session.add_bandwidth(v.clone()),
             SdpLine::Timing(ref v) => sdp_session.set_timing(v.clone()),
-            SdpLine::Media(_) => sdp_session.extend_media(parse_media_vector(&lines[i..])?),
+            SdpLine::Media(_) => {
+                sdp_session.extend_media(parse_media_vector(&lines[line_number..])?)
+            }
             SdpLine::Origin(_) |
             SdpLine::Session(_) |
             SdpLine::Version(_) => {
                 return Err(SdpParserError::Sequence {
-                               message: "internal parser error".to_string(),
-                               line_number: Some(i),
+                               message: "version, origin or session at wrong level".to_string(),
+                               line_number: Some(line_number),
                            })
             }
             // TODO does anyone really ever need these?
@@ -658,7 +660,14 @@ fn parse_sdp_vector(lines: &[SdpLine]) -> Result<SdpSession, SdpParserError> {
             SdpLine::Phone(_) |
             SdpLine::Repeat(_) |
             SdpLine::Uri(_) |
-            SdpLine::Zone(_) => (),
+            SdpLine::Zone(_) => {
+                return Err(SdpParserError::Unsupported {
+                               message: "Unsupported type found in sequence".to_string(),
+                               // TODO
+                               line: "".to_string(),
+                               line_number: Some(line_number),
+                           });
+            }
         };
         if sdp_session.has_media() {
             break;
@@ -711,11 +720,19 @@ pub fn parse_sdp(sdp: &str, fail_on_warning: bool) -> Result<SdpSession, SdpPars
                     SdpParserError::Line { message, line } => {
                         errors.push(SdpParserError::Line { message, line })
                     }
-                    SdpParserError::Unsupported { message, line } => {
+                    SdpParserError::Unsupported {
+                        message,
+                        line,
+                        line_number,
+                    } => {
                         println!("Warning unsupported value encountered: {}\n in line {}",
                                  message,
                                  line);
-                        warnings.push(SdpParserError::Unsupported { message, line });
+                        warnings.push(SdpParserError::Unsupported {
+                                          message,
+                                          line,
+                                          line_number,
+                                      });
                     }
                     SdpParserError::Sequence {
                         message,
@@ -740,13 +757,22 @@ pub fn parse_sdp(sdp: &str, fail_on_warning: bool) -> Result<SdpSession, SdpPars
         if fail_on_warning {
             return Err(warning);
         } else {
+            println!("{}", warning);
+            /*
             match warning {
                 SdpParserError::Unsupported {
-                    message: msg,
-                    line: l,
-                } => println!("Parser unknown: {}\n  in line: {}", msg, l),
+                    message,
+                    line,
+                    line_number,
+                } => {
+                    println!("Parser unknown: {}\n  in line {}: {}",
+                             message,
+                             line_number,
+                             line)
+                }
                 _ => panic!(),
             };
+            */
         };
     }
     // We just return the last of the errors here

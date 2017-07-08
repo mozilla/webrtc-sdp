@@ -14,7 +14,7 @@ pub enum SdpParserError {
     Unsupported {
         message: String,
         line: String,
-        //line_number: Option<usize>,
+        line_number: Option<usize>,
     },
     Sequence {
         message: String,
@@ -41,7 +41,7 @@ impl fmt::Display for SdpParserError {
             SdpParserError::Unsupported {
                 ref message,
                 ref line,
-                ..
+                ref line_number,
             } => write!(f, "Unsupported: {} in line: {}", message, line),
             SdpParserError::Sequence { ref message, .. } => {
                 write!(f, "Sequence error: {}", message)
@@ -114,7 +114,7 @@ fn test_sdp_parser_error_unsupported() {
     let unsupported = SdpParserError::Unsupported {
         message: "unsupported message".to_string(),
         line: "unsupported line".to_string(),
-        //line_number: None,
+        line_number: None,
     };
     // TODO how to verify the output of fmt::Display() ?
     println!("{}", unsupported);
