@@ -42,7 +42,13 @@ impl fmt::Display for SdpParserError {
                 ref message,
                 ref line,
                 ref line_number,
-            } => write!(f, "Unsupported: {} in line: {}", message, line),
+            } => {
+                let ln = match *line_number {
+                    None => "?".to_string(),
+                    Some(x) => x.to_string(),
+                };
+                write!(f, "Unsupported: {} in line {}: {}", message, ln, line)
+            }
             SdpParserError::Sequence { ref message, .. } => {
                 write!(f, "Sequence error: {}", message)
             }
