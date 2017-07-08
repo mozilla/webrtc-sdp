@@ -20,8 +20,14 @@ pub enum SdpParserError {
         message: String,
         line_number: Option<usize>,
     },
-    Integer(ParseIntError),
-    Address(AddrParseError),
+    Integer {
+        error: ParseIntError,
+        line_number: Option<usize>,
+    },
+    Address {
+        error: AddrParseError,
+        line_number: Option<usize>,
+    },
 }
 
 impl fmt::Display for SdpParserError {
@@ -40,11 +46,11 @@ impl fmt::Display for SdpParserError {
             SdpParserError::Sequence { ref message, .. } => {
                 write!(f, "Sequence error: {}", message)
             }
-            SdpParserError::Integer(ref err) => {
-                write!(f, "Integer parsing error: {}", err.description())
+            SdpParserError::Integer { ref error, .. } => {
+                write!(f, "Integer parsing error: {}", error.description())
             }
-            SdpParserError::Address(ref err) => {
-                write!(f, "IP address parsing error: {}", err.description())
+            SdpParserError::Address { ref error, .. } => {
+                write!(f, "IP address parsing error: {}", error.description())
             }
         }
     }
@@ -57,15 +63,15 @@ impl error::Error for SdpParserError {
             SdpParserError::Line { ref message, .. } |
             SdpParserError::Unsupported { ref message, .. } |
             SdpParserError::Sequence { ref message, .. } => message,
-            SdpParserError::Integer(ref err) => err.description(),
-            SdpParserError::Address(ref err) => err.description(),
+            SdpParserError::Integer { ref error, .. } => error.description(),
+            SdpParserError::Address { ref error, .. } => error.description(),
         }
     }
 
     fn cause(&self) -> Option<&error::Error> {
         match *self {
-            SdpParserError::Integer(ref err) => Some(err),
-            SdpParserError::Address(ref err) => Some(err),
+            SdpParserError::Integer { ref error, .. } => Some(error),
+            SdpParserError::Address { ref error, .. } => Some(error),
             // Can't tell much more about our internal errors
             _ => None,
         }
@@ -74,13 +80,19 @@ impl error::Error for SdpParserError {
 
 impl From<ParseIntError> for SdpParserError {
     fn from(err: ParseIntError) -> SdpParserError {
-        SdpParserError::Integer(err)
+        SdpParserError::Integer {
+            error: err,
+            line_number: None,
+        }
     }
 }
 
 impl From<AddrParseError> for SdpParserError {
     fn from(err: AddrParseError) -> SdpParserError {
-        SdpParserError::Address(err)
+        SdpParserError::Address {
+            error: err,
+            line_number: None,
+        }
     }
 }
 
@@ -136,7 +148,10 @@ fn test_sdp_parser_error_integer() {
     let v = "12a";
     let integer = v.parse::<u64>();
     assert!(integer.is_err());
-    let int_err = SdpParserError::Integer(integer.err().unwrap());
+    let int_err = SdpParserError::Integer {
+        error: integer.err().unwrap(),
+        line_number: None,
+    };
     // TODO how to verify the output of fmt::Display() ?
     println!("{}", int_err);
     println!("{}", int_err.description());
@@ -151,7 +166,10 @@ fn test_sdp_parser_error_address() {
     let addr = IpAddr::from_str(v);
     assert!(addr.is_err());
     // TODO how to verify the output of fmt::Display() ?
-    let addr_err = SdpParserError::Address(addr.err().unwrap());
+    let addr_err = SdpParserError::Address {
+        error: addr.err().unwrap(),
+        line_number: None,
+    };
     println!("{}", addr_err);
     println!("{}", addr_err.description());
     //assert!(addr_err.cause().is_none());

@@ -708,38 +708,30 @@ pub fn parse_sdp(sdp: &str, fail_on_warning: bool) -> Result<SdpSession, SdpPars
             Err(e) => {
                 match e {
                     // FIXME is this really a good way to accomplish this?
-                    SdpParserError::Line {
-                        message: x,
-                        line: y,
-                    } => {
-                        errors.push(SdpParserError::Line {
-                                        message: x,
-                                        line: y,
-                                    })
+                    SdpParserError::Line { message, line } => {
+                        errors.push(SdpParserError::Line { message, line })
                     }
-                    SdpParserError::Unsupported {
-                        message: x,
-                        line: y,
-                    } => {
+                    SdpParserError::Unsupported { message, line } => {
                         println!("Warning unsupported value encountered: {}\n in line {}",
-                                 x,
-                                 y);
-                        warnings.push(SdpParserError::Unsupported {
-                                          message: x,
-                                          line: y,
-                                      });
+                                 message,
+                                 line);
+                        warnings.push(SdpParserError::Unsupported { message, line });
                     }
                     SdpParserError::Sequence {
-                        message: x,
-                        line_number: y,
+                        message,
+                        line_number,
                     } => {
                         errors.push(SdpParserError::Sequence {
-                                        message: x,
-                                        line_number: y,
+                                        message,
+                                        line_number,
                                     })
                     }
-                    SdpParserError::Integer(err) => errors.push(SdpParserError::Integer(err)),
-                    SdpParserError::Address(err) => errors.push(SdpParserError::Address(err)),
+                    SdpParserError::Integer { error, line_number } => {
+                        errors.push(SdpParserError::Integer { error, line_number })
+                    }
+                    SdpParserError::Address { error, line_number } => {
+                        errors.push(SdpParserError::Address { error, line_number })
+                    }
                 }
             }
         };
