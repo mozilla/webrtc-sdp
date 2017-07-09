@@ -36,8 +36,14 @@ impl fmt::Display for SdpParserError {
             SdpParserError::Line {
                 ref message,
                 ref line,
-                ..
-            } => write!(f, "Line error: {} in line: {}", message, line),
+                ref line_number,
+            } => {
+                let ln = match *line_number {
+                    None => "?".to_string(),
+                    Some(x) => x.to_string(),
+                };
+                write!(f, "Line error: {} in line({}): {}", message, ln, line)
+            }
             SdpParserError::Unsupported {
                 ref message,
                 ref line,
@@ -47,16 +53,43 @@ impl fmt::Display for SdpParserError {
                     None => "?".to_string(),
                     Some(x) => x.to_string(),
                 };
-                write!(f, "Unsupported: {} in line {}: {}", message, ln, line)
+                write!(f, "Unsupported: {} in line({}): {}", message, ln, line)
             }
-            SdpParserError::Sequence { ref message, .. } => {
-                write!(f, "Sequence error: {}", message)
+            SdpParserError::Sequence {
+                ref message,
+                ref line_number,
+            } => {
+                let ln = match *line_number {
+                    None => "?".to_string(),
+                    Some(x) => x.to_string(),
+                };
+                write!(f, "Sequence error in line({}): {}", ln, message)
             }
-            SdpParserError::Integer { ref error, .. } => {
-                write!(f, "Integer parsing error: {}", error.description())
+            SdpParserError::Integer {
+                ref error,
+                ref line_number,
+            } => {
+                let ln = match *line_number {
+                    None => "?".to_string(),
+                    Some(x) => x.to_string(),
+                };
+                write!(f,
+                       "Integer parsing error in line({}): {}",
+                       ln,
+                       error.description())
             }
-            SdpParserError::Address { ref error, .. } => {
-                write!(f, "IP address parsing error: {}", error.description())
+            SdpParserError::Address {
+                ref error,
+                ref line_number,
+            } => {
+                let ln = match *line_number {
+                    None => "?".to_string(),
+                    Some(x) => x.to_string(),
+                };
+                write!(f,
+                       "IP address parsing error in line({}): {}",
+                       ln,
+                       error.description())
             }
         }
     }
