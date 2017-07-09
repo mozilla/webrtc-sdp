@@ -32,6 +32,7 @@ pub fn parse_nettype(value: &str) -> Result<(), SdpParserError> {
         return Err(SdpParserError::Line {
                        message: "nettype needs to be IN".to_string(),
                        line: value.to_string(),
+                       line_number: None,
                    });
     };
     Ok(())
@@ -54,6 +55,7 @@ pub fn parse_addrtype(value: &str) -> Result<SdpAddrType, SdpParserError> {
                return Err(SdpParserError::Line {
                               message: "address type needs to be IP4 or IP6".to_string(),
                               line: value.to_string(),
+                              line_number: None,
                           })
            }
        })

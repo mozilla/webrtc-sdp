@@ -9,7 +9,7 @@ pub enum SdpParserError {
     Line {
         message: String,
         line: String,
-        //line_number: Option<usize>,
+        line_number: Option<usize>,
     },
     Unsupported {
         message: String,
@@ -104,28 +104,48 @@ impl From<AddrParseError> for SdpParserError {
 
 #[test]
 fn test_sdp_parser_error_line() {
-    let line = SdpParserError::Line {
+    let line1 = SdpParserError::Line {
         message: "test message".to_string(),
         line: "test line".to_string(),
-        //line_number: None,
+        line_number: None,
     };
     // TODO how to verify the output of fmt::Display() ?
-    println!("{}", line);
-    assert_eq!(line.description(), "test message");
-    assert!(line.cause().is_none());
+    println!("{}", line1);
+    assert_eq!(line1.description(), "test message");
+    assert!(line1.cause().is_none());
+
+    let line2 = SdpParserError::Line {
+        message: "test message".to_string(),
+        line: "test line".to_string(),
+        line_number: Some(13),
+    };
+    // TODO how to verify the output of fmt::Display() ?
+    println!("{}", line2);
+    assert_eq!(line2.description(), "test message");
+    assert!(line2.cause().is_none());
 }
 
 #[test]
 fn test_sdp_parser_error_unsupported() {
-    let unsupported = SdpParserError::Unsupported {
+    let unsupported1 = SdpParserError::Unsupported {
         message: "unsupported message".to_string(),
         line: "unsupported line".to_string(),
         line_number: None,
     };
     // TODO how to verify the output of fmt::Display() ?
-    println!("{}", unsupported);
-    assert_eq!(unsupported.description(), "unsupported message");
-    assert!(unsupported.cause().is_none());
+    println!("{}", unsupported1);
+    assert_eq!(unsupported1.description(), "unsupported message");
+    assert!(unsupported1.cause().is_none());
+
+    let unsupported2 = SdpParserError::Unsupported {
+        message: "unsupported message".to_string(),
+        line: "unsupported line".to_string(),
+        line_number: Some(21),
+    };
+    // TODO how to verify the output of fmt::Display() ?
+    println!("{}", unsupported2);
+    assert_eq!(unsupported2.description(), "unsupported message");
+    assert!(unsupported2.cause().is_none());
 }
 
 #[test]
@@ -141,7 +161,7 @@ fn test_sdp_parser_error_sequence() {
 
     let sequence2 = SdpParserError::Sequence {
         message: "another sequence message".to_string(),
-        line_number: Some(5),
+        line_number: Some(42),
     };
     // TODO how to verify the output of fmt::Display() ?
     println!("{}", sequence2);
@@ -156,7 +176,7 @@ fn test_sdp_parser_error_integer() {
     assert!(integer.is_err());
     let int_err = SdpParserError::Integer {
         error: integer.err().unwrap(),
-        line_number: None,
+        line_number: Some(1),
     };
     // TODO how to verify the output of fmt::Display() ?
     println!("{}", int_err);
@@ -174,7 +194,7 @@ fn test_sdp_parser_error_address() {
     // TODO how to verify the output of fmt::Display() ?
     let addr_err = SdpParserError::Address {
         error: addr.err().unwrap(),
-        line_number: None,
+        line_number: Some(3),
     };
     println!("{}", addr_err);
     println!("{}", addr_err.description());

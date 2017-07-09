@@ -226,6 +226,7 @@ pub fn parse_media(value: &str) -> Result<SdpType, SdpParserError> {
         return Err(SdpParserError::Line {
                        message: "media attribute must have at least four tokens".to_string(),
                        line: value.to_string(),
+                       line_number: None,
                    });
     }
     let media = parse_media_token(mv[0])?;
@@ -235,6 +236,7 @@ pub fn parse_media(value: &str) -> Result<SdpType, SdpParserError> {
             return Err(SdpParserError::Line {
                            message: "missing port token".to_string(),
                            line: value.to_string(),
+                           line_number: None,
                        })
         }
         Some(p) => p.parse::<u32>()?,
@@ -243,6 +245,7 @@ pub fn parse_media(value: &str) -> Result<SdpType, SdpParserError> {
         return Err(SdpParserError::Line {
                        message: "media port token is too big".to_string(),
                        line: value.to_string(),
+                       line_number: None,
                    });
     }
     let port_count = match ptokens.next() {
@@ -264,7 +267,9 @@ pub fn parse_media(value: &str) -> Result<SdpType, SdpParserError> {
                     96 ... 127 => (),  // dynamic range
                     _ => return Err(SdpParserError::Line {
                           message: "format number in media line is out of range".to_string(),
-                          line: value.to_string() }),
+                          line: value.to_string(),
+                          line_number: None,
+                    }),
                 };
                 fmt_vec.push(fmt_num);
             }
