@@ -547,7 +547,7 @@ fn parse_sdp_line(line: &str, line_number: usize) -> Result<SdpLine, SdpParserEr
             trimmed
         }
     };
-    let sdp_type = match line_type.to_lowercase().as_ref() {
+    let st = match line_type.to_lowercase().as_ref() {
         "a" => parse_attribute(line_value),
         "b" => parse_bandwidth(line_value),
         "c" => parse_connection(line_value),
@@ -564,17 +564,57 @@ fn parse_sdp_line(line: &str, line_number: usize) -> Result<SdpLine, SdpParserEr
         "v" => parse_version(line_value),
         "z" => parse_zone(line_value),
         _ => {
-            Err(SdpParserError::Line {
-                    message: "unsupported sdp type".to_string(),
-                    line: line.to_string(),
-                    line_number: Some(line_number),
-                })
+            return Err(SdpParserError::Line {
+                           message: "unsupported sdp type".to_string(),
+                           line: line.to_string(),
+                           line_number: Some(line_number),
+                       })
         }
-    }?;
-    Ok(SdpLine {
-           line_number,
-           sdp_type,
-       })
+    };
+    match st {
+        Ok(sdp_type) => {
+            Ok(SdpLine {
+                   line_number,
+                   sdp_type,
+               })
+        }
+        Err(e) => {
+            match e {
+                SdpParserError::Line { message, line, .. } => {
+                    Err(SdpParserError::Line {
+                            message,
+                            line,
+                            line_number: Some(line_number),
+                        })
+                }
+                SdpParserError::Unsupported { message, line, .. } => {
+                    Err(SdpParserError::Unsupported {
+                            message,
+                            line,
+                            line_number: Some(line_number),
+                        })
+                }
+                SdpParserError::Sequence { message, .. } => {
+                    Err(SdpParserError::Sequence {
+                            message,
+                            line_number: Some(line_number),
+                        })
+                }
+                SdpParserError::Integer { error, .. } => {
+                    Err(SdpParserError::Integer {
+                            error,
+                            line_number: Some(line_number),
+                        })
+                }
+                SdpParserError::Address { error, .. } => {
+                    Err(SdpParserError::Address {
+                            error,
+                            line_number: Some(line_number),
+                        })
+                }
+            }
+        }
+    }
 }
 
 #[test]
