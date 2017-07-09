@@ -1,5 +1,5 @@
 use std::fmt;
-use {SdpLine, SdpBandwidth, SdpConnection};
+use {SdpType, SdpLine, SdpBandwidth, SdpConnection};
 use attribute_type::SdpAttribute;
 use error::SdpParserError;
 
@@ -220,7 +220,7 @@ fn test_parse_protocol_token() {
     assert!(parse_protocol_token("foobar").is_err());
 }
 
-pub fn parse_media(value: &str) -> Result<SdpLine, SdpParserError> {
+pub fn parse_media(value: &str) -> Result<SdpType, SdpParserError> {
     let mv: Vec<&str> = value.split_whitespace().collect();
     if mv.len() < 4 {
         return Err(SdpParserError::Line {
@@ -287,7 +287,7 @@ pub fn parse_media(value: &str) -> Result<SdpLine, SdpParserError> {
         formats,
     };
     println!("media: {}, {}, {}, {}", m.media, m.port, m.proto, m.formats);
-    Ok(SdpLine::Media(m))
+    Ok(SdpType::Media(m))
 }
 
 #[test]
@@ -334,44 +334,44 @@ fn test_media_invalid_payload() {
 
 pub fn parse_media_vector(lines: &[SdpLine]) -> Result<Vec<SdpMedia>, SdpParserError> {
     let mut media_sections: Vec<SdpMedia> = Vec::new();
-    let mut sdp_media = match lines[0] {
-        SdpLine::Media(ref v) => SdpMedia::new(v.clone()),
+    let mut sdp_media = match lines[0].sdp_type {
+        SdpType::Media(ref v) => SdpMedia::new(v.clone()),
         _ => {
             return Err(SdpParserError::Sequence {
                            message: "first line in media section needs to be a media line"
                                .to_string(),
-                           line_number: None,
+                           line_number: Some(lines[0].line_number),
                        })
         }
     };
     for line in lines.iter().skip(1) {
-        match *line {
-            SdpLine::Information(ref v) => sdp_media.set_information(v.clone()),
-            SdpLine::Connection(ref v) => sdp_media.set_connection(v.clone()),
-            SdpLine::Bandwidth(ref v) => {
+        match line.sdp_type {
+            SdpType::Information(ref v) => sdp_media.set_information(v.clone()),
+            SdpType::Connection(ref v) => sdp_media.set_connection(v.clone()),
+            SdpType::Bandwidth(ref v) => {
                 sdp_media.add_bandwidth(v.clone());
             }
-            SdpLine::Key(ref v) => sdp_media.set_key(v.clone()),
-            SdpLine::Attribute(ref v) => {
+            SdpType::Key(ref v) => sdp_media.set_key(v.clone()),
+            SdpType::Attribute(ref v) => {
                 sdp_media.add_attribute(v.clone());
             }
-            SdpLine::Media(ref v) => {
+            SdpType::Media(ref v) => {
                 media_sections.push(sdp_media);
                 sdp_media = SdpMedia::new(v.clone());
             }
 
-            SdpLine::Email(_) |
-            SdpLine::Phone(_) |
-            SdpLine::Origin(_) |
-            SdpLine::Repeat(_) |
-            SdpLine::Session(_) |
-            SdpLine::Timing(_) |
-            SdpLine::Uri(_) |
-            SdpLine::Version(_) |
-            SdpLine::Zone(_) => {
+            SdpType::Email(_) |
+            SdpType::Phone(_) |
+            SdpType::Origin(_) |
+            SdpType::Repeat(_) |
+            SdpType::Session(_) |
+            SdpType::Timing(_) |
+            SdpType::Uri(_) |
+            SdpType::Version(_) |
+            SdpType::Zone(_) => {
                 return Err(SdpParserError::Sequence {
                                message: "invalid type in media section".to_string(),
-                               line_number: None,
+                               line_number: Some(line.line_number),
                            })
             }
         };

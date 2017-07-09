@@ -1,7 +1,7 @@
 use std::fmt;
 use std::net::IpAddr;
 
-use SdpLine;
+use SdpType;
 use error::SdpParserError;
 use network::{parse_nettype, parse_addrtype, parse_unicast_addr};
 
@@ -900,7 +900,7 @@ impl SdpAttribute {
     }
 }
 
-pub fn parse_attribute(value: &str) -> Result<SdpLine, SdpParserError> {
+pub fn parse_attribute(value: &str) -> Result<SdpType, SdpParserError> {
     let name: &str;
     let mut val: &str = "";
     if value.find(':') == None {
@@ -963,7 +963,7 @@ pub fn parse_attribute(value: &str) -> Result<SdpLine, SdpParserError> {
     println!("attribute: {}, {}", 
              a.name, a.value.some());
              */
-    Ok(SdpLine::Attribute(attr))
+    Ok(SdpType::Attribute(attr))
 }
 
 #[test]
