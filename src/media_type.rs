@@ -98,6 +98,10 @@ impl SdpMedia {
         self.media.port
     }
 
+    pub fn get_port_count(&self) -> u32 {
+        self.media.port_count
+    }
+
     pub fn get_proto(&self) -> &SdpProtocolValue {
         &self.media.proto
     }
