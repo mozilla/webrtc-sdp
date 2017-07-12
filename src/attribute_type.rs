@@ -352,7 +352,7 @@ impl FromStr for SdpAttribute {
     type Err = SdpParserError;
 
     fn from_str(line: &str) -> Result<SdpAttribute, SdpParserError> {
-        let tokens: Vec<_> = line.splitn(2, ":").collect();
+        let tokens: Vec<_> = line.splitn(2, ':').collect();
         let name = tokens[0].to_lowercase();
         let val = match tokens.get(1) {
             Some(x) => x.trim(),
