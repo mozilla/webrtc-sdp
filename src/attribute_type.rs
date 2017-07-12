@@ -365,7 +365,7 @@ impl FromStr for SdpAttribute {
                     | "rtcp-mux" | "rtcp-rsize" | "sendonly"
                     | "sendrecv" => {
                         return Err(SdpParserError::Line{
-                            message: "This attribute is required to have a value".to_string(),
+                            message: "This attribute is not allowed to have a value".to_string(),
                             line: line.to_string()});
                     },
                 _ => ()
