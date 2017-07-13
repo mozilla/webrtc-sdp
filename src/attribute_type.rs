@@ -351,7 +351,7 @@ pub enum SdpAttribute {
 impl FromStr for SdpAttribute {
     type Err = SdpParserError;
 
-    fn from_str(line: &str) -> Result<SdpAttribute, SdpParserError> {
+    fn from_str(line: &str) -> Result<Self, Self::Err> {
         let tokens: Vec<_> = line.splitn(2, ':').collect();
         let name = tokens[0].to_lowercase();
         let val = match tokens.get(1) {
@@ -365,7 +365,7 @@ impl FromStr for SdpAttribute {
                     | "rtcp-mux" | "rtcp-rsize" | "sendonly"
                     | "sendrecv" => {
                         return Err(SdpParserError::Line{
-                            message: "This attribute is not allowed to have a value".to_string(),
+                            message: format!("{} attribute is not allowed to have a value", name),
                             line: line.to_string()});
                     },
                 _ => ()
@@ -892,13 +892,7 @@ fn parse_ssrc(to_parse: &str,
 }
 
 pub fn parse_attribute(value: &str) -> Result<SdpLine, SdpParserError> {
-    let attr: SdpAttribute = value.parse()?;
-    // attr.parse_value(val.trim())?;
-    /*
-    println!("attribute: {}, {}", 
-             a.name, a.value.some());
-             */
-    Ok(SdpLine::Attribute(attr))
+    Ok(SdpLine::Attribute(value.trim().parse()?))
 }
 
 #[test]
