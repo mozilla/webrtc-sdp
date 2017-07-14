@@ -125,48 +125,26 @@ impl SdpSession {
         &self.session
     }
 
-    pub fn set_information(&mut self, i: String) {
-        self.information = Some(i)
-    }
-
-    pub fn set_uri(&mut self, u: String) {
-        self.uri = Some(u)
-    }
-
-    pub fn set_email(&mut self, e: String) {
-        self.email = Some(e)
-    }
-
-    pub fn set_phone(&mut self, p: String) {
-        self.phone = Some(p)
-    }
-
     pub fn set_connection(&mut self, c: SdpConnection) {
         self.connection = Some(c)
     }
 
-    pub fn add_bandwidth(&mut self, b: SdpBandwidth) {
-        self.bandwidth.push(b)
+    pub fn add_bandwidth(&mut self, b: &SdpBandwidth) {
+        self.bandwidth.push(b.clone())
     }
 
-    pub fn set_timing(&mut self, t: SdpTiming) {
-        self.timing = Some(t)
+    pub fn set_timing(&mut self, t: &SdpTiming) {
+        self.timing = Some(t.clone())
     }
 
-    pub fn set_repeat(&mut self, r: String) {
-        self.repeat = Some(r)
-    }
-
-    pub fn set_zone(&mut self, z: String) {
-        self.zone = Some(z)
-    }
-
-    pub fn set_key(&mut self, k: String) {
-        self.key = Some(k)
-    }
-
-    pub fn add_attribute(&mut self, a: SdpAttribute) {
-        self.attribute.push(a)
+    pub fn add_attribute(&mut self, a: &SdpAttribute) -> Result<(), SdpParserError> {
+        if !a.allowed_at_session_level() {
+            return Err(SdpParserError::Line {
+                           message: format!("{} not allowed at session level", a),
+                           line: "".to_string(),
+                       });
+        };
+        Ok(self.attribute.push(a.clone()))
     }
 
     pub fn add_media(&mut self, m: SdpMedia) {
@@ -418,7 +396,7 @@ fn parse_bandwidth(value: &str) -> Result<SdpLine, SdpParserError> {
         "AS" => SdpBandwidth::As(bandwidth),
         "CT" => SdpBandwidth::Ct(bandwidth),
         "TIAS" => SdpBandwidth::Tias(bandwidth),
-        _ => SdpBandwidth::Unknown(String::from(bv[0]), bandwidth)
+        _ => SdpBandwidth::Unknown(String::from(bv[0]), bandwidth),
     };
     println!("bandwidth: {}, {}", bv[0], bandwidth);
     Ok(SdpLine::Bandwidth(bw))
@@ -611,9 +589,9 @@ fn parse_sdp_vector(lines: &[SdpLine]) -> Result<SdpSession, SdpParserError> {
     let mut sdp_session = SdpSession::new(version, origin, session);
     for (i, line) in lines.iter().enumerate().skip(3) {
         match *line {
-            SdpLine::Attribute(ref v) => sdp_session.add_attribute(v.clone()),
-            SdpLine::Bandwidth(ref v) => sdp_session.add_bandwidth(v.clone()),
-            SdpLine::Timing(ref v) => sdp_session.set_timing(v.clone()),
+            SdpLine::Attribute(ref a) => sdp_session.add_attribute(a)?,
+            SdpLine::Bandwidth(ref b) => sdp_session.add_bandwidth(b),
+            SdpLine::Timing(ref t) => sdp_session.set_timing(t),
             SdpLine::Media(_) => sdp_session.extend_media(parse_media_vector(&lines[i..])?),
             SdpLine::Origin(_) |
             SdpLine::Session(_) |
@@ -631,7 +609,12 @@ fn parse_sdp_vector(lines: &[SdpLine]) -> Result<SdpSession, SdpParserError> {
             SdpLine::Phone(_) |
             SdpLine::Repeat(_) |
             SdpLine::Uri(_) |
-            SdpLine::Zone(_) => (),
+            SdpLine::Zone(_) => {
+                return Err(SdpParserError::Unsupported {
+                               message: "unsupported type".to_string(),
+                               line: "".to_string(),
+                           })
+            }
         };
         if sdp_session.has_media() {
             break;
