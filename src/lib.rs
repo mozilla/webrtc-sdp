@@ -798,3 +798,27 @@ m=audio 0 UDP/TLS/RTP/SAVPF 0\r\n",
                       true)
                     .is_err());
 }
+
+#[test]
+fn test_parse_sdp_invalid_session_attribute() {
+    assert!(parse_sdp("v=0\r\n
+o=- 0 0 IN IP4 0.a.b.0\r\n
+s=-\r\n
+t=0 0\r\n
+a=bundle-only\r\n
+m=audio 0 UDP/TLS/RTP/SAVPF 0\r\n",
+                      true)
+                    .is_err());
+}
+
+#[test]
+fn test_parse_sdp_invalid_media_attribute() {
+    assert!(parse_sdp("v=0\r\n
+o=- 0 0 IN IP4 0.a.b.0\r\n
+s=-\r\n
+t=0 0\r\n
+m=audio 0 UDP/TLS/RTP/SAVPF 0\r\n
+a=ice-lite\r\n",
+                      true)
+                    .is_err());
+}
