@@ -126,27 +126,29 @@ impl SdpMedia {
         !self.attribute.is_empty()
     }
 
-    pub fn add_attribute(&mut self, attr: SdpAttribute) {
-        self.attribute.push(attr)
+    pub fn add_attribute(&mut self, attr: &SdpAttribute) -> Result<(), SdpParserError> {
+        if !attr.allowed_at_media_level() {
+            return Err(SdpParserError::Line {
+                           message: format!("{} not allowed at media level", attr),
+                           line: "".to_string(),
+                       });
+        }
+        Ok(self.attribute.push(attr.clone()))
     }
 
-    pub fn add_bandwidth(&mut self, bw: SdpBandwidth) {
-        self.bandwidth.push(bw)
+    pub fn add_bandwidth(&mut self, bw: &SdpBandwidth) {
+        self.bandwidth.push(bw.clone())
     }
 
-    //TODO complain if connection is set already
-    pub fn set_connection(&mut self, c: SdpConnection) {
-        self.connection = Some(c);
-    }
-
-    //TODO complain if information is set already
-    pub fn set_information(&mut self, i: String) {
-        self.information = Some(i);
-    }
-
-    //TODO complain if key is set already
-    pub fn set_key(&mut self, k: String) {
-        self.key = Some(k);
+    pub fn set_connection(&mut self, c: &SdpConnection) -> Result<(), SdpParserError> {
+        if self.connection.is_some() {
+            return Err(SdpParserError::Line {
+                           message: "connection type already exists at this media level"
+                               .to_string(),
+                           line: "".to_string(),
+                       });
+        }
+        Ok(self.connection = Some(c.clone()))
     }
 }
 fn parse_media_token(value: &str) -> Result<SdpMediaValue, SdpParserError> {
@@ -348,18 +350,20 @@ pub fn parse_media_vector(lines: &[SdpLine]) -> Result<Vec<SdpMedia>, SdpParserE
     };
     for line in lines.iter().skip(1) {
         match *line {
-            SdpLine::Information(ref v) => sdp_media.set_information(v.clone()),
-            SdpLine::Connection(ref v) => sdp_media.set_connection(v.clone()),
-            SdpLine::Bandwidth(ref v) => {
-                sdp_media.add_bandwidth(v.clone());
-            }
-            SdpLine::Key(ref v) => sdp_media.set_key(v.clone()),
-            SdpLine::Attribute(ref v) => {
-                sdp_media.add_attribute(v.clone());
-            }
+            SdpLine::Connection(ref c) => sdp_media.set_connection(c)?,
+            SdpLine::Bandwidth(ref b) => sdp_media.add_bandwidth(b),
+            SdpLine::Attribute(ref a) => sdp_media.add_attribute(a)?,
             SdpLine::Media(ref v) => {
                 media_sections.push(sdp_media);
                 sdp_media = SdpMedia::new(v.clone());
+            }
+
+            SdpLine::Information(_) |
+            SdpLine::Key(_) => {
+                return Err(SdpParserError::Unsupported {
+                               message: "unsupported type found".to_string(),
+                               line: "".to_string(),
+                           })
             }
 
             SdpLine::Email(_) |
