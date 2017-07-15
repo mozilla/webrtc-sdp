@@ -131,6 +131,7 @@ impl SdpMedia {
             return Err(SdpParserError::Line {
                            message: format!("{} not allowed at media level", attr),
                            line: "".to_string(),
+                           line_number: None,
                        });
         }
         Ok(self.attribute.push(attr.clone()))
@@ -146,6 +147,7 @@ impl SdpMedia {
                            message: "connection type already exists at this media level"
                                .to_string(),
                            line: "".to_string(),
+                           line_number: None,
                        });
         }
         Ok(self.connection = Some(c.clone()))
@@ -357,31 +359,32 @@ pub fn parse_media_vector(lines: &[SdpLine]) -> Result<Vec<SdpMedia>, SdpParserE
     };
     for line in lines.iter().skip(1) {
         match line.sdp_type {
-            SdpLine::Connection(ref c) => sdp_media.set_connection(c)?,
-            SdpLine::Bandwidth(ref b) => sdp_media.add_bandwidth(b),
-            SdpLine::Attribute(ref a) => sdp_media.add_attribute(a)?,
-            SdpLine::Media(ref v) => {
+            SdpType::Connection(ref c) => sdp_media.set_connection(c)?,
+            SdpType::Bandwidth(ref b) => sdp_media.add_bandwidth(b),
+            SdpType::Attribute(ref a) => sdp_media.add_attribute(a)?,
+            SdpType::Media(ref v) => {
                 media_sections.push(sdp_media);
                 sdp_media = SdpMedia::new(v.clone());
             }
 
-            SdpLine::Information(_) |
-            SdpLine::Key(_) => {
+            SdpType::Information(_) |
+            SdpType::Key(_) => {
                 return Err(SdpParserError::Unsupported {
                                message: "unsupported type found".to_string(),
                                line: "".to_string(),
+                               line_number: Some(line.line_number),
                            })
             }
 
-            SdpLine::Email(_) |
-            SdpLine::Phone(_) |
-            SdpLine::Origin(_) |
-            SdpLine::Repeat(_) |
-            SdpLine::Session(_) |
-            SdpLine::Timing(_) |
-            SdpLine::Uri(_) |
-            SdpLine::Version(_) |
-            SdpLine::Zone(_) => {
+            SdpType::Email(_) |
+            SdpType::Phone(_) |
+            SdpType::Origin(_) |
+            SdpType::Repeat(_) |
+            SdpType::Session(_) |
+            SdpType::Timing(_) |
+            SdpType::Uri(_) |
+            SdpType::Version(_) |
+            SdpType::Zone(_) => {
                 return Err(SdpParserError::Sequence {
                                message: "invalid type in media section".to_string(),
                                line_number: Some(line.line_number),

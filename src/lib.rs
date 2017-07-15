@@ -147,6 +147,7 @@ impl SdpSession {
             return Err(SdpParserError::Line {
                            message: format!("{} not allowed at session level", a),
                            line: "".to_string(),
+                           line_number: None,
                        });
         };
         Ok(self.attribute.push(a.clone()))
@@ -684,13 +685,13 @@ fn parse_sdp_vector(lines: &[SdpLine]) -> Result<SdpSession, SdpParserError> {
     let mut sdp_session = SdpSession::new(version, origin, session);
     for (index, line) in lines.iter().enumerate().skip(3) {
         match line.sdp_type {
-            SdpLine::Attribute(ref a) => sdp_session.add_attribute(a)?,
-            SdpLine::Bandwidth(ref b) => sdp_session.add_bandwidth(b),
-            SdpLine::Timing(ref t) => sdp_session.set_timing(t),
-            SdpLine::Media(_) => sdp_session.extend_media(parse_media_vector(&lines[i..])?),
-            SdpLine::Origin(_) |
-            SdpLine::Session(_) |
-            SdpLine::Version(_) => {
+            SdpType::Attribute(ref a) => sdp_session.add_attribute(a)?,
+            SdpType::Bandwidth(ref b) => sdp_session.add_bandwidth(b),
+            SdpType::Timing(ref t) => sdp_session.set_timing(t),
+            SdpType::Media(_) => sdp_session.extend_media(parse_media_vector(&lines[index..])?),
+            SdpType::Origin(_) |
+            SdpType::Session(_) |
+            SdpType::Version(_) => {
                 return Err(SdpParserError::Sequence {
                                message: "version, origin or session at wrong level".to_string(),
                                line_number: Some(line.line_number),
