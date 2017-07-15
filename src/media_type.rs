@@ -98,6 +98,10 @@ impl SdpMedia {
         self.media.port
     }
 
+    pub fn get_port_count(&self) -> u32 {
+        self.media.port_count
+    }
+
     pub fn get_proto(&self) -> &SdpProtocolValue {
         &self.media.proto
     }
@@ -122,27 +126,29 @@ impl SdpMedia {
         !self.attribute.is_empty()
     }
 
-    pub fn add_attribute(&mut self, attr: SdpAttribute) {
-        self.attribute.push(attr)
+    pub fn add_attribute(&mut self, attr: &SdpAttribute) -> Result<(), SdpParserError> {
+        if !attr.allowed_at_media_level() {
+            return Err(SdpParserError::Line {
+                           message: format!("{} not allowed at media level", attr),
+                           line: "".to_string(),
+                       });
+        }
+        Ok(self.attribute.push(attr.clone()))
     }
 
-    pub fn add_bandwidth(&mut self, bw: SdpBandwidth) {
-        self.bandwidth.push(bw)
+    pub fn add_bandwidth(&mut self, bw: &SdpBandwidth) {
+        self.bandwidth.push(bw.clone())
     }
 
-    //TODO complain if connection is set already
-    pub fn set_connection(&mut self, c: SdpConnection) {
-        self.connection = Some(c);
-    }
-
-    //TODO complain if information is set already
-    pub fn set_information(&mut self, i: String) {
-        self.information = Some(i);
-    }
-
-    //TODO complain if key is set already
-    pub fn set_key(&mut self, k: String) {
-        self.key = Some(k);
+    pub fn set_connection(&mut self, c: &SdpConnection) -> Result<(), SdpParserError> {
+        if self.connection.is_some() {
+            return Err(SdpParserError::Line {
+                           message: "connection type already exists at this media level"
+                               .to_string(),
+                           line: "".to_string(),
+                       });
+        }
+        Ok(self.connection = Some(c.clone()))
     }
 }
 fn parse_media_token(value: &str) -> Result<SdpMediaValue, SdpParserError> {
@@ -351,29 +357,31 @@ pub fn parse_media_vector(lines: &[SdpLine]) -> Result<Vec<SdpMedia>, SdpParserE
     };
     for line in lines.iter().skip(1) {
         match line.sdp_type {
-            SdpType::Information(ref v) => sdp_media.set_information(v.clone()),
-            SdpType::Connection(ref v) => sdp_media.set_connection(v.clone()),
-            SdpType::Bandwidth(ref v) => {
-                sdp_media.add_bandwidth(v.clone());
-            }
-            SdpType::Key(ref v) => sdp_media.set_key(v.clone()),
-            SdpType::Attribute(ref v) => {
-                sdp_media.add_attribute(v.clone());
-            }
-            SdpType::Media(ref v) => {
+            SdpLine::Connection(ref c) => sdp_media.set_connection(c)?,
+            SdpLine::Bandwidth(ref b) => sdp_media.add_bandwidth(b),
+            SdpLine::Attribute(ref a) => sdp_media.add_attribute(a)?,
+            SdpLine::Media(ref v) => {
                 media_sections.push(sdp_media);
                 sdp_media = SdpMedia::new(v.clone());
             }
 
-            SdpType::Email(_) |
-            SdpType::Phone(_) |
-            SdpType::Origin(_) |
-            SdpType::Repeat(_) |
-            SdpType::Session(_) |
-            SdpType::Timing(_) |
-            SdpType::Uri(_) |
-            SdpType::Version(_) |
-            SdpType::Zone(_) => {
+            SdpLine::Information(_) |
+            SdpLine::Key(_) => {
+                return Err(SdpParserError::Unsupported {
+                               message: "unsupported type found".to_string(),
+                               line: "".to_string(),
+                           })
+            }
+
+            SdpLine::Email(_) |
+            SdpLine::Phone(_) |
+            SdpLine::Origin(_) |
+            SdpLine::Repeat(_) |
+            SdpLine::Session(_) |
+            SdpLine::Timing(_) |
+            SdpLine::Uri(_) |
+            SdpLine::Version(_) |
+            SdpLine::Zone(_) => {
                 return Err(SdpParserError::Sequence {
                                message: "invalid type in media section".to_string(),
                                line_number: Some(line.line_number),

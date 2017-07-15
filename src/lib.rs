@@ -130,48 +130,26 @@ impl SdpSession {
         &self.session
     }
 
-    pub fn set_information(&mut self, i: String) {
-        self.information = Some(i)
-    }
-
-    pub fn set_uri(&mut self, u: String) {
-        self.uri = Some(u)
-    }
-
-    pub fn set_email(&mut self, e: String) {
-        self.email = Some(e)
-    }
-
-    pub fn set_phone(&mut self, p: String) {
-        self.phone = Some(p)
-    }
-
     pub fn set_connection(&mut self, c: SdpConnection) {
         self.connection = Some(c)
     }
 
-    pub fn add_bandwidth(&mut self, b: SdpBandwidth) {
-        self.bandwidth.push(b)
+    pub fn add_bandwidth(&mut self, b: &SdpBandwidth) {
+        self.bandwidth.push(b.clone())
     }
 
-    pub fn set_timing(&mut self, t: SdpTiming) {
-        self.timing = Some(t)
+    pub fn set_timing(&mut self, t: &SdpTiming) {
+        self.timing = Some(t.clone())
     }
 
-    pub fn set_repeat(&mut self, r: String) {
-        self.repeat = Some(r)
-    }
-
-    pub fn set_zone(&mut self, z: String) {
-        self.zone = Some(z)
-    }
-
-    pub fn set_key(&mut self, k: String) {
-        self.key = Some(k)
-    }
-
-    pub fn add_attribute(&mut self, a: SdpAttribute) {
-        self.attribute.push(a)
+    pub fn add_attribute(&mut self, a: &SdpAttribute) -> Result<(), SdpParserError> {
+        if !a.allowed_at_session_level() {
+            return Err(SdpParserError::Line {
+                           message: format!("{} not allowed at session level", a),
+                           line: "".to_string(),
+                       });
+        };
+        Ok(self.attribute.push(a.clone()))
     }
 
     pub fn add_media(&mut self, m: SdpMedia) {
@@ -706,13 +684,13 @@ fn parse_sdp_vector(lines: &[SdpLine]) -> Result<SdpSession, SdpParserError> {
     let mut sdp_session = SdpSession::new(version, origin, session);
     for (index, line) in lines.iter().enumerate().skip(3) {
         match line.sdp_type {
-            SdpType::Attribute(ref v) => sdp_session.add_attribute(v.clone()),
-            SdpType::Bandwidth(ref v) => sdp_session.add_bandwidth(v.clone()),
-            SdpType::Timing(ref v) => sdp_session.set_timing(v.clone()),
-            SdpType::Media(_) => sdp_session.extend_media(parse_media_vector(&lines[index..])?),
-            SdpType::Origin(_) |
-            SdpType::Session(_) |
-            SdpType::Version(_) => {
+            SdpLine::Attribute(ref a) => sdp_session.add_attribute(a)?,
+            SdpLine::Bandwidth(ref b) => sdp_session.add_bandwidth(b),
+            SdpLine::Timing(ref t) => sdp_session.set_timing(t),
+            SdpLine::Media(_) => sdp_session.extend_media(parse_media_vector(&lines[i..])?),
+            SdpLine::Origin(_) |
+            SdpLine::Session(_) |
+            SdpLine::Version(_) => {
                 return Err(SdpParserError::Sequence {
                                message: "version, origin or session at wrong level".to_string(),
                                line_number: Some(line.line_number),
@@ -918,6 +896,30 @@ o=- 0 0 IN IP4 0.a.b.0\r\n
 s=-\r\n
 t=0 0\r\n
 m=audio 0 UDP/TLS/RTP/SAVPF 0\r\n",
+                      true)
+                    .is_err());
+}
+
+#[test]
+fn test_parse_sdp_invalid_session_attribute() {
+    assert!(parse_sdp("v=0\r\n
+o=- 0 0 IN IP4 0.a.b.0\r\n
+s=-\r\n
+t=0 0\r\n
+a=bundle-only\r\n
+m=audio 0 UDP/TLS/RTP/SAVPF 0\r\n",
+                      true)
+                    .is_err());
+}
+
+#[test]
+fn test_parse_sdp_invalid_media_attribute() {
+    assert!(parse_sdp("v=0\r\n
+o=- 0 0 IN IP4 0.a.b.0\r\n
+s=-\r\n
+t=0 0\r\n
+m=audio 0 UDP/TLS/RTP/SAVPF 0\r\n
+a=ice-lite\r\n",
                       true)
                     .is_err());
 }
