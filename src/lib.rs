@@ -429,7 +429,7 @@ fn parse_sdp_line(line: &str, line_number: usize) -> Result<SdpLine, SdpParserEr
                        error: SdpParserInternalError::Generic("missing = character in line"
                                                                   .to_string()),
                        line: line.to_string(),
-                       line_number: Some(line_number),
+                       line_number: line_number,
                    });
     }
     let mut splitted_line = line.splitn(2, '=');
@@ -438,7 +438,7 @@ fn parse_sdp_line(line: &str, line_number: usize) -> Result<SdpLine, SdpParserEr
             return Err(SdpParserError::Line {
                            error: SdpParserInternalError::Generic("missing type".to_string()),
                            line: line.to_string(),
-                           line_number: Some(line_number),
+                           line_number: line_number,
                        })
         }
         Some(t) => {
@@ -447,14 +447,14 @@ fn parse_sdp_line(line: &str, line_number: usize) -> Result<SdpLine, SdpParserEr
                 return Err(SdpParserError::Line {
                                error: SdpParserInternalError::Generic("type to long".to_string()),
                                line: line.to_string(),
-                               line_number: Some(line_number),
+                               line_number: line_number,
                            });
             }
             if trimmed.is_empty() {
                 return Err(SdpParserError::Line {
                                error: SdpParserInternalError::Generic("type is empty".to_string()),
                                line: line.to_string(),
-                               line_number: Some(line_number),
+                               line_number: line_number,
                            });
             }
             trimmed
@@ -465,7 +465,7 @@ fn parse_sdp_line(line: &str, line_number: usize) -> Result<SdpLine, SdpParserEr
             return Err(SdpParserError::Line {
                            error: SdpParserInternalError::Generic("missing value".to_string()),
                            line: line.to_string(),
-                           line_number: Some(line_number),
+                           line_number: line_number,
                        })
         }
         Some(v) => {
@@ -474,7 +474,7 @@ fn parse_sdp_line(line: &str, line_number: usize) -> Result<SdpLine, SdpParserEr
                 return Err(SdpParserError::Line {
                                error: SdpParserInternalError::Generic("value is empty".to_string()),
                                line: line.to_string(),
-                               line_number: Some(line_number),
+                               line_number: line_number,
                            });
             }
             trimmed
@@ -511,7 +511,7 @@ fn parse_sdp_line(line: &str, line_number: usize) -> Result<SdpLine, SdpParserEr
                          SdpParserError::Line {
                              error: e,
                              line: line.to_string(),
-                             line_number: Some(line_number),
+                             line_number: line_number,
                          }
                      }
                      SdpParserInternalError::Unsupported(..) => {
@@ -684,7 +684,7 @@ pub fn parse_sdp(sdp: &str, fail_on_warning: bool) -> Result<SdpSession, SdpPars
         return Err(SdpParserError::Line {
                        error: SdpParserInternalError::Generic("empty SDP".to_string()),
                        line: sdp.to_string(),
-                       line_number: Some(0),
+                       line_number: 0,
                    });
     }
     if sdp.len() < 62 {
@@ -692,7 +692,7 @@ pub fn parse_sdp(sdp: &str, fail_on_warning: bool) -> Result<SdpSession, SdpPars
                        error: SdpParserInternalError::Generic("string to short to be valid SDP"
                                                                   .to_string()),
                        line: sdp.to_string(),
-                       line_number: Some(0),
+                       line_number: 0,
                    });
     }
     let lines = sdp.lines();

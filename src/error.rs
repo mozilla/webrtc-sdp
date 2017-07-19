@@ -82,7 +82,7 @@ pub enum SdpParserError {
     Line {
         error: SdpParserInternalError,
         line: String,
-        line_number: Option<usize>,
+        line_number: usize,
     },
     Unsupported {
         error: SdpParserInternalError,
@@ -100,14 +100,16 @@ impl fmt::Display for SdpParserError {
                 ref line,
                 ref line_number,
             } => {
+                /*
                 let ln = match *line_number {
                     None => "?".to_string(),
                     Some(x) => x.to_string(),
                 };
+                */
                 write!(f,
                        "Line error: {} in line({}): {}",
                        error.description(),
-                       ln,
+                       line_number,
                        line)
             }
             SdpParserError::Unsupported {
@@ -174,22 +176,12 @@ fn test_sdp_parser_error_line() {
     let line1 = SdpParserError::Line {
         error: SdpParserInternalError::Generic("test message".to_string()),
         line: "test line".to_string(),
-        line_number: None,
+        line_number: 13,
     };
-    // TODO how to verify the output of fmt::Display() ?
-    println!("{}", line1);
+    assert_eq!(format!("{}", line1),
+               "Line error: test message in line(13): test line");
     assert_eq!(line1.description(), "test message");
     assert!(line1.cause().is_some());
-
-    let line2 = SdpParserError::Line {
-        error: SdpParserInternalError::Generic("test message".to_string()),
-        line: "test line".to_string(),
-        line_number: Some(13),
-    };
-    // TODO how to verify the output of fmt::Display() ?
-    println!("{}", line2);
-    assert_eq!(line2.description(), "test message");
-    assert!(line2.cause().is_some());
 }
 
 #[test]
