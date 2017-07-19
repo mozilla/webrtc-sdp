@@ -726,14 +726,6 @@ pub fn parse_sdp(sdp: &str, fail_on_warning: bool) -> Result<SdpSession, SdpPars
                                         line_number,
                                     })
                     }
-                    /*
-                    SdpParserError::Integer { error, line_number } => {
-                        errors.push(SdpParserError::Integer { error, line_number })
-                    }
-                    SdpParserError::Address { error, line_number } => {
-                        errors.push(SdpParserError::Address { error, line_number })
-                    }
-                    */
                 }
             }
         };
