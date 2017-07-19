@@ -518,7 +518,7 @@ fn parse_sdp_line(line: &str, line_number: usize) -> Result<SdpLine, SdpParserEr
                          SdpParserError::Unsupported {
                              error: e,
                              line: line.to_string(),
-                             line_number: Some(line_number),
+                             line_number: line_number,
                          }
                      }
                  })

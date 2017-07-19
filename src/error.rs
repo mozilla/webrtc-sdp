@@ -106,7 +106,7 @@ pub enum SdpParserError {
     Unsupported {
         error: SdpParserInternalError,
         line: String,
-        line_number: Option<usize>,
+        line_number: usize,
     },
     Sequence { message: String, line_number: usize },
 }
@@ -130,14 +130,10 @@ impl fmt::Display for SdpParserError {
                 ref line,
                 ref line_number,
             } => {
-                let ln = match *line_number {
-                    None => "?".to_string(),
-                    Some(x) => x.to_string(),
-                };
                 write!(f,
                        "Unsupported: {} in line({}): {}",
                        error.description(),
-                       ln,
+                       line_number,
                        line)
             }
             SdpParserError::Sequence {
@@ -198,22 +194,12 @@ fn test_sdp_parser_error_unsupported() {
     let unsupported1 = SdpParserError::Unsupported {
         error: SdpParserInternalError::Generic("unsupported value".to_string()),
         line: "unsupported line".to_string(),
-        line_number: None,
+        line_number: 21,
     };
     assert_eq!(format!("{}", unsupported1),
-               "Unsupported: unsupported value in line(?): unsupported line");
+               "Unsupported: unsupported value in line(21): unsupported line");
     assert_eq!(unsupported1.description(), "unsupported value");
     assert!(unsupported1.cause().is_some());
-
-    let unsupported3 = SdpParserError::Unsupported {
-        error: SdpParserInternalError::Generic("unsupported message".to_string()),
-        line: "unsupported line".to_string(),
-        line_number: Some(42),
-    };
-    // TODO how to verify the output of fmt::Display() ?
-    println!("{}", unsupported3);
-    assert_eq!(unsupported3.description(), "unsupported message");
-    assert!(unsupported3.cause().is_some());
 }
 
 #[test]
