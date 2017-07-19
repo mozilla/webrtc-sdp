@@ -124,8 +124,8 @@ impl SdpSession {
         &self.session
     }
 
-    pub fn set_connection(&mut self, c: SdpConnection) {
-        self.connection = Some(c)
+    pub fn set_connection(&mut self, c: &SdpConnection) {
+        self.connection = Some(c.clone())
     }
 
     pub fn add_bandwidth(&mut self, b: &SdpBandwidth) {
@@ -625,6 +625,7 @@ fn parse_sdp_vector(lines: &[SdpLine]) -> Result<SdpSession, SdpParserError> {
             }
             SdpType::Bandwidth(ref b) => sdp_session.add_bandwidth(b),
             SdpType::Timing(ref t) => sdp_session.set_timing(t),
+            SdpType::Connection(ref c) => sdp_session.set_connection(c),
             SdpType::Media(_) => sdp_session.extend_media(parse_media_vector(&lines[index..])?),
             SdpType::Origin(_) |
             SdpType::Session(_) |
@@ -635,7 +636,6 @@ fn parse_sdp_vector(lines: &[SdpLine]) -> Result<SdpSession, SdpParserError> {
                            })
             }
             // the line parsers throw unsupported errors for these already
-            SdpType::Connection(_) |
             SdpType::Email(_) |
             SdpType::Information(_) |
             SdpType::Key(_) |

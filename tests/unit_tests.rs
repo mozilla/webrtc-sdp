@@ -48,6 +48,27 @@ m=audio 0 UDP/TLS/RTP/SAVPF 0\r\n";
 }
 
 #[test]
+fn parse_minimal_sdp_with_most_session_types() {
+    let sdp = "v=0\r\n
+o=- 0 0 IN IP4 0.0.0.0\r\n
+s=-\r\n
+t=0 0\r\n
+b=AS:1\r\n
+b=CT:123\r\n
+b=TIAS:12345\r\n
+c=IN IP4 0.0.0.0\r\n
+a=ice-options:trickle\r\n
+m=audio 0 UDP/TLS/RTP/SAVPF 0\r\n";
+    let sdp_res = rsdparsa::parse_sdp(sdp, false);
+    assert!(sdp_res.is_ok());
+    let sdp_opt = sdp_res.ok();
+    assert!(sdp_opt.is_some());
+    let sdp = sdp_opt.unwrap();
+    assert_eq!(sdp.version, 0);
+    assert_eq!(sdp.session, "-");
+}
+
+#[test]
 fn parse_firefox_audio_offer() {
     let sdp = "v=0\r\n
 o=mozilla...THIS_IS_SDPARTA-52.0a1 506705521068071134 0 IN IP4 0.0.0.0\r\n
