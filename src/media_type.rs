@@ -125,6 +125,10 @@ impl SdpMedia {
         !self.attribute.is_empty()
     }
 
+    pub fn get_attributes(&self) -> &[SdpAttribute] {
+        &self.attribute
+    }
+
     pub fn add_attribute(&mut self, attr: &SdpAttribute) -> Result<(), SdpParserInternalError> {
         if !attr.allowed_at_media_level() {
             return Err(SdpParserInternalError::Generic(format!("{} not allowed at media level",
