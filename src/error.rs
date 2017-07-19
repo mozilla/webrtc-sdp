@@ -25,7 +25,7 @@ impl fmt::Display for SdpParserInternalError {
                 write!(f, "Integer parsing error: {}", error.description())
             }
             SdpParserInternalError::Address(ref error) => {
-                write!(f, "Integer parsing error: {}", error.description())
+                write!(f, "IP address parsing error: {}", error.description())
             }
         }
     }
@@ -52,14 +52,33 @@ impl error::Error for SdpParserInternalError {
 }
 
 #[test]
+fn test_sdp_parser_internal_error_generic() {
+    let generic = SdpParserInternalError::Generic("generic message".to_string());
+    assert_eq!(format!("{}", generic),
+               "Generic parsing error: generic message");
+    assert_eq!(generic.description(), "generic message");
+    assert!(generic.cause().is_none());
+}
+
+#[test]
+fn test_sdp_parser_internal_error_unsupported() {
+    let unsupported = SdpParserInternalError::Unsupported("unsupported internal message"
+                                                              .to_string());
+    assert_eq!(format!("{}", unsupported),
+               "Unsupported parsing error: unsupported internal message");
+    assert_eq!(unsupported.description(), "unsupported internal message");
+    assert!(unsupported.cause().is_none());
+}
+
+#[test]
 fn test_sdp_parser_internal_error_integer() {
     let v = "12a";
     let integer = v.parse::<u64>();
     assert!(integer.is_err());
     let int_err = SdpParserInternalError::Integer(integer.err().unwrap());
-    // TODO how to verify the output of fmt::Display() ?
-    println!("{}", int_err);
-    println!("{}", int_err.description());
+    assert_eq!(format!("{}", int_err),
+               "Integer parsing error: invalid digit found in string");
+    assert_eq!(int_err.description(), "invalid digit found in string");
     assert!(!int_err.cause().is_none());
 }
 
@@ -70,10 +89,10 @@ fn test_sdp_parser_internal_error_address() {
     use std::net::IpAddr;
     let addr = IpAddr::from_str(v);
     assert!(addr.is_err());
-    // TODO how to verify the output of fmt::Display() ?
     let addr_err = SdpParserInternalError::Address(addr.err().unwrap());
-    println!("{}", addr_err);
-    println!("{}", addr_err.description());
+    assert_eq!(format!("{}", addr_err),
+               "IP address parsing error: invalid IP address syntax");
+    assert_eq!(addr_err.description(), "invalid IP address syntax");
     assert!(!addr_err.cause().is_none());
 }
 
@@ -100,12 +119,6 @@ impl fmt::Display for SdpParserError {
                 ref line,
                 ref line_number,
             } => {
-                /*
-                let ln = match *line_number {
-                    None => "?".to_string(),
-                    Some(x) => x.to_string(),
-                };
-                */
                 write!(f,
                        "Line error: {} in line({}): {}",
                        error.description(),
@@ -233,8 +246,8 @@ fn test_sdp_parser_error_sequence() {
         message: "sequence message".to_string(),
         line_number: 42,
     };
-    // TODO how to verify the output of fmt::Display() ?
-    println!("{}", sequence1);
+    assert_eq!(format!("{}", sequence1),
+               "Sequence error in line(42): sequence message");
     assert_eq!(sequence1.description(), "sequence message");
     assert!(sequence1.cause().is_none());
 }
