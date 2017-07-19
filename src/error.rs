@@ -148,7 +148,7 @@ impl fmt::Display for SdpParserError {
 impl error::Error for SdpParserError {
     fn description(&self) -> &str {
         match *self {
-            SdpParserError::Line { ref error, .. } => error.description(),
+            SdpParserError::Line { ref error, .. } |
             SdpParserError::Unsupported { ref error, .. } => error.description(),
             SdpParserError::Sequence { ref message, .. } => message,
         }
