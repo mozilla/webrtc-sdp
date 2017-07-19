@@ -5,36 +5,98 @@ use std::error;
 use std::error::Error;
 
 #[derive(Debug)]
+pub enum SdpParserInternalError {
+    Generic(String),
+    Unsupported(String),
+    Integer(ParseIntError),
+    Address(AddrParseError),
+}
+
+impl fmt::Display for SdpParserInternalError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            SdpParserInternalError::Generic(ref message) => {
+                write!(f, "Generic parsing error: {}", message)
+            }
+            SdpParserInternalError::Unsupported(ref message) => {
+                write!(f, "Unsupported parsing error: {}", message)
+            }
+            SdpParserInternalError::Integer(ref error) => {
+                write!(f, "Integer parsing error: {}", error.description())
+            }
+            SdpParserInternalError::Address(ref error) => {
+                write!(f, "Integer parsing error: {}", error.description())
+            }
+        }
+    }
+}
+
+impl error::Error for SdpParserInternalError {
+    fn description(&self) -> &str {
+        match *self {
+            SdpParserInternalError::Generic(ref message) |
+            SdpParserInternalError::Unsupported(ref message) => message,
+            SdpParserInternalError::Integer(ref error) => error.description(),
+            SdpParserInternalError::Address(ref error) => error.description(),
+        }
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        match *self {
+            SdpParserInternalError::Integer(ref error) => Some(error),
+            SdpParserInternalError::Address(ref error) => Some(error),
+            // Can't tell much more about our internal errors
+            _ => None,
+        }
+    }
+}
+
+#[test]
+fn test_sdp_parser_internal_error_integer() {
+    let v = "12a";
+    let integer = v.parse::<u64>();
+    assert!(integer.is_err());
+    let int_err = SdpParserInternalError::Integer(integer.err().unwrap());
+    // TODO how to verify the output of fmt::Display() ?
+    println!("{}", int_err);
+    println!("{}", int_err.description());
+    assert!(!int_err.cause().is_none());
+}
+
+#[test]
+fn test_sdp_parser_internal_error_address() {
+    let v = "127.0.0.a";
+    use std::str::FromStr;
+    use std::net::IpAddr;
+    let addr = IpAddr::from_str(v);
+    assert!(addr.is_err());
+    // TODO how to verify the output of fmt::Display() ?
+    let addr_err = SdpParserInternalError::Address(addr.err().unwrap());
+    println!("{}", addr_err);
+    println!("{}", addr_err.description());
+    assert!(!addr_err.cause().is_none());
+}
+
+#[derive(Debug)]
 pub enum SdpParserError {
     Line {
-        message: String,
+        error: SdpParserInternalError,
         line: String,
         line_number: Option<usize>,
     },
     Unsupported {
-        message: String,
-        line: String,
+        error: SdpParserInternalError,
+        line: Option<String>,
         line_number: Option<usize>,
     },
-    Sequence {
-        message: String,
-        line_number: Option<usize>,
-    },
-    Integer {
-        error: ParseIntError,
-        line_number: Option<usize>,
-    },
-    Address {
-        error: AddrParseError,
-        line_number: Option<usize>,
-    },
+    Sequence { message: String, line_number: usize },
 }
 
 impl fmt::Display for SdpParserError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             SdpParserError::Line {
-                ref message,
+                ref error,
                 ref line,
                 ref line_number,
             } => {
@@ -42,10 +104,14 @@ impl fmt::Display for SdpParserError {
                     None => "?".to_string(),
                     Some(x) => x.to_string(),
                 };
-                write!(f, "Line error: {} in line({}): {}", message, ln, line)
+                write!(f,
+                       "Line error: {} in line({}): {}",
+                       error.description(),
+                       ln,
+                       line)
             }
             SdpParserError::Unsupported {
-                ref message,
+                ref error,
                 ref line,
                 ref line_number,
             } => {
@@ -53,44 +119,20 @@ impl fmt::Display for SdpParserError {
                     None => "?".to_string(),
                     Some(x) => x.to_string(),
                 };
-                write!(f, "Unsupported: {} in line({}): {}", message, ln, line)
+                let l = match *line {
+                    None => "?".to_string(),
+                    Some(ref x) => x.to_string(),
+                };
+                write!(f,
+                       "Unsupported: {} in line({}): {}",
+                       error.description(),
+                       ln,
+                       l)
             }
             SdpParserError::Sequence {
                 ref message,
                 ref line_number,
-            } => {
-                let ln = match *line_number {
-                    None => "?".to_string(),
-                    Some(x) => x.to_string(),
-                };
-                write!(f, "Sequence error in line({}): {}", ln, message)
-            }
-            SdpParserError::Integer {
-                ref error,
-                ref line_number,
-            } => {
-                let ln = match *line_number {
-                    None => "?".to_string(),
-                    Some(x) => x.to_string(),
-                };
-                write!(f,
-                       "Integer parsing error in line({}): {}",
-                       ln,
-                       error.description())
-            }
-            SdpParserError::Address {
-                ref error,
-                ref line_number,
-            } => {
-                let ln = match *line_number {
-                    None => "?".to_string(),
-                    Some(x) => x.to_string(),
-                };
-                write!(f,
-                       "IP address parsing error in line({}): {}",
-                       ln,
-                       error.description())
-            }
+            } => write!(f, "Sequence error in line({}): {}", line_number, message),
         }
     }
 }
@@ -99,137 +141,108 @@ impl fmt::Display for SdpParserError {
 impl error::Error for SdpParserError {
     fn description(&self) -> &str {
         match *self {
-            SdpParserError::Line { ref message, .. } |
-            SdpParserError::Unsupported { ref message, .. } |
+            SdpParserError::Line { ref error, .. } => error.description(),
+            SdpParserError::Unsupported { ref error, .. } => error.description(),
             SdpParserError::Sequence { ref message, .. } => message,
-            SdpParserError::Integer { ref error, .. } => error.description(),
-            SdpParserError::Address { ref error, .. } => error.description(),
         }
     }
 
     fn cause(&self) -> Option<&error::Error> {
         match *self {
-            SdpParserError::Integer { ref error, .. } => Some(error),
-            SdpParserError::Address { ref error, .. } => Some(error),
+            SdpParserError::Line { ref error, .. } |
+            SdpParserError::Unsupported { ref error, .. } => Some(error),
             // Can't tell much more about our internal errors
             _ => None,
         }
     }
 }
 
-impl From<ParseIntError> for SdpParserError {
-    fn from(err: ParseIntError) -> SdpParserError {
-        SdpParserError::Integer {
-            error: err,
-            line_number: None,
-        }
+impl From<ParseIntError> for SdpParserInternalError {
+    fn from(err: ParseIntError) -> SdpParserInternalError {
+        SdpParserInternalError::Integer(err)
     }
 }
 
-impl From<AddrParseError> for SdpParserError {
-    fn from(err: AddrParseError) -> SdpParserError {
-        SdpParserError::Address {
-            error: err,
-            line_number: None,
-        }
+impl From<AddrParseError> for SdpParserInternalError {
+    fn from(err: AddrParseError) -> SdpParserInternalError {
+        SdpParserInternalError::Address(err)
     }
 }
 
 #[test]
 fn test_sdp_parser_error_line() {
     let line1 = SdpParserError::Line {
-        message: "test message".to_string(),
+        error: SdpParserInternalError::Generic("test message".to_string()),
         line: "test line".to_string(),
         line_number: None,
     };
     // TODO how to verify the output of fmt::Display() ?
     println!("{}", line1);
     assert_eq!(line1.description(), "test message");
-    assert!(line1.cause().is_none());
+    assert!(line1.cause().is_some());
 
     let line2 = SdpParserError::Line {
-        message: "test message".to_string(),
+        error: SdpParserInternalError::Generic("test message".to_string()),
         line: "test line".to_string(),
         line_number: Some(13),
     };
     // TODO how to verify the output of fmt::Display() ?
     println!("{}", line2);
     assert_eq!(line2.description(), "test message");
-    assert!(line2.cause().is_none());
+    assert!(line2.cause().is_some());
 }
 
 #[test]
 fn test_sdp_parser_error_unsupported() {
     let unsupported1 = SdpParserError::Unsupported {
-        message: "unsupported message".to_string(),
-        line: "unsupported line".to_string(),
+        error: SdpParserInternalError::Generic("unsupported message".to_string()),
+        line: None,
         line_number: None,
     };
     // TODO how to verify the output of fmt::Display() ?
     println!("{}", unsupported1);
     assert_eq!(unsupported1.description(), "unsupported message");
-    assert!(unsupported1.cause().is_none());
+    assert!(unsupported1.cause().is_some());
 
     let unsupported2 = SdpParserError::Unsupported {
-        message: "unsupported message".to_string(),
-        line: "unsupported line".to_string(),
-        line_number: Some(21),
+        error: SdpParserInternalError::Generic("unsupported message".to_string()),
+        line: Some("unsupported line".to_string()),
+        line_number: None,
     };
     // TODO how to verify the output of fmt::Display() ?
     println!("{}", unsupported2);
     assert_eq!(unsupported2.description(), "unsupported message");
-    assert!(unsupported2.cause().is_none());
+    assert!(unsupported2.cause().is_some());
+
+    let unsupported3 = SdpParserError::Unsupported {
+        error: SdpParserInternalError::Generic("unsupported message".to_string()),
+        line: None,
+        line_number: Some(42),
+    };
+    // TODO how to verify the output of fmt::Display() ?
+    println!("{}", unsupported3);
+    assert_eq!(unsupported3.description(), "unsupported message");
+    assert!(unsupported3.cause().is_some());
+
+    let unsupported4 = SdpParserError::Unsupported {
+        error: SdpParserInternalError::Generic("unsupported message".to_string()),
+        line: Some("unsupported line".to_string()),
+        line_number: Some(21),
+    };
+    // TODO how to verify the output of fmt::Display() ?
+    println!("{}", unsupported4);
+    assert_eq!(unsupported4.description(), "unsupported message");
+    assert!(unsupported4.cause().is_some());
 }
 
 #[test]
 fn test_sdp_parser_error_sequence() {
     let sequence1 = SdpParserError::Sequence {
         message: "sequence message".to_string(),
-        line_number: None,
+        line_number: 42,
     };
     // TODO how to verify the output of fmt::Display() ?
     println!("{}", sequence1);
     assert_eq!(sequence1.description(), "sequence message");
     assert!(sequence1.cause().is_none());
-
-    let sequence2 = SdpParserError::Sequence {
-        message: "another sequence message".to_string(),
-        line_number: Some(42),
-    };
-    // TODO how to verify the output of fmt::Display() ?
-    println!("{}", sequence2);
-    assert_eq!(sequence2.description(), "another sequence message");
-    assert!(sequence2.cause().is_none());
-}
-
-#[test]
-fn test_sdp_parser_error_integer() {
-    let v = "12a";
-    let integer = v.parse::<u64>();
-    assert!(integer.is_err());
-    let int_err = SdpParserError::Integer {
-        error: integer.err().unwrap(),
-        line_number: Some(1),
-    };
-    // TODO how to verify the output of fmt::Display() ?
-    println!("{}", int_err);
-    println!("{}", int_err.description());
-    assert!(!int_err.cause().is_none());
-}
-
-#[test]
-fn test_sdp_parser_error_address() {
-    let v = "127.0.0.a";
-    use std::str::FromStr;
-    use std::net::IpAddr;
-    let addr = IpAddr::from_str(v);
-    assert!(addr.is_err());
-    // TODO how to verify the output of fmt::Display() ?
-    let addr_err = SdpParserError::Address {
-        error: addr.err().unwrap(),
-        line_number: Some(3),
-    };
-    println!("{}", addr_err);
-    println!("{}", addr_err.description());
-    assert!(!addr_err.cause().is_none());
 }

@@ -1,7 +1,7 @@
 use std::fmt;
 use {SdpType, SdpLine, SdpBandwidth, SdpConnection};
 use attribute_type::SdpAttribute;
-use error::SdpParserError;
+use error::{SdpParserError, SdpParserInternalError};
 
 #[derive(Clone)]
 pub struct SdpMediaLine {
@@ -71,21 +71,20 @@ impl fmt::Display for SdpFormatList {
 
 pub struct SdpMedia {
     media: SdpMediaLine,
-    information: Option<String>,
     connection: Option<SdpConnection>,
     bandwidth: Vec<SdpBandwidth>,
-    key: Option<String>,
     attribute: Vec<SdpAttribute>,
+    // unsupported values:
+    // information: Option<String>,
+    // key: Option<String>,
 }
 
 impl SdpMedia {
     pub fn new(media: SdpMediaLine) -> SdpMedia {
         SdpMedia {
             media,
-            information: None,
             connection: None,
             bandwidth: Vec::new(),
-            key: None,
             attribute: Vec::new(),
         }
     }
@@ -126,13 +125,10 @@ impl SdpMedia {
         !self.attribute.is_empty()
     }
 
-    pub fn add_attribute(&mut self, attr: &SdpAttribute) -> Result<(), SdpParserError> {
+    pub fn add_attribute(&mut self, attr: &SdpAttribute) -> Result<(), SdpParserInternalError> {
         if !attr.allowed_at_media_level() {
-            return Err(SdpParserError::Line {
-                           message: format!("{} not allowed at media level", attr),
-                           line: "".to_string(),
-                           line_number: None,
-                       });
+            return Err(SdpParserInternalError::Generic(format!("{} not allowed at media level",
+                                                               attr)));
         }
         Ok(self.attribute.push(attr.clone()))
     }
@@ -141,29 +137,23 @@ impl SdpMedia {
         self.bandwidth.push(bw.clone())
     }
 
-    pub fn set_connection(&mut self, c: &SdpConnection) -> Result<(), SdpParserError> {
+    pub fn set_connection(&mut self, c: &SdpConnection) -> Result<(), SdpParserInternalError> {
         if self.connection.is_some() {
-            return Err(SdpParserError::Line {
-                           message: "connection type already exists at this media level"
+            return Err(SdpParserInternalError::Generic("connection type already exists at this media level"
                                .to_string(),
-                           line: "".to_string(),
-                           line_number: None,
-                       });
+                       ));
         }
         Ok(self.connection = Some(c.clone()))
     }
 }
-fn parse_media_token(value: &str) -> Result<SdpMediaValue, SdpParserError> {
+fn parse_media_token(value: &str) -> Result<SdpMediaValue, SdpParserInternalError> {
     Ok(match value.to_lowercase().as_ref() {
            "audio" => SdpMediaValue::Audio,
            "video" => SdpMediaValue::Video,
            "application" => SdpMediaValue::Application,
            _ => {
-               return Err(SdpParserError::Unsupported {
-                              message: "unsupported media value".to_string(),
-                              line: value.to_string(),
-                              line_number: None,
-                          })
+               return Err(SdpParserInternalError::Unsupported(format!("unsupported media value: {}",
+                                                                      value)))
            }
        })
 }
@@ -185,7 +175,7 @@ fn test_parse_media_token() {
 }
 
 
-fn parse_protocol_token(value: &str) -> Result<SdpProtocolValue, SdpParserError> {
+fn parse_protocol_token(value: &str) -> Result<SdpProtocolValue, SdpParserInternalError> {
     Ok(match value.to_uppercase().as_ref() {
            "RTP/SAVPF" => SdpProtocolValue::RtpSavpf,
            "UDP/TLS/RTP/SAVPF" => SdpProtocolValue::UdpTlsRtpSavpf,
@@ -194,11 +184,8 @@ fn parse_protocol_token(value: &str) -> Result<SdpProtocolValue, SdpParserError>
            "UDP/DTLS/SCTP" => SdpProtocolValue::UdpDtlsSctp,
            "TCP/DTLS/SCTP" => SdpProtocolValue::TcpDtlsSctp,
            _ => {
-               return Err(SdpParserError::Unsupported {
-                              message: "unsupported protocol value".to_string(),
-                              line: value.to_string(),
-                              line_number: None,
-                          })
+               return Err(SdpParserInternalError::Unsupported(format!("unsupported protocol value: {}",
+                                                                      value)))
            }
        })
 }
@@ -228,33 +215,20 @@ fn test_parse_protocol_token() {
     assert!(parse_protocol_token("foobar").is_err());
 }
 
-pub fn parse_media(value: &str) -> Result<SdpType, SdpParserError> {
+pub fn parse_media(value: &str) -> Result<SdpType, SdpParserInternalError> {
     let mv: Vec<&str> = value.split_whitespace().collect();
     if mv.len() < 4 {
-        return Err(SdpParserError::Line {
-                       message: "media attribute must have at least four tokens".to_string(),
-                       line: value.to_string(),
-                       line_number: None,
-                   });
+        return Err(SdpParserInternalError::Generic("media attribute must have at least four tokens"
+                                                       .to_string()));
     }
     let media = parse_media_token(mv[0])?;
     let mut ptokens = mv[1].split('/');
     let port = match ptokens.next() {
-        None => {
-            return Err(SdpParserError::Line {
-                           message: "missing port token".to_string(),
-                           line: value.to_string(),
-                           line_number: None,
-                       })
-        }
+        None => return Err(SdpParserInternalError::Generic("missing port token".to_string())),
         Some(p) => p.parse::<u32>()?,
     };
     if port > 65535 {
-        return Err(SdpParserError::Line {
-                       message: "media port token is too big".to_string(),
-                       line: value.to_string(),
-                       line_number: None,
-                   });
+        return Err(SdpParserInternalError::Generic("media port token is too big".to_string()));
     }
     let port_count = match ptokens.next() {
         None => 0,
@@ -273,11 +247,8 @@ pub fn parse_media(value: &str) -> Result<SdpType, SdpParserError> {
                     9  |  // G722
                     13 |  // Comfort Noise
                     96 ... 127 => (),  // dynamic range
-                    _ => return Err(SdpParserError::Line {
-                          message: "format number in media line is out of range".to_string(),
-                          line: value.to_string(),
-                          line_number: None,
-                    }),
+                    _ => return Err(SdpParserInternalError::Generic(
+                          "format number in media line is out of range".to_string()))
                 };
                 fmt_vec.push(fmt_num);
             }
@@ -353,27 +324,36 @@ pub fn parse_media_vector(lines: &[SdpLine]) -> Result<Vec<SdpMedia>, SdpParserE
             return Err(SdpParserError::Sequence {
                            message: "first line in media section needs to be a media line"
                                .to_string(),
-                           line_number: Some(lines[0].line_number),
+                           line_number: lines[0].line_number,
                        })
         }
     };
     for line in lines.iter().skip(1) {
         match line.sdp_type {
-            SdpType::Connection(ref c) => sdp_media.set_connection(c)?,
+            SdpType::Connection(ref c) => {
+                sdp_media
+                    .set_connection(c)
+                    .map_err(|e: SdpParserInternalError| {
+                                 SdpParserError::Sequence {
+                                     message: format!("{}", e),
+                                     line_number: line.line_number,
+                                 }
+                             })?
+            }
             SdpType::Bandwidth(ref b) => sdp_media.add_bandwidth(b),
-            SdpType::Attribute(ref a) => sdp_media.add_attribute(a)?,
+            SdpType::Attribute(ref a) => {
+                sdp_media
+                    .add_attribute(a)
+                    .map_err(|e: SdpParserInternalError| {
+                                 SdpParserError::Sequence {
+                                     message: format!("{}", e),
+                                     line_number: line.line_number,
+                                 }
+                             })?
+            }
             SdpType::Media(ref v) => {
                 media_sections.push(sdp_media);
                 sdp_media = SdpMedia::new(v.clone());
-            }
-
-            SdpType::Information(_) |
-            SdpType::Key(_) => {
-                return Err(SdpParserError::Unsupported {
-                               message: "unsupported type found".to_string(),
-                               line: "".to_string(),
-                               line_number: Some(line.line_number),
-                           })
             }
 
             SdpType::Email(_) |
@@ -387,9 +367,13 @@ pub fn parse_media_vector(lines: &[SdpLine]) -> Result<Vec<SdpMedia>, SdpParserE
             SdpType::Zone(_) => {
                 return Err(SdpParserError::Sequence {
                                message: "invalid type in media section".to_string(),
-                               line_number: Some(line.line_number),
+                               line_number: line.line_number,
                            })
             }
+
+            // the line parsers throw unsupported errors for these already
+            SdpType::Information(_) |
+            SdpType::Key(_) => (),
         };
     }
     media_sections.push(sdp_media);
