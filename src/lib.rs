@@ -517,26 +517,10 @@ fn parse_sdp_line(line: &str, line_number: usize) -> Result<SdpLine, SdpParserEr
                      SdpParserInternalError::Unsupported(..) => {
                          SdpParserError::Unsupported {
                              error: e,
-                             line: Some(line.to_string()),
+                             line: line.to_string(),
                              line_number: Some(line_number),
                          }
                      }
-                     /*
-                     SdpParserInternalError::Integer(..) => {
-                         Err(SdpParserError::Line {
-                                 error: e,
-                                 line: line.to_string(),
-                                 line_number: Some(line_number),
-                             })
-                     }
-                     SdpParserInternalError::Address(..) => {
-                         Err(SdpParserError::Line {
-                                 error: e,
-                                 line: line.to_string(),
-                                 line_number: Some(line_number),
-                             })
-                     }
-                     */
                  })
 }
 
