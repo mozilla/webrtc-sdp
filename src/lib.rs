@@ -10,7 +10,7 @@ pub mod network;
 pub mod unsupported_types;
 
 use attribute_type::{SdpAttribute, parse_attribute};
-use error::SdpParserError;
+use error::{SdpParserInternalError, SdpParserError};
 use media_type::{SdpMedia, SdpMediaLine, parse_media, parse_media_vector};
 use network::{parse_addrtype, parse_nettype, parse_unicast_addr};
 use unsupported_types::{parse_email, parse_information, parse_key, parse_phone, parse_repeat,
@@ -56,7 +56,7 @@ pub struct SdpTiming {
     pub stop: u64,
 }
 
-pub enum SdpLine {
+pub enum SdpType {
     Attribute(SdpAttribute),
     Bandwidth(SdpBandwidth),
     Connection(SdpConnection),
@@ -74,22 +74,28 @@ pub enum SdpLine {
     Zone(String),
 }
 
+pub struct SdpLine {
+    pub line_number: usize,
+    pub sdp_type: SdpType,
+}
+
 pub struct SdpSession {
     pub version: u64,
     pub origin: SdpOrigin,
     pub session: String,
-    information: Option<String>,
-    uri: Option<String>,
-    email: Option<String>,
-    phone: Option<String>,
     pub connection: Option<SdpConnection>,
     pub bandwidth: Vec<SdpBandwidth>,
     pub timing: Option<SdpTiming>,
-    repeat: Option<String>,
-    zone: Option<String>,
-    key: Option<String>,
     pub attribute: Vec<SdpAttribute>,
     pub media: Vec<SdpMedia>,
+    // unsupported values:
+    // information: Option<String>,
+    // uri: Option<String>,
+    // email: Option<String>,
+    // phone: Option<String>,
+    // repeat: Option<String>,
+    // zone: Option<String>,
+    // key: Option<String>,
 }
 
 impl SdpSession {
@@ -98,16 +104,9 @@ impl SdpSession {
             version,
             origin,
             session,
-            information: None,
-            uri: None,
-            email: None,
-            phone: None,
             connection: None,
             bandwidth: Vec::new(),
             timing: None,
-            repeat: None,
-            zone: None,
-            key: None,
             attribute: Vec::new(),
             media: Vec::new(),
         }
@@ -137,12 +136,10 @@ impl SdpSession {
         self.timing = Some(t.clone())
     }
 
-    pub fn add_attribute(&mut self, a: &SdpAttribute) -> Result<(), SdpParserError> {
+    pub fn add_attribute(&mut self, a: &SdpAttribute) -> Result<(), SdpParserInternalError> {
         if !a.allowed_at_session_level() {
-            return Err(SdpParserError::Line {
-                           message: format!("{} not allowed at session level", a),
-                           line: "".to_string(),
-                       });
+            return Err(SdpParserInternalError::Generic(format!("{} not allowed at session level",
+                                                               a)));
         };
         Ok(self.attribute.push(a.clone()))
     }
@@ -168,9 +165,9 @@ impl SdpSession {
     }
 }
 
-fn parse_session(value: &str) -> Result<SdpLine, SdpParserError> {
+fn parse_session(value: &str) -> Result<SdpType, SdpParserInternalError> {
     println!("session: {}", value);
-    Ok(SdpLine::Session(String::from(value)))
+    Ok(SdpType::Session(String::from(value)))
 }
 
 #[test]
@@ -179,16 +176,14 @@ fn test_session_works() {
 }
 
 
-fn parse_version(value: &str) -> Result<SdpLine, SdpParserError> {
+fn parse_version(value: &str) -> Result<SdpType, SdpParserInternalError> {
     let ver = value.parse::<u64>()?;
     if ver != 0 {
-        return Err(SdpParserError::Line {
-                       message: "unsupported version in v field".to_string(),
-                       line: value.to_string(),
-                   });
+        return Err(SdpParserInternalError::Generic(format!("version type contains unsupported value {}",
+                                                           ver)));
     };
     println!("version: {}", ver);
-    Ok(SdpLine::Version(ver))
+    Ok(SdpType::Version(ver))
 }
 
 #[test]
@@ -203,69 +198,55 @@ fn test_version_unsupported_input() {
     assert!(parse_version("a").is_err());
 }
 
-fn parse_origin(value: &str) -> Result<SdpLine, SdpParserError> {
+fn parse_origin(value: &str) -> Result<SdpType, SdpParserInternalError> {
     let mut tokens = value.split_whitespace();
     let username = match tokens.next() {
         None => {
-            return Err(SdpParserError::Line {
-                           message: "Origin field is missing username token".to_string(),
-                           line: value.to_string(),
-                       })
+            return Err(SdpParserInternalError::Generic("Origin type is missing username token"
+                                                           .to_string()))
         }
         Some(x) => x,
     };
     let session_id = match tokens.next() {
         None => {
-            return Err(SdpParserError::Line {
-                           message: "Origin field is missing session ID token".to_string(),
-                           line: value.to_string(),
-                       })
+            return Err(SdpParserInternalError::Generic("Origin type is missing session ID token"
+                                                           .to_string()))
         }
         Some(x) => x.parse::<u64>()?,
     };
     let session_version = match tokens.next() {
         None => {
-            return Err(SdpParserError::Line {
-                           message: "Origin field is missing session version token".to_string(),
-                           line: value.to_string(),
-                       })
+            return Err(SdpParserInternalError::Generic(
+                           "Origin type is missing session version token"
+                           .to_string()))
         }
         Some(x) => x.parse::<u64>()?,
     };
     match tokens.next() {
         None => {
-            return Err(SdpParserError::Line {
-                           message: "Origin field is missing session version token".to_string(),
-                           line: value.to_string(),
-                       })
+            return Err(SdpParserInternalError::Generic(
+                           "Origin type is missing session version token".to_string(),
+                       ))
         }
         Some(x) => parse_nettype(x)?,
     };
     let addrtype = match tokens.next() {
         None => {
-            return Err(SdpParserError::Line {
-                           message: "Origin field is missing address type token".to_string(),
-                           line: value.to_string(),
-                       })
+            return Err(SdpParserInternalError::Generic("Origin type is missing address type token"
+                                                           .to_string()))
         }
         Some(x) => parse_addrtype(x)?,
     };
     let unicast_addr = match tokens.next() {
         None => {
-            return Err(SdpParserError::Line {
-                           message: "Origin field is missing IP address token".to_string(),
-                           line: value.to_string(),
-                       })
+            return Err(SdpParserInternalError::Generic("Origin type is missing IP address token"
+                                                           .to_string()))
         }
         Some(x) => parse_unicast_addr(x)?,
     };
     if !addrtype.same_protocol(&unicast_addr) {
-        return Err(SdpParserError::Line {
-                       message: "Failed to parse unicast address attribute.\
-                          addrtype does not match address."
-                               .to_string(),
-                       line: value.to_string(),
-                   });
+        return Err(SdpParserInternalError::Generic("Origin addrtype does not match address."
+                                                       .to_string()));
     }
     let o = SdpOrigin {
         username: String::from(username),
@@ -274,7 +255,7 @@ fn parse_origin(value: &str) -> Result<SdpLine, SdpParserError> {
         unicast_addr,
     };
     println!("{}", o);
-    Ok(SdpLine::Origin(o))
+    Ok(SdpType::Origin(o))
 }
 
 #[test]
@@ -310,13 +291,11 @@ fn test_origin_addr_type_mismatch() {
     assert!(parse_origin("mozilla 506705521068071134 0 IN IP4 ::1").is_err());
 }
 
-fn parse_connection(value: &str) -> Result<SdpLine, SdpParserError> {
+fn parse_connection(value: &str) -> Result<SdpType, SdpParserInternalError> {
     let cv: Vec<&str> = value.split_whitespace().collect();
     if cv.len() != 3 {
-        return Err(SdpParserError::Line {
-                       message: "connection attribute must have three tokens".to_string(),
-                       line: value.to_string(),
-                   });
+        return Err(SdpParserInternalError::Generic("connection attribute must have three tokens"
+                                                       .to_string()));
     }
     parse_nettype(cv[0])?;
     let addrtype = parse_addrtype(cv[1])?;
@@ -333,16 +312,12 @@ fn parse_connection(value: &str) -> Result<SdpLine, SdpParserError> {
     }
     let addr = parse_unicast_addr(addr_token)?;
     if !addrtype.same_protocol(&addr) {
-        return Err(SdpParserError::Line {
-                       message: "Failed to parse unicast address attribute.\
-                          addrtype does not match address."
-                               .to_string(),
-                       line: value.to_string(),
-                   });
+        return Err(SdpParserInternalError::Generic("connection addrtype does not match address."
+                                                       .to_string()));
     }
     let c = SdpConnection { addr, ttl, amount };
     println!("connection: {}", c.addr);
-    Ok(SdpLine::Connection(c))
+    Ok(SdpType::Connection(c))
 }
 
 #[test]
@@ -383,13 +358,11 @@ fn connection_addr_type_mismatch() {
     assert!(parse_connection("IN IP4 ::1").is_err());
 }
 
-fn parse_bandwidth(value: &str) -> Result<SdpLine, SdpParserError> {
+fn parse_bandwidth(value: &str) -> Result<SdpType, SdpParserInternalError> {
     let bv: Vec<&str> = value.split(':').collect();
     if bv.len() != 2 {
-        return Err(SdpParserError::Line {
-                       message: "bandwidth attribute must have two tokens".to_string(),
-                       line: value.to_string(),
-                   });
+        return Err(SdpParserInternalError::Generic("bandwidth attribute must have two tokens"
+                                                       .to_string()));
     }
     let bandwidth = bv[1].parse::<u32>()?;
     let bw = match bv[0].to_uppercase().as_ref() {
@@ -399,7 +372,7 @@ fn parse_bandwidth(value: &str) -> Result<SdpLine, SdpParserError> {
         _ => SdpBandwidth::Unknown(String::from(bv[0]), bandwidth),
     };
     println!("bandwidth: {}, {}", bv[0], bandwidth);
-    Ok(SdpLine::Bandwidth(bw))
+    Ok(SdpType::Bandwidth(bw))
 }
 
 #[test]
@@ -420,19 +393,17 @@ fn bandwidth_unsupported_type() {
     assert!(parse_bandwidth("UNSUPPORTED:12345").is_ok());
 }
 
-fn parse_timing(value: &str) -> Result<SdpLine, SdpParserError> {
+fn parse_timing(value: &str) -> Result<SdpType, SdpParserInternalError> {
     let tv: Vec<&str> = value.split_whitespace().collect();
     if tv.len() != 2 {
-        return Err(SdpParserError::Line {
-                       message: "timing attribute must have two tokens".to_string(),
-                       line: value.to_string(),
-                   });
+        return Err(SdpParserInternalError::Generic("timing attribute must have two tokens"
+                                                       .to_string()));
     }
     let start = tv[0].parse::<u64>()?;
     let stop = tv[1].parse::<u64>()?;
     let t = SdpTiming { start, stop };
     println!("timing: {}, {}", t.start, t.stop);
-    Ok(SdpLine::Timing(t))
+    Ok(SdpType::Timing(t))
 }
 
 #[test]
@@ -452,101 +423,154 @@ fn test_timing_wrong_amount_of_tokens() {
     assert!(parse_timing("0 0 0").is_err());
 }
 
-fn parse_sdp_line(line: &str) -> Result<SdpLine, SdpParserError> {
+fn parse_sdp_line(line: &str, line_number: usize) -> Result<SdpLine, SdpParserError> {
     if line.find('=') == None {
         return Err(SdpParserError::Line {
-                       message: "missing = character in line".to_string(),
+                       error: SdpParserInternalError::Generic("missing = character in line"
+                                                                  .to_string()),
                        line: line.to_string(),
+                       line_number: line_number,
                    });
     }
-    let v: Vec<&str> = line.splitn(2, '=').collect();
-    if v.len() < 2 {
-        return Err(SdpParserError::Line {
-                       message: "failed to split field and attribute".to_string(),
-                       line: line.to_string(),
-                   });
-    };
-    let name = v[0].trim();
-    if name.is_empty() || name.len() > 1 {
-        return Err(SdpParserError::Line {
-                       message: "field name empty or too long".to_string(),
-                       line: line.to_string(),
-                   });
-    };
-    let value = v[1].trim();
-    if value.is_empty() {
-        return Err(SdpParserError::Line {
-                       message: "attribute value has zero length".to_string(),
-                       line: line.to_string(),
-                   });
-    }
-    match name.to_lowercase().as_ref() {
-        "a" => parse_attribute(value),
-        "b" => parse_bandwidth(value),
-        "c" => parse_connection(value),
-        "e" => parse_email(value),
-        "i" => parse_information(value),
-        "k" => parse_key(value),
-        "m" => parse_media(value),
-        "o" => parse_origin(value),
-        "p" => parse_phone(value),
-        "r" => parse_repeat(value),
-        "s" => parse_session(value),
-        "t" => parse_timing(value),
-        "u" => parse_uri(value),
-        "v" => parse_version(value),
-        "z" => parse_zone(value),
-        _ => {
-            Err(SdpParserError::Line {
-                    message: "unsupported sdp field".to_string(),
-                    line: line.to_string(),
-                })
+    let mut splitted_line = line.splitn(2, '=');
+    let line_type = match splitted_line.next() {
+        None => {
+            return Err(SdpParserError::Line {
+                           error: SdpParserInternalError::Generic("missing type".to_string()),
+                           line: line.to_string(),
+                           line_number: line_number,
+                       })
         }
-    }
+        Some(t) => {
+            let trimmed = t.trim();
+            if trimmed.len() > 1 {
+                return Err(SdpParserError::Line {
+                               error: SdpParserInternalError::Generic("type to long".to_string()),
+                               line: line.to_string(),
+                               line_number: line_number,
+                           });
+            }
+            if trimmed.is_empty() {
+                return Err(SdpParserError::Line {
+                               error: SdpParserInternalError::Generic("type is empty".to_string()),
+                               line: line.to_string(),
+                               line_number: line_number,
+                           });
+            }
+            trimmed
+        }
+    };
+    let line_value = match splitted_line.next() {
+        None => {
+            return Err(SdpParserError::Line {
+                           error: SdpParserInternalError::Generic("missing value".to_string()),
+                           line: line.to_string(),
+                           line_number: line_number,
+                       })
+        }
+        Some(v) => {
+            let trimmed = v.trim();
+            if trimmed.is_empty() {
+                return Err(SdpParserError::Line {
+                               error: SdpParserInternalError::Generic("value is empty".to_string()),
+                               line: line.to_string(),
+                               line_number: line_number,
+                           });
+            }
+            trimmed
+        }
+    };
+    match line_type.to_lowercase().as_ref() {
+            "a" => parse_attribute(line_value),
+            "b" => parse_bandwidth(line_value),
+            "c" => parse_connection(line_value),
+            "e" => parse_email(line_value),
+            "i" => parse_information(line_value),
+            "k" => parse_key(line_value),
+            "m" => parse_media(line_value),
+            "o" => parse_origin(line_value),
+            "p" => parse_phone(line_value),
+            "r" => parse_repeat(line_value),
+            "s" => parse_session(line_value),
+            "t" => parse_timing(line_value),
+            "u" => parse_uri(line_value),
+            "v" => parse_version(line_value),
+            "z" => parse_zone(line_value),
+            _ => Err(SdpParserInternalError::Generic("unknown sdp type".to_string())),
+        }
+        .map(|sdp_type| {
+                 SdpLine {
+                     line_number,
+                     sdp_type,
+                 }
+             })
+        .map_err(|e| match e {
+                     SdpParserInternalError::Generic(..) |
+                     SdpParserInternalError::Integer(..) |
+                     SdpParserInternalError::Address(..) => {
+                         SdpParserError::Line {
+                             error: e,
+                             line: line.to_string(),
+                             line_number: line_number,
+                         }
+                     }
+                     SdpParserInternalError::Unsupported(..) => {
+                         SdpParserError::Unsupported {
+                             error: e,
+                             line: line.to_string(),
+                             line_number: line_number,
+                         }
+                     }
+                 })
 }
 
 #[test]
 fn test_parse_sdp_line_works() {
-    assert!(parse_sdp_line("v=0").is_ok());
-    assert!(parse_sdp_line("z=somekey").is_ok());
+    assert!(parse_sdp_line("v=0", 0).is_ok());
+    assert!(parse_sdp_line("s=somesession", 0).is_ok());
 }
 
 #[test]
 fn test_parse_sdp_line_empty_line() {
-    assert!(parse_sdp_line("").is_err());
+    assert!(parse_sdp_line("", 0).is_err());
 }
 
 #[test]
 fn test_parse_sdp_line_unknown_key() {
-    assert!(parse_sdp_line("y=foobar").is_err());
+    assert!(parse_sdp_line("y=foobar", 0).is_err());
+}
+
+#[test]
+fn test_parse_sdp_line_too_long_type() {
+    assert!(parse_sdp_line("ab=foobar", 0).is_err());
 }
 
 #[test]
 fn test_parse_sdp_line_without_equal() {
-    assert!(parse_sdp_line("abcd").is_err());
-    assert!(parse_sdp_line("ab cd").is_err());
+    assert!(parse_sdp_line("abcd", 0).is_err());
+    assert!(parse_sdp_line("ab cd", 0).is_err());
 }
 
 #[test]
 fn test_parse_sdp_line_empty_value() {
-    assert!(parse_sdp_line("v=").is_err());
-    assert!(parse_sdp_line("o=").is_err());
-    assert!(parse_sdp_line("s=").is_err());
+    assert!(parse_sdp_line("v=", 0).is_err());
+    assert!(parse_sdp_line("o=", 0).is_err());
+    assert!(parse_sdp_line("s=", 0).is_err());
 }
 
 #[test]
 fn test_parse_sdp_line_empty_name() {
-    assert!(parse_sdp_line("=abc").is_err());
+    assert!(parse_sdp_line("=abc", 0).is_err());
 }
 
 #[test]
 fn test_parse_sdp_line_valid_a_line() {
-    assert!(parse_sdp_line("a=rtpmap:8 PCMA/8000").is_ok());
+    assert!(parse_sdp_line("a=rtpmap:8 PCMA/8000", 0).is_ok());
 }
 
 #[test]
 fn test_parse_sdp_line_invalid_a_line() {
-    assert!(parse_sdp_line("a=rtpmap:8 PCMA/8000 1").is_err());
+    assert!(parse_sdp_line("a=rtpmap:8 PCMA/8000 1", 0).is_err());
 }
 
 // TODO add unit tests
@@ -554,67 +578,71 @@ fn parse_sdp_vector(lines: &[SdpLine]) -> Result<SdpSession, SdpParserError> {
     if lines.len() < 5 {
         return Err(SdpParserError::Sequence {
                        message: "SDP neeeds at least 5 lines".to_string(),
-                       line: None,
+                       line_number: 0,
                    });
     }
 
     // TODO are these mataches really the only way to verify the types?
-    let version: u64 = match lines[0] {
-        SdpLine::Version(v) => v,
+    let version: u64 = match lines[0].sdp_type {
+        SdpType::Version(v) => v,
         _ => {
             return Err(SdpParserError::Sequence {
                            message: "first line needs to be version number".to_string(),
-                           line: None,
+                           line_number: lines[0].line_number,
                        })
         }
     };
-    let origin: SdpOrigin = match lines[1] {
-        SdpLine::Origin(ref v) => v.clone(),
+    let origin: SdpOrigin = match lines[1].sdp_type {
+        SdpType::Origin(ref v) => v.clone(),
         _ => {
             return Err(SdpParserError::Sequence {
                            message: "second line needs to be origin".to_string(),
-                           line: None,
+                           line_number: lines[1].line_number,
                        })
         }
     };
-    let session: String = match lines[2] {
-        SdpLine::Session(ref v) => v.clone(),
+    let session: String = match lines[2].sdp_type {
+        SdpType::Session(ref v) => v.clone(),
         _ => {
             return Err(SdpParserError::Sequence {
                            message: "third line needs to be session".to_string(),
-                           line: None,
+                           line_number: lines[2].line_number,
                        })
         }
     };
     let mut sdp_session = SdpSession::new(version, origin, session);
-    for (i, line) in lines.iter().enumerate().skip(3) {
-        match *line {
-            SdpLine::Attribute(ref a) => sdp_session.add_attribute(a)?,
-            SdpLine::Bandwidth(ref b) => sdp_session.add_bandwidth(b),
-            SdpLine::Timing(ref t) => sdp_session.set_timing(t),
-            SdpLine::Media(_) => sdp_session.extend_media(parse_media_vector(&lines[i..])?),
-            SdpLine::Origin(_) |
-            SdpLine::Session(_) |
-            SdpLine::Version(_) => {
+    for (index, line) in lines.iter().enumerate().skip(3) {
+        match line.sdp_type {
+            SdpType::Attribute(ref a) => {
+                sdp_session
+                    .add_attribute(a)
+                    .map_err(|e: SdpParserInternalError| {
+                                 SdpParserError::Sequence {
+                                     message: format!("{}", e),
+                                     line_number: line.line_number,
+                                 }
+                             })?
+            }
+            SdpType::Bandwidth(ref b) => sdp_session.add_bandwidth(b),
+            SdpType::Timing(ref t) => sdp_session.set_timing(t),
+            SdpType::Media(_) => sdp_session.extend_media(parse_media_vector(&lines[index..])?),
+            SdpType::Origin(_) |
+            SdpType::Session(_) |
+            SdpType::Version(_) => {
                 return Err(SdpParserError::Sequence {
-                               message: "internal parser error".to_string(),
-                               line: Some(i),
+                               message: "version, origin or session at wrong level".to_string(),
+                               line_number: line.line_number,
                            })
             }
-            // TODO does anyone really ever need these?
-            SdpLine::Connection(_) |
-            SdpLine::Email(_) |
-            SdpLine::Information(_) |
-            SdpLine::Key(_) |
-            SdpLine::Phone(_) |
-            SdpLine::Repeat(_) |
-            SdpLine::Uri(_) |
-            SdpLine::Zone(_) => {
-                return Err(SdpParserError::Unsupported {
-                               message: "unsupported type".to_string(),
-                               line: "".to_string(),
-                           })
-            }
+            // the line parsers throw unsupported errors for these already
+            SdpType::Connection(_) |
+            SdpType::Email(_) |
+            SdpType::Information(_) |
+            SdpType::Key(_) |
+            SdpType::Phone(_) |
+            SdpType::Repeat(_) |
+            SdpType::Uri(_) |
+            SdpType::Zone(_) => (),
         };
         if sdp_session.has_media() {
             break;
@@ -622,14 +650,14 @@ fn parse_sdp_vector(lines: &[SdpLine]) -> Result<SdpSession, SdpParserError> {
     }
     if !sdp_session.has_timing() {
         return Err(SdpParserError::Sequence {
-                       message: "Missing timing".to_string(),
-                       line: None,
+                       message: "Missing timing type".to_string(),
+                       line_number: 0,
                    });
     }
     if !sdp_session.has_media() {
         return Err(SdpParserError::Sequence {
-                       message: "Missing media".to_string(),
-                       line: None,
+                       message: "Missing media setion".to_string(),
+                       line_number: 0,
                    });
     }
     Ok(sdp_session)
@@ -638,26 +666,29 @@ fn parse_sdp_vector(lines: &[SdpLine]) -> Result<SdpSession, SdpParserError> {
 pub fn parse_sdp(sdp: &str, fail_on_warning: bool) -> Result<SdpSession, SdpParserError> {
     if sdp.is_empty() {
         return Err(SdpParserError::Line {
-                       message: "empty SDP".to_string(),
-                       line: "".to_string(),
+                       error: SdpParserInternalError::Generic("empty SDP".to_string()),
+                       line: sdp.to_string(),
+                       line_number: 0,
                    });
     }
     if sdp.len() < 62 {
         return Err(SdpParserError::Line {
-                       message: "string to short to be valid SDP".to_string(),
+                       error: SdpParserInternalError::Generic("string to short to be valid SDP"
+                                                                  .to_string()),
                        line: sdp.to_string(),
+                       line_number: 0,
                    });
     }
     let lines = sdp.lines();
     let mut errors: Vec<SdpParserError> = Vec::new();
     let mut warnings: Vec<SdpParserError> = Vec::new();
     let mut sdp_lines: Vec<SdpLine> = Vec::new();
-    for line in lines {
+    for (line_number, line) in lines.enumerate() {
         let stripped_line = line.trim();
         if stripped_line.is_empty() {
             continue;
         }
-        match parse_sdp_line(stripped_line) {
+        match parse_sdp_line(stripped_line, line_number) {
             Ok(n) => {
                 sdp_lines.push(n);
             }
@@ -665,37 +696,36 @@ pub fn parse_sdp(sdp: &str, fail_on_warning: bool) -> Result<SdpSession, SdpPars
                 match e {
                     // FIXME is this really a good way to accomplish this?
                     SdpParserError::Line {
-                        message: x,
-                        line: y,
+                        error,
+                        line,
+                        line_number,
                     } => {
                         errors.push(SdpParserError::Line {
-                                        message: x,
-                                        line: y,
+                                        error,
+                                        line,
+                                        line_number,
                                     })
                     }
                     SdpParserError::Unsupported {
-                        message: x,
-                        line: y,
+                        error,
+                        line,
+                        line_number,
                     } => {
-                        println!("Warning unsupported value encountered: {}\n in line {}",
-                                 x,
-                                 y);
                         warnings.push(SdpParserError::Unsupported {
-                                          message: x,
-                                          line: y,
+                                          error,
+                                          line,
+                                          line_number,
                                       });
                     }
                     SdpParserError::Sequence {
-                        message: x,
-                        line: y,
+                        message,
+                        line_number,
                     } => {
                         errors.push(SdpParserError::Sequence {
-                                        message: x,
-                                        line: y,
+                                        message,
+                                        line_number,
                                     })
                     }
-                    SdpParserError::Integer(err) => errors.push(SdpParserError::Integer(err)),
-                    SdpParserError::Address(err) => errors.push(SdpParserError::Address(err)),
                 }
             }
         };
@@ -704,13 +734,7 @@ pub fn parse_sdp(sdp: &str, fail_on_warning: bool) -> Result<SdpSession, SdpPars
         if fail_on_warning {
             return Err(warning);
         } else {
-            match warning {
-                SdpParserError::Unsupported {
-                    message: msg,
-                    line: l,
-                } => println!("Parser unknown: {}\n  in line: {}", msg, l),
-                _ => panic!(),
-            };
+            println!("Warning: {}", warning);
         };
     }
     // We just return the last of the errors here
