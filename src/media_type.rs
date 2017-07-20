@@ -141,6 +141,10 @@ impl SdpMedia {
         self.bandwidth.push(bw.clone())
     }
 
+    pub fn gt_connection(&self) -> &Option<SdpConnection> {
+        &self.connection
+    }
+
     pub fn set_connection(&mut self, c: &SdpConnection) -> Result<(), SdpParserInternalError> {
         if self.connection.is_some() {
             return Err(SdpParserInternalError::Generic("connection type already exists at this media level"
