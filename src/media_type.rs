@@ -109,16 +109,16 @@ impl SdpMedia {
         &self.media.formats
     }
 
-    pub fn has_connection(&self) -> bool {
-        self.connection.is_some()
-    }
-
     pub fn has_bandwidth(&self) -> bool {
         !self.bandwidth.is_empty()
     }
 
     pub fn get_bandwidth(&self) -> &Vec<SdpBandwidth> {
         &self.bandwidth
+    }
+
+    pub fn add_bandwidth(&mut self, bw: &SdpBandwidth) {
+        self.bandwidth.push(bw.clone())
     }
 
     pub fn has_attributes(&self) -> bool {
@@ -137,11 +137,11 @@ impl SdpMedia {
         Ok(self.attribute.push(attr.clone()))
     }
 
-    pub fn add_bandwidth(&mut self, bw: &SdpBandwidth) {
-        self.bandwidth.push(bw.clone())
+    pub fn has_connection(&self) -> bool {
+        self.connection.is_some()
     }
 
-    pub fn gt_connection(&self) -> &Option<SdpConnection> {
+    pub fn get_connection(&self) -> &Option<SdpConnection> {
         &self.connection
     }
 
