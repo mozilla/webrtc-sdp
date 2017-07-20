@@ -124,6 +124,10 @@ impl SdpSession {
         &self.session
     }
 
+    pub fn get_connection(&self) -> &Option<SdpConnection> {
+        &self.connection
+    }
+
     pub fn set_connection(&mut self, c: &SdpConnection) {
         self.connection = Some(c.clone())
     }

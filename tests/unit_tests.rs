@@ -27,6 +27,7 @@ m=audio 0 UDP/TLS/RTP/SAVPF 0\r\n";
     assert!(!msection.has_attributes());
     assert!(!msection.has_bandwidth());
     assert!(!msection.has_connection());
+    assert!(msection.get_connection().is_none());
 }
 
 #[test]
@@ -66,6 +67,7 @@ m=audio 0 UDP/TLS/RTP/SAVPF 0\r\n";
     let sdp = sdp_opt.unwrap();
     assert_eq!(sdp.version, 0);
     assert_eq!(sdp.session, "-");
+    assert!(sdp.get_connection().is_some());
 }
 
 #[test]
@@ -110,6 +112,7 @@ a=ssrc:2655508255 cname:{735484ea-4f6c-f74a-bd66-7425f8476c2e}\r\n";
                rsdparsa::media_type::SdpProtocolValue::UdpTlsRtpSavpf);
     assert!(msection.has_attributes());
     assert!(msection.has_connection());
+    assert!(msection.get_connection().is_some());
     assert!(!msection.has_bandwidth());
 }
 
