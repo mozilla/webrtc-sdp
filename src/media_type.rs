@@ -125,7 +125,7 @@ impl SdpMedia {
         !self.attribute.is_empty()
     }
 
-    pub fn get_attributes(&self) -> &[SdpAttribute] {
+    pub fn get_attributes(&self) -> &Vec<SdpAttribute> {
         &self.attribute
     }
 
