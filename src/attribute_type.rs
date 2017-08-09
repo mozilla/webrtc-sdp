@@ -245,6 +245,12 @@ pub struct SdpAttributeMsid {
     pub appdata: Option<String>,
 }
 
+#[derive(Clone, Debug)]
+pub struct SdpAttributeMsidSemantic {
+    pub semantic: String,
+    pub msids: Vec<String>,
+}
+
 #[derive(Clone)]
 pub struct SdpAttributeRtpmap {
     pub payload_type: u32,
@@ -329,7 +335,7 @@ pub enum SdpAttribute {
     MaxPtime(u64),
     Mid(String),
     Msid(SdpAttributeMsid),
-    MsidSemantic(String),
+    MsidSemantic(SdpAttributeMsidSemantic),
     Ptime(u64),
     Rid(String),
     Recvonly,
@@ -526,7 +532,7 @@ impl FromStr for SdpAttribute {
             "max-message-size" => Ok(SdpAttribute::MaxMessageSize(val.parse()?)),
             "maxptime" => Ok(SdpAttribute::MaxPtime(val.parse()?)),
             "mid" => Ok(SdpAttribute::Mid(string_or_empty(val)?)),
-            "msid-semantic" => Ok(SdpAttribute::MsidSemantic(string_or_empty(val)?)),
+            "msid-semantic" => parse_msid_semantic(val),
             "ptime" => Ok(SdpAttribute::Ptime(val.parse()?)),
             "rid" => Ok(SdpAttribute::Rid(string_or_empty(val)?)),
             "recvonly" => Ok(SdpAttribute::Recvonly),
@@ -778,6 +784,21 @@ fn parse_msid(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
     Ok(SdpAttribute::Msid(SdpAttributeMsid { id, appdata }))
 
 }
+
+fn parse_msid_semantic(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
+    let tokens: Vec<_> = to_parse.split_whitespace().collect();
+    if tokens.len() < 1 {
+        return Err(SdpParserInternalError::Generic("Msid-semantic attribute is missing msid-semantic token"
+                                                   .to_string()))
+    }
+    // TODO: Should msids be checked to ensure they are non empty?
+    let semantic = SdpAttributeMsidSemantic {
+        semantic: tokens[0].to_string(),
+        msids: tokens[1..].iter().map(|x| x.to_string()).collect()
+    };
+    Ok(SdpAttribute::MsidSemantic(semantic))
+}
+
 fn parse_remote_candidates(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
     let mut tokens = to_parse.split_whitespace();
     let component = match tokens.next() {
