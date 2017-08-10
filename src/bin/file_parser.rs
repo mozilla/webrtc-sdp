@@ -31,8 +31,5 @@ fn main() {
         Ok(s) => s
     };
 
-    match rsdparsa::parse_sdp(&s, true) {
-        Ok(_) => return,
-        Err(e) => println!("{:?}", e)
-    }
+    rsdparsa::parse_sdp(&s, true).is_ok();
 }
