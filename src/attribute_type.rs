@@ -201,6 +201,7 @@ pub struct SdpAttributeExtmap {
     pub id: u32,
     pub direction: Option<SdpAttributeDirection>,
     pub url: String,
+    pub extension_attributes: Option<String>
 }
 
 #[derive(Clone)]
@@ -677,10 +678,12 @@ fn parse_candidate(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalErro
     Ok(SdpAttribute::Candidate(cand))
 }
 
+// ABNF for extmap is defined in RFC 5285
+// https://tools.ietf.org/html/rfc5285#section-7
 fn parse_extmap(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
     let tokens: Vec<&str> = to_parse.split_whitespace().collect();
-    if tokens.len() != 2 {
-        return Err(SdpParserInternalError::Generic("Extmap needs to have two tokens".to_string()));
+    if tokens.len() < 2 {
+        return Err(SdpParserInternalError::Generic("Extmap needs to have at least two tokens".to_string()));
     }
     let id: u32;
     let mut direction: Option<SdpAttributeDirection> = None;
@@ -698,11 +701,22 @@ fn parse_extmap(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> 
                              }
                          })
     }
+    // Consider replaceing to_parse.split_whitespace() above with splitn on space. Would we want the pattern to split on any amout of any kind of whitespace?
+    let extension_attributes = if tokens.len() == 2 {
+        None
+    } else {
+        let ext_string: String = tokens[2..].iter().map(|x| *x).collect();
+        if !valid_byte_string(&ext_string) {
+            return Err(SdpParserInternalError::Generic("Illegal character in extmap extension attributes".to_string()))
+        }
+        Some(ext_string)
+    };
     Ok(SdpAttribute::Extmap(SdpAttributeExtmap {
-                                id,
-                                direction,
-                                url: tokens[1].to_string(),
-                            }))
+        id,
+        direction,
+        url: tokens[1].to_string(),
+        extension_attributes: extension_attributes
+    }))
 }
 
 fn parse_fingerprint(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
@@ -1123,10 +1137,18 @@ fn test_parse_attribute_extmap() {
     assert!(parse_attribute("extmap:3 http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time")
                 .is_ok());
 
+    assert!(parse_attribute("extmap:3 http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time ext_attributes")
+            .is_ok());
+    
     assert!(parse_attribute("extmap:a/sendrecv urn:ietf:params:rtp-hdrext:ssrc-audio-level")
                 .is_err());
     assert!(parse_attribute("extmap:4/unsupported urn:ietf:params:rtp-hdrext:ssrc-audio-level")
                 .is_err());
+
+    let mut bad_char = String::from("extmap:3 http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time ");
+    bad_char.push(0x00 as char);
+    assert!(parse_attribute(&bad_char)
+            .is_err());
 }
 
 #[test]
@@ -1415,4 +1437,12 @@ fn test_parse_attribute_ssrc_group() {
 #[test]
 fn test_parse_unknown_attribute() {
     assert!(parse_attribute("unknown").is_err())
+}
+
+// Returns true if valid byte-string as defined by RFC 4566
+// https://tools.ietf.org/html/rfc4566
+fn valid_byte_string(input: &str) -> bool {
+    !(input.contains(0x00 as char) ||
+     input.contains(0x0A as char) ||
+     input.contains(0x0D as char))
 }
