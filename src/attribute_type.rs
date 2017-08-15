@@ -201,7 +201,7 @@ pub struct SdpAttributeExtmap {
     pub id: u32,
     pub direction: Option<SdpAttributeDirection>,
     pub url: String,
-    pub extension_attributes: Option<String>
+    pub extension_attributes: Option<String>,
 }
 
 #[derive(Clone)]
@@ -256,22 +256,18 @@ pub struct SdpAttributeMsidSemantic {
 pub struct SdpAttributeRtpmap {
     pub payload_type: u32,
     pub codec_name: String,
-    pub frequency: Option<u32>,
+    pub frequency: u32,
     pub channels: Option<u32>,
 }
 
 impl SdpAttributeRtpmap {
-    pub fn new(payload_type: u32, codec_name: String) -> SdpAttributeRtpmap {
+    pub fn new(payload_type: u32, codec_name: String, frequency: u32) -> SdpAttributeRtpmap {
         SdpAttributeRtpmap {
             payload_type,
             codec_name,
-            frequency: None,
+            frequency,
             channels: None,
         }
-    }
-
-    fn set_frequency(&mut self, f: u32) {
-        self.frequency = Some(f)
     }
 
     fn set_channels(&mut self, c: u32) {
@@ -683,7 +679,8 @@ fn parse_candidate(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalErro
 fn parse_extmap(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
     let tokens: Vec<&str> = to_parse.split_whitespace().collect();
     if tokens.len() < 2 {
-        return Err(SdpParserInternalError::Generic("Extmap needs to have at least two tokens".to_string()));
+        return Err(SdpParserInternalError::Generic("Extmap needs to have at least two tokens"
+                                                       .to_string()));
     }
     let id: u32;
     let mut direction: Option<SdpAttributeDirection> = None;
@@ -707,16 +704,16 @@ fn parse_extmap(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> 
     } else {
         let ext_string: String = tokens[2..].join(" ");
         if !valid_byte_string(&ext_string) {
-            return Err(SdpParserInternalError::Generic("Illegal character in extmap extension attributes".to_string()))
+            return Err(SdpParserInternalError::Generic("Illegal character in extmap extension attributes".to_string()));
         }
         Some(ext_string)
     };
     Ok(SdpAttribute::Extmap(SdpAttributeExtmap {
-        id,
-        direction,
-        url: tokens[1].to_string(),
-        extension_attributes: extension_attributes
-    }))
+                                id,
+                                direction,
+                                url: tokens[1].to_string(),
+                                extension_attributes: extension_attributes,
+                            }))
 }
 
 fn parse_fingerprint(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
@@ -803,12 +800,12 @@ fn parse_msid_semantic(to_parse: &str) -> Result<SdpAttribute, SdpParserInternal
     let tokens: Vec<_> = to_parse.split_whitespace().collect();
     if tokens.len() < 1 {
         return Err(SdpParserInternalError::Generic("Msid-semantic attribute is missing msid-semantic token"
-                                                   .to_string()))
+                                                   .to_string()));
     }
     // TODO: Should msids be checked to ensure they are non empty?
     let semantic = SdpAttributeMsidSemantic {
         semantic: tokens[0].to_string(),
-        msids: tokens[1..].iter().map(|x| x.to_string()).collect()
+        msids: tokens[1..].iter().map(|x| x.to_string()).collect(),
     };
     Ok(SdpAttribute::MsidSemantic(semantic))
 }
@@ -854,24 +851,42 @@ fn parse_remote_candidates(to_parse: &str) -> Result<SdpAttribute, SdpParserInte
 }
 
 fn parse_rtpmap(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
-    let tokens: Vec<&str> = to_parse.split_whitespace().collect();
-    if tokens.len() != 2 {
-        return Err(SdpParserInternalError::Generic("Rtpmap needs to have two tokens".to_string()));
-    }
-    // TODO limit this to dymaic PTs
-    let payload_type: u32 = tokens[0].parse::<u32>()?;
-    let split: Vec<&str> = tokens[1].split('/').collect();
-    if split.len() > 3 {
-        return Err(SdpParserInternalError::Generic("Rtpmap codec token can max 3 subtokens"
-                                                       .to_string()));
-    }
-    let mut rtpmap = SdpAttributeRtpmap::new(payload_type, split[0].to_string());
-    if split.len() > 1 {
-        rtpmap.set_frequency(split[1].parse::<u32>()?);
-    }
-    if split.len() > 2 {
-        rtpmap.set_channels(split[2].parse::<u32>()?);
-    }
+    let mut tokens = to_parse.split_whitespace();
+    let payload_type: u32 = match tokens.next() {
+        None => {
+            return Err(SdpParserInternalError::Generic("Rtpmap missing payload type".to_string()))
+        }
+        Some(x) => {
+            let pt = x.parse::<u32>()?;
+            if pt > 127 {
+                return Err(SdpParserInternalError::Generic("Rtpmap payload type must be less then 127".to_string()));
+            };
+            pt
+        }
+    };
+    let mut parameters = match tokens.next() {
+        None => {
+            return Err(SdpParserInternalError::Generic("Rtpmap missing payload type".to_string()))
+        }
+        Some(x) => x.split('/'),
+    };
+    let name = match parameters.next() {
+        None => {
+            return Err(SdpParserInternalError::Generic("Rtpmap missing codec name".to_string()))
+        }
+        Some(x) => x.to_string(),
+    };
+    let frequency = match parameters.next() {
+        None => {
+            return Err(SdpParserInternalError::Generic("Rtpmap missing codec name".to_string()))
+        }
+        Some(x) => x.parse::<u32>()?,
+    };
+    let mut rtpmap = SdpAttributeRtpmap::new(payload_type, name, frequency);
+    match parameters.next() {
+        Some(x) => rtpmap.set_channels(x.parse::<u32>()?),
+        None => (),
+    };
     Ok(SdpAttribute::Rtpmap(rtpmap))
 }
 
@@ -1139,16 +1154,15 @@ fn test_parse_attribute_extmap() {
 
     assert!(parse_attribute("extmap:3 http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time ext_attributes")
             .is_ok());
-    
+
     assert!(parse_attribute("extmap:a/sendrecv urn:ietf:params:rtp-hdrext:ssrc-audio-level")
                 .is_err());
     assert!(parse_attribute("extmap:4/unsupported urn:ietf:params:rtp-hdrext:ssrc-audio-level")
                 .is_err());
 
-    let mut bad_char = String::from("extmap:3 http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time ");
+    let mut bad_char = String::from("extmap:3 http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time ",);
     bad_char.push(0x00 as char);
-    assert!(parse_attribute(&bad_char)
-            .is_err());
+    assert!(parse_attribute(&bad_char).is_err());
 }
 
 #[test]
@@ -1368,7 +1382,12 @@ fn test_parse_attribute_rtcp_rsize() {
 
 #[test]
 fn test_parse_attribute_rtpmap() {
-    assert!(parse_attribute("rtpmap:109 opus/48000/2").is_ok())
+    assert!(parse_attribute("rtpmap:109 opus/48000").is_ok());
+    assert!(parse_attribute("rtpmap:109 opus/48000/2").is_ok());
+
+    assert!(parse_attribute("rtpmap:109 ").is_err());
+    assert!(parse_attribute("rtpmap:109 opus").is_err());
+    assert!(parse_attribute("rtpmap:128 opus/48000").is_err());
 }
 
 #[test]
@@ -1442,7 +1461,5 @@ fn test_parse_unknown_attribute() {
 // Returns true if valid byte-string as defined by RFC 4566
 // https://tools.ietf.org/html/rfc4566
 fn valid_byte_string(input: &str) -> bool {
-    !(input.contains(0x00 as char) ||
-     input.contains(0x0A as char) ||
-     input.contains(0x0D as char))
+    !(input.contains(0x00 as char) || input.contains(0x0A as char) || input.contains(0x0D as char))
 }

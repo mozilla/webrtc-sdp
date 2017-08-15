@@ -574,7 +574,7 @@ fn test_parse_sdp_line_valid_a_line() {
 
 #[test]
 fn test_parse_sdp_line_invalid_a_line() {
-    assert!(parse_sdp_line("a=rtpmap:8 PCMA/8000 1", 0).is_err());
+    assert!(parse_sdp_line("a=rtpmap:200 PCMA/8000", 0).is_err());
 }
 
 // TODO add unit tests
