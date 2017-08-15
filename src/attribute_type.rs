@@ -701,11 +701,11 @@ fn parse_extmap(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> 
                              }
                          })
     }
-    // Consider replaceing to_parse.split_whitespace() above with splitn on space. Would we want the pattern to split on any amout of any kind of whitespace?
+    // Consider replacing to_parse.split_whitespace() above with splitn on space. Would we want the pattern to split on any amout of any kind of whitespace?
     let extension_attributes = if tokens.len() == 2 {
         None
     } else {
-        let ext_string: String = tokens[2..].iter().map(|x| *x).collect();
+        let ext_string: String = tokens[2..].join(" ");
         if !valid_byte_string(&ext_string) {
             return Err(SdpParserInternalError::Generic("Illegal character in extmap extension attributes".to_string()))
         }
