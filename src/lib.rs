@@ -449,7 +449,7 @@ fn parse_sdp_line(line: &str, line_number: usize) -> Result<SdpLine, SdpParserEr
             let trimmed = t.trim();
             if trimmed.len() > 1 {
                 return Err(SdpParserError::Line {
-                               error: SdpParserInternalError::Generic("type to long".to_string()),
+                               error: SdpParserInternalError::Generic("type too long".to_string()),
                                line: line.to_string(),
                                line_number: line_number,
                            });
