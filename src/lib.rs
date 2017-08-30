@@ -148,10 +148,6 @@ impl SdpSession {
         Ok(self.attribute.push(a.clone()))
     }
 
-    pub fn add_media(&mut self, m: SdpMedia) {
-        self.media.push(m)
-    }
-
     pub fn extend_media(&mut self, v: Vec<SdpMedia>) {
         self.media.extend(v)
     }
@@ -162,6 +158,17 @@ impl SdpSession {
 
     pub fn has_attributes(&self) -> bool {
         !self.attribute.is_empty()
+    }
+
+    // FIXME this is a temporary hack until we re-oranize the SdpAttribute enum
+    // so that we can build a generic has_attribute(X) function
+    fn has_extmap_attribute(&self) -> bool {
+        for attribute in &self.attribute {
+            if let &SdpAttribute::Extmap(_) = attribute {
+                return true;
+            }
+        }
+        false
     }
 
     pub fn has_media(&self) -> bool {
@@ -577,6 +584,132 @@ fn test_parse_sdp_line_invalid_a_line() {
     assert!(parse_sdp_line("a=rtpmap:200 PCMA/8000", 0).is_err());
 }
 
+fn sanity_check_sdp_session(session: &SdpSession) -> Result<(), SdpParserError> {
+    if !session.has_timing() {
+        return Err(SdpParserError::Sequence {
+                       message: "Missing timing type".to_string(),
+                       line_number: 0,
+                   });
+    }
+
+    if !session.has_media() {
+        return Err(SdpParserError::Sequence {
+                       message: "Missing media setion".to_string(),
+                       line_number: 0,
+                   });
+    }
+
+    // Check that extmaps are not defined on session and media level
+    if session.has_extmap_attribute() {
+        for msection in &session.media {
+            if msection.has_extmap_attribute() {
+                return Err(SdpParserError::Sequence {
+                               message: "Extmap can't be define at session and media level"
+                                   .to_string(),
+                               line_number: 0,
+                           });
+            }
+        }
+    }
+
+    Ok(())
+}
+
+#[cfg(test)]
+fn create_dummy_sdp_session() -> SdpSession {
+    let origin = parse_origin("mozilla 506705521068071134 0 IN IP4 0.0.0.0");
+    assert!(origin.is_ok());
+    let sdp_session;
+    if let SdpType::Origin(o) = origin.unwrap() {
+        sdp_session = SdpSession::new(0, o, "-".to_string());
+    } else {
+        panic!("SdpType is not Origin");
+    }
+    sdp_session
+}
+
+#[cfg(test)]
+use media_type::create_dummy_media_section;
+
+#[test]
+fn test_sanity_check_sdp_session_timing() {
+    let mut sdp_session = create_dummy_sdp_session();
+    sdp_session.extend_media(vec![create_dummy_media_section()]);
+
+    assert!(sanity_check_sdp_session(&sdp_session).is_err());
+
+    let t = SdpTiming { start: 0, stop: 0 };
+    sdp_session.set_timing(&t);
+
+    assert!(sanity_check_sdp_session(&sdp_session).is_ok());
+}
+
+#[test]
+fn test_sanity_check_sdp_session_media() {
+    let mut sdp_session = create_dummy_sdp_session();
+    let t = SdpTiming { start: 0, stop: 0 };
+    sdp_session.set_timing(&t);
+
+    assert!(sanity_check_sdp_session(&sdp_session).is_err());
+
+    sdp_session.extend_media(vec![create_dummy_media_section()]);
+
+    assert!(sanity_check_sdp_session(&sdp_session).is_ok());
+}
+
+#[test]
+fn test_sanity_check_sdp_session_extmap() {
+    let mut sdp_session = create_dummy_sdp_session();
+    let t = SdpTiming { start: 0, stop: 0 };
+    sdp_session.set_timing(&t);
+    sdp_session.extend_media(vec![create_dummy_media_section()]);
+
+    let attribute = parse_attribute("extmap:3 http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time",);
+    assert!(attribute.is_ok());
+    let extmap;
+    if let SdpType::Attribute(a) = attribute.unwrap() {
+        extmap = a;
+    } else {
+        panic!("SdpType is not Attribute");
+    }
+    let ret = sdp_session.add_attribute(&extmap);
+    assert!(ret.is_ok());
+    assert!(sdp_session.has_extmap_attribute());
+
+    assert!(sanity_check_sdp_session(&sdp_session).is_ok());
+
+    let mattribute = parse_attribute("extmap:1/sendonly urn:ietf:params:rtp-hdrext:ssrc-audio-level",);
+    assert!(mattribute.is_ok());
+    let mextmap;
+    if let SdpType::Attribute(ma) = mattribute.unwrap() {
+        mextmap = ma;
+    } else {
+        panic!("SdpType is not Attribute");
+    }
+    let mut second_media = create_dummy_media_section();
+    assert!(second_media.add_attribute(&mextmap).is_ok());
+    assert!(second_media.has_extmap_attribute());
+
+    sdp_session.extend_media(vec![second_media]);
+    assert!(sdp_session.media.len() == 2);
+
+    assert!(sanity_check_sdp_session(&sdp_session).is_err());
+
+    sdp_session.attribute = Vec::new();
+
+    assert!(sanity_check_sdp_session(&sdp_session).is_ok());
+}
+
+#[test]
+fn test_sanity_check_sdp_session_simulcast() {
+    let mut sdp_session = create_dummy_sdp_session();
+    let t = SdpTiming { start: 0, stop: 0 };
+    sdp_session.set_timing(&t);
+    sdp_session.extend_media(vec![create_dummy_media_section()]);
+
+    assert!(sanity_check_sdp_session(&sdp_session).is_ok());
+}
+
 // TODO add unit tests
 fn parse_sdp_vector(lines: &[SdpLine]) -> Result<SdpSession, SdpParserError> {
     if lines.len() < 5 {
@@ -652,18 +785,7 @@ fn parse_sdp_vector(lines: &[SdpLine]) -> Result<SdpSession, SdpParserError> {
             break;
         };
     }
-    if !sdp_session.has_timing() {
-        return Err(SdpParserError::Sequence {
-                       message: "Missing timing type".to_string(),
-                       line_number: 0,
-                   });
-    }
-    if !sdp_session.has_media() {
-        return Err(SdpParserError::Sequence {
-                       message: "Missing media setion".to_string(),
-                       line_number: 0,
-                   });
-    }
+    sanity_check_sdp_session(&sdp_session)?;
     Ok(sdp_session)
 }
 

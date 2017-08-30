@@ -137,6 +137,17 @@ impl SdpMedia {
         Ok(self.attribute.push(attr.clone()))
     }
 
+    // FIXME this is a temporary hack until we re-oranize the SdpAttribute enum
+    // so that we can build a generic has_attribute(X) function
+    pub fn has_extmap_attribute(&self) -> bool {
+        for attribute in &self.attribute {
+            if let &SdpAttribute::Extmap(_) = attribute {
+                return true;
+            }
+        }
+        false
+    }
+
     pub fn has_connection(&self) -> bool {
         self.connection.is_some()
     }
@@ -154,6 +165,19 @@ impl SdpMedia {
         Ok(self.connection = Some(c.clone()))
     }
 }
+
+#[cfg(test)]
+pub fn create_dummy_media_section() -> SdpMedia {
+    let media_line = SdpMediaLine {
+        media: SdpMediaValue::Audio,
+        port: 9,
+        port_count: 0,
+        proto: SdpProtocolValue::RtpSavpf,
+        formats: SdpFormatList::Integers(Vec::new()),
+    };
+    SdpMedia::new(media_line)
+}
+
 fn parse_media_token(value: &str) -> Result<SdpMediaValue, SdpParserInternalError> {
     Ok(match value.to_lowercase().as_ref() {
            "audio" => SdpMediaValue::Audio,
