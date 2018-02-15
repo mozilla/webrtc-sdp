@@ -165,12 +165,12 @@ impl SdpAttributeSimulcast {
 
 #[derive(Clone)]
 pub struct SdpAttributeRtcp {
-    pub port: u32,
+    pub port: u16,
     pub unicast_addr: Option<IpAddr>,
 }
 
 impl SdpAttributeRtcp {
-    pub fn new(port: u32) -> SdpAttributeRtcp {
+    pub fn new(port: u16) -> SdpAttributeRtcp {
         SdpAttributeRtcp {
             port,
             unicast_addr: None,
@@ -198,7 +198,7 @@ pub enum SdpAttributeDirection {
 
 #[derive(Clone)]
 pub struct SdpAttributeExtmap {
-    pub id: u32,
+    pub id: u16,
     pub direction: Option<SdpAttributeDirection>,
     pub url: String,
     pub extension_attributes: Option<String>,
@@ -206,7 +206,7 @@ pub struct SdpAttributeExtmap {
 
 #[derive(Clone)]
 pub struct SdpAttributeFmtp {
-    pub payload_type: u32,
+    pub payload_type: u8,
     pub tokens: Vec<String>,
 }
 
@@ -219,7 +219,7 @@ pub struct SdpAttributeFingerprint {
 
 #[derive(Clone)]
 pub struct SdpAttributeSctpmap {
-    pub port: u32,
+    pub port: u16,
     pub channels: u32,
 }
 
@@ -254,14 +254,14 @@ pub struct SdpAttributeMsidSemantic {
 
 #[derive(Clone)]
 pub struct SdpAttributeRtpmap {
-    pub payload_type: u32,
+    pub payload_type: u8,
     pub codec_name: String,
     pub frequency: u32,
     pub channels: Option<u32>,
 }
 
 impl SdpAttributeRtpmap {
-    pub fn new(payload_type: u32, codec_name: String, frequency: u32) -> SdpAttributeRtpmap {
+    pub fn new(payload_type: u8, codec_name: String, frequency: u32) -> SdpAttributeRtpmap {
         SdpAttributeRtpmap {
             payload_type,
             codec_name,
@@ -682,13 +682,13 @@ fn parse_extmap(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> 
         return Err(SdpParserInternalError::Generic("Extmap needs to have at least two tokens"
                                                        .to_string()));
     }
-    let id: u32;
+    let id: u16;
     let mut direction: Option<SdpAttributeDirection> = None;
     if tokens[0].find('/') == None {
-        id = tokens[0].parse::<u32>()?;
+        id = tokens[0].parse::<u16>()?;
     } else {
         let id_dir: Vec<&str> = tokens[0].splitn(2, '/').collect();
-        id = id_dir[0].parse::<u32>()?;
+        id = id_dir[0].parse::<u16>()?;
         direction = Some(match id_dir[1].to_lowercase().as_ref() {
                              "recvonly" => SdpAttributeDirection::Recvonly,
                              "sendonly" => SdpAttributeDirection::Sendonly,
@@ -735,7 +735,7 @@ fn parse_fmtp(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
     }
     Ok(SdpAttribute::Fmtp(SdpAttributeFmtp {
                               // TODO check for dynamic PT range
-                              payload_type: tokens[0].parse::<u32>()?,
+                              payload_type: tokens[0].parse::<u8>()?,
                               // TODO this should probably be slit into known tokens
                               // plus a list of unknown tokens
                               tokens: to_parse.split(';').map(|x| x.to_string()).collect(),
@@ -852,12 +852,12 @@ fn parse_remote_candidates(to_parse: &str) -> Result<SdpAttribute, SdpParserInte
 
 fn parse_rtpmap(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
     let mut tokens = to_parse.split_whitespace();
-    let payload_type: u32 = match tokens.next() {
+    let payload_type: u8 = match tokens.next() {
         None => {
             return Err(SdpParserInternalError::Generic("Rtpmap missing payload type".to_string()))
         }
         Some(x) => {
-            let pt = x.parse::<u32>()?;
+            let pt = x.parse::<u8>()?;
             if pt > 127 {
                 return Err(SdpParserInternalError::Generic("Rtpmap payload type must be less then 127".to_string()));
             };
@@ -897,11 +897,7 @@ fn parse_rtcp(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
             return Err(SdpParserInternalError::Generic("Rtcp attribute is missing port number"
                                                            .to_string()))
         }
-        Some(x) => x.parse::<u32>()?,
-    };
-    if port > 65535 {
-        return Err(SdpParserInternalError::Generic("Rtcp port can only be a bit 16bit number"
-                                                       .to_string()));
+        Some(x) => x.parse::<u16>()?,
     };
     let mut rtcp = SdpAttributeRtcp::new(port);
     match tokens.next() {
@@ -966,11 +962,7 @@ fn parse_sctpmap(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError>
         return Err(SdpParserInternalError::Generic("Sctpmap needs to have three tokens"
                                                        .to_string()));
     }
-    let port = tokens[0].parse::<u32>()?;
-    if port > 65535 {
-        return Err(SdpParserInternalError::Generic("Sctpmap port can only be a bit 16bit number"
-                                                       .to_string()));
-    }
+    let port = tokens[0].parse::<u16>()?;
     if tokens[1].to_lowercase() != "webrtc-datachannel" {
         return Err(SdpParserInternalError::Generic("Unsupported sctpmap type token".to_string()));
     }
