@@ -27,7 +27,7 @@ pub enum SdpBandwidth {
 #[derive(Clone)]
 pub struct SdpConnection {
     pub addr: IpAddr,
-    pub ttl: Option<u32>,
+    pub ttl: Option<u8>,
     pub amount: Option<u32>,
 }
 
@@ -318,7 +318,7 @@ fn parse_connection(value: &str) -> Result<SdpType, SdpParserInternalError> {
         if addr_tokens.len() >= 3 {
             amount = Some(addr_tokens[2].parse::<u32>()?);
         }
-        ttl = Some(addr_tokens[1].parse::<u32>()?);
+        ttl = Some(addr_tokens[1].parse::<u8>()?);
         addr_token = addr_tokens[0];
     }
     let addr = parse_unicast_addr(addr_token)?;
