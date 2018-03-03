@@ -3,7 +3,7 @@ use {SdpType, SdpLine, SdpBandwidth, SdpConnection};
 use attribute_type::SdpAttribute;
 use error::{SdpParserError, SdpParserInternalError};
 
-#[derive(Clone)]
+#[derive(Clone,Debug)]
 pub struct SdpMediaLine {
     pub media: SdpMediaValue,
     pub port: u32,
@@ -54,7 +54,7 @@ impl fmt::Display for SdpProtocolValue {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum SdpFormatList {
     Integers(Vec<u32>),
     Strings(Vec<String>),
@@ -69,6 +69,7 @@ impl fmt::Display for SdpFormatList {
     }
 }
 
+#[derive(Debug)]
 pub struct SdpMedia {
     media: SdpMediaLine,
     connection: Option<SdpConnection>,
