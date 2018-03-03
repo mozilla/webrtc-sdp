@@ -6,13 +6,13 @@ use SdpType;
 use error::SdpParserInternalError;
 use network::{parse_nettype, parse_addrtype, parse_unicast_addr};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum SdpAttributeCandidateTransport {
     Udp,
     Tcp,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum SdpAttributeCandidateType {
     Host,
     Srflx,
@@ -20,14 +20,14 @@ pub enum SdpAttributeCandidateType {
     Relay,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum SdpAttributeCandidateTcpType {
     Active,
     Passive,
     Simultaneous,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SdpAttributeCandidate {
     pub foundation: String,
     pub component: u32,
@@ -95,14 +95,14 @@ impl SdpAttributeCandidate {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SdpAttributeRemoteCandidate {
     pub component: u32,
     pub address: IpAddr,
     pub port: u32,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SdpAttributeSimulcastId {
     pub id: String,
     pub paused: bool,
@@ -124,7 +124,7 @@ impl SdpAttributeSimulcastId {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SdpAttributeSimulcastAlternatives {
     pub ids: Vec<SdpAttributeSimulcastId>,
 }
@@ -141,7 +141,7 @@ impl SdpAttributeSimulcastAlternatives {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SdpAttributeSimulcast {
     pub send: Vec<SdpAttributeSimulcastAlternatives>,
     pub receive: Vec<SdpAttributeSimulcastAlternatives>,
@@ -163,7 +163,7 @@ impl SdpAttributeSimulcast {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SdpAttributeRtcp {
     pub port: u16,
     pub unicast_addr: Option<IpAddr>,
@@ -182,21 +182,21 @@ impl SdpAttributeRtcp {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SdpAttributeRtcpFb {
     pub payload_type: u32,
     // TODO parse this and use an enum instead?
     pub feedback_type: String,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum SdpAttributeDirection {
     Recvonly,
     Sendonly,
     Sendrecv,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SdpAttributeExtmap {
     pub id: u16,
     pub direction: Option<SdpAttributeDirection>,
@@ -204,26 +204,26 @@ pub struct SdpAttributeExtmap {
     pub extension_attributes: Option<String>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SdpAttributeFmtp {
     pub payload_type: u8,
     pub tokens: Vec<String>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SdpAttributeFingerprint {
     // TODO turn the supported hash algorithms into an enum?
     pub hash_algorithm: String,
     pub fingerprint: String,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SdpAttributeSctpmap {
     pub port: u16,
     pub channels: u32,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum SdpAttributeGroupSemantic {
     LipSynchronization,
     FlowIdentification,
@@ -234,13 +234,13 @@ pub enum SdpAttributeGroupSemantic {
     Bundle,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SdpAttributeGroup {
     pub semantics: SdpAttributeGroupSemantic,
     pub tags: Vec<String>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SdpAttributeMsid {
     pub id: String,
     pub appdata: Option<String>,
@@ -252,7 +252,7 @@ pub struct SdpAttributeMsidSemantic {
     pub msids: Vec<String>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SdpAttributeRtpmap {
     pub payload_type: u8,
     pub codec_name: String,
@@ -275,7 +275,7 @@ impl SdpAttributeRtpmap {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum SdpAttributeSetup {
     Active,
     Actpass,
@@ -283,7 +283,7 @@ pub enum SdpAttributeSetup {
     Passive,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SdpAttributeSsrc {
     pub id: u32,
     pub attribute: Option<String>,
@@ -310,7 +310,7 @@ impl SdpAttributeSsrc {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum SdpAttribute {
     BundleOnly,
     Candidate(SdpAttributeCandidate),

@@ -16,7 +16,7 @@ use network::{parse_addrtype, parse_nettype, parse_unicast_addr};
 use unsupported_types::{parse_email, parse_information, parse_key, parse_phone, parse_repeat,
                         parse_uri, parse_zone};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum SdpBandwidth {
     As(u32),
     Ct(u32),
@@ -24,14 +24,14 @@ pub enum SdpBandwidth {
     Unknown(String, u32),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SdpConnection {
     pub addr: IpAddr,
     pub ttl: Option<u8>,
     pub amount: Option<u32>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SdpOrigin {
     pub username: String,
     pub session_id: u64,
@@ -50,7 +50,7 @@ impl fmt::Display for SdpOrigin {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SdpTiming {
     pub start: u64,
     pub stop: u64,
@@ -79,6 +79,7 @@ pub struct SdpLine {
     pub sdp_type: SdpType,
 }
 
+#[derive(Debug)]
 pub struct SdpSession {
     pub version: u64,
     pub origin: SdpOrigin,
