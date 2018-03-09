@@ -3,6 +3,9 @@ use std::net::AddrParseError;
 use std::fmt;
 use std::error;
 use std::error::Error;
+#[cfg(feature = "serde")]
+use serde::ser::{Serializer, Serialize, SerializeStruct};
+
 
 #[derive(Debug)]
 pub enum SdpParserInternalError {
@@ -10,6 +13,16 @@ pub enum SdpParserInternalError {
     Unsupported(String),
     Integer(ParseIntError),
     Address(AddrParseError),
+}
+
+#[cfg(feature = "serde")]
+impl Serialize for SdpParserInternalError {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+        let err = format!("{}", &self);
+        let mut state = serializer.serialize_struct("internal_error", 1)?;
+        state.serialize_field("message", &err)?;
+        state.end()
+    }
 }
 
 impl fmt::Display for SdpParserInternalError {
@@ -97,6 +110,7 @@ fn test_sdp_parser_internal_error_address() {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize))]
 pub enum SdpParserError {
     Line {
         error: SdpParserInternalError,
