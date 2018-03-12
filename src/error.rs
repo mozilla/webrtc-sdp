@@ -15,16 +15,6 @@ pub enum SdpParserInternalError {
     Address(AddrParseError),
 }
 
-#[cfg(feature = "serde")]
-impl Serialize for SdpParserInternalError {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
-        let err = format!("{}", &self);
-        let mut state = serializer.serialize_struct("internal_error", 1)?;
-        state.serialize_field("message", &err)?;
-        state.end()
-    }
-}
-
 impl fmt::Display for SdpParserInternalError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
@@ -110,7 +100,6 @@ fn test_sdp_parser_internal_error_address() {
 }
 
 #[derive(Debug)]
-#[cfg_attr(feature = "serde", derive(Serialize))]
 pub enum SdpParserError {
     Line {
         error: SdpParserInternalError,
@@ -123,6 +112,38 @@ pub enum SdpParserError {
         line_number: usize,
     },
     Sequence { message: String, line_number: usize },
+}
+
+#[cfg(feature = "serde")]
+impl Serialize for SdpParserError {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+        let mut state = serializer.serialize_struct("error", match self {
+            &SdpParserError::Sequence{..} => 3,
+            _ => 4
+        })?;
+        match self {
+            &SdpParserError::Line {ref error, ref line, ..} => {
+                state.serialize_field("type", "Line")?;
+                state.serialize_field("internal", &format!("{}", error))?;
+                state.serialize_field("line", &line)?
+            },
+            &SdpParserError::Unsupported {ref error, ref line, ..} => {
+                state.serialize_field("type", "Unsupported")?;
+                state.serialize_field("internal", &format!("{}", error))?;
+                state.serialize_field("line", &line)?
+            },
+            &SdpParserError::Sequence {ref message, ..} => {
+                state.serialize_field("type", "Sequence")?;
+                state.serialize_field("message", &message)?;
+            }
+        };
+        state.serialize_field("line_number", &match self {
+            &SdpParserError::Line {line_number, ..} => line_number,
+            &SdpParserError::Unsupported {line_number, ..} => line_number,
+            &SdpParserError::Sequence {line_number, ..} => line_number,
+        })?;
+        state.end()
+    }
 }
 
 impl fmt::Display for SdpParserError {
