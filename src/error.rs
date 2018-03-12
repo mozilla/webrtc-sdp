@@ -124,12 +124,12 @@ impl Serialize for SdpParserError {
         match self {
             &SdpParserError::Line {ref error, ref line, ..} => {
                 state.serialize_field("type", "Line")?;
-                state.serialize_field("internal", &format!("{}", error))?;
+                state.serialize_field("message", &format!("{}", error))?;
                 state.serialize_field("line", &line)?
             },
             &SdpParserError::Unsupported {ref error, ref line, ..} => {
                 state.serialize_field("type", "Unsupported")?;
-                state.serialize_field("internal", &format!("{}", error))?;
+                state.serialize_field("message", &format!("{}", error))?;
                 state.serialize_field("line", &line)?
             },
             &SdpParserError::Sequence {ref message, ..} => {
