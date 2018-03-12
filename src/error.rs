@@ -3,7 +3,7 @@ use std::net::AddrParseError;
 use std::fmt;
 use std::error;
 use std::error::Error;
-#[cfg(feature = "serde")]
+#[cfg(feature = "serialize")]
 use serde::ser::{Serializer, Serialize, SerializeStruct};
 
 
@@ -114,7 +114,7 @@ pub enum SdpParserError {
     Sequence { message: String, line_number: usize },
 }
 
-#[cfg(feature = "serde")]
+#[cfg(feature = "serialize")]
 impl Serialize for SdpParserError {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
         let mut state = serializer.serialize_struct("error", match self {
