@@ -3,8 +3,15 @@ name = "rsdparsa"
 version = "0.1.0"
 authors = ["Nils Ohlmeier <github@ohlmeier.org>"]
 
-[dependencies]
-clippy = {version = "*", optional = true}
-
 [features]
 default = []
+# serializability
+serialize = ["serde", "serde_derive"]
+
+[dependencies]
+clippy = {version = "*", optional = true}
+serde = {version = "1.0" , optional = true}
+serde_derive = {version = "1.0" , optional = true}
+
+[dev-dependencies]
+serde_json = {version = "1.0"}

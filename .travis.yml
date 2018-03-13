@@ -6,6 +6,9 @@ os:
 # Taken out temporarily because it's to slow
 #  - osx
 
+env:
+  - FEATURES=""
+  - FEATURES="serialize"
 rust:
   - nightly
   - beta
@@ -38,7 +41,8 @@ before_script:
     fi
 
 script:
-  - cargo build --verbose --all
+  - echo FEATURES="$FEATURES"
+  - cargo build --verbose --all --features="$FEATURES"
   - |
     if [[ "$TRAVIS_RUST_VERSION" == "nightly" &&
       -f ~/.cargo/bin/cargo-clippy ]]; then
@@ -48,7 +52,7 @@ script:
 
 after_success:
   - |
-      if [[ "$TRAVIS_OS_NAME" == "linux" && "$TRAVIS_RUST_VERSION" == "stable" ]]; then
+      if [[ "$TRAVIS_OS_NAME" == "linux" && "$TRAVIS_RUST_VERSION" == "stable" && "$FEATURES" == "serialize" ]]; then
         wget https://github.com/SimonKagstrom/kcov/archive/v34.tar.gz &&
         tar xzf v34.tar.gz &&
         cd kcov-34 &&
@@ -60,6 +64,7 @@ after_success:
         cd ../.. &&
         rm -rf kcov-34 &&
         kcov --version &&
+        (cd target/debug/ && ls -al) &&
         for file in target/debug/rsdparsa-*[^\.d]; do echo "$file"; mkdir -p "target/cov/$(basename $file)"; kcov --verify --exclude-pattern=/.cargo,/usr/lib "target/cov/$(basename $file)" "$file"; done &&
         for file in target/debug/unit_tests-*[^\.d]; do echo "$file"; mkdir -p "target/cov/$(basename $file)"; kcov --verify --exclude-pattern=/.cargo,/usr/lib "target/cov/$(basename $file)" "$file"; done &&
         bash <(curl -s https://codecov.io/bash) &&
