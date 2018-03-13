@@ -6,12 +6,25 @@ os:
 # Taken out temporarily because it's to slow
 #  - osx
 
-rust:
-  - nightly
-  - beta
-  - stable
-  # mimimum stable version because we use init shorthand
-  - 1.17.0
+matrix:
+  include:
+    - rust: nightly
+    - rust: nightly
+      env:
+      - FEATURES="serialize"
+    - rust: beta
+    - rust: beta
+      env:
+      - FEATURES="serialize"
+    - rust: stable
+    - rust: stable
+      env:
+      - FEATURES="serialize"
+    # mimimum stable version because we use init shorthand
+    - rust: 1.17.0
+    - rust: 1.17.0
+      env:
+      - FEATURES="serialize"
 
 matrix:
   allow_failures:
@@ -48,7 +61,7 @@ script:
 
 after_success:
   - |
-      if [[ "$TRAVIS_OS_NAME" == "linux" && "$TRAVIS_RUST_VERSION" == "stable" ]]; then
+      if [[ "$TRAVIS_OS_NAME" == "linux" && "$TRAVIS_RUST_VERSION" == "stable" && "$FEATURES" == "serialize" ]]; then
         wget https://github.com/SimonKagstrom/kcov/archive/v34.tar.gz &&
         tar xzf v34.tar.gz &&
         cd kcov-34 &&
