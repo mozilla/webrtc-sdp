@@ -17,13 +17,12 @@ matrix:
   allow_failures:
     - rust: nightly
 
-before_install:
-  - sudo apt-get update
-
 addons:
   apt:
     packages:
       - libcurl4-openssl-dev
+      - zlib1g-dev
+      - libiberty-dev
       - libelf-dev
       - libdw-dev
       - cmake
@@ -50,16 +49,16 @@ script:
 after_success:
   - |
       if [[ "$TRAVIS_OS_NAME" == "linux" && "$TRAVIS_RUST_VERSION" == "stable" ]]; then
-        wget https://github.com/SimonKagstrom/kcov/archive/master.tar.gz &&
-        tar xzf master.tar.gz &&
-        cd kcov-master &&
+        wget https://github.com/SimonKagstrom/kcov/archive/v34.tar.gz &&
+        tar xzf v34.tar.gz &&
+        cd kcov-34 &&
         mkdir build &&
         cd build &&
         cmake .. &&
         make &&
         sudo make install &&
         cd ../.. &&
-        rm -rf kcov-master &&
+        rm -rf kcov-34 &&
         kcov --version &&
         for file in target/debug/rsdparsa-*[^\.d]; do echo "$file"; mkdir -p "target/cov/$(basename $file)"; kcov --verify --exclude-pattern=/.cargo,/usr/lib "target/cov/$(basename $file)" "$file"; done &&
         for file in target/debug/unit_tests-*[^\.d]; do echo "$file"; mkdir -p "target/cov/$(basename $file)"; kcov --verify --exclude-pattern=/.cargo,/usr/lib "target/cov/$(basename $file)" "$file"; done &&
