@@ -17,13 +17,12 @@ matrix:
   allow_failures:
     - rust: nightly
 
-before_install:
-  - sudo apt-get update
-
 addons:
   apt:
     packages:
       - libcurl4-openssl-dev
+      - zlib1g-dev
+      - libiberty-dev
       - libelf-dev
       - libdw-dev
       - cmake
