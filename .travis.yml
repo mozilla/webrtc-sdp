@@ -6,25 +6,15 @@ os:
 # Taken out temporarily because it's to slow
 #  - osx
 
-matrix:
-  include:
-    - rust: nightly
-    - rust: nightly
-      env:
-      - FEATURES="serialize"
-    - rust: beta
-    - rust: beta
-      env:
-      - FEATURES="serialize"
-    - rust: stable
-    - rust: stable
-      env:
-      - FEATURES="serialize"
-    # mimimum stable version because we use init shorthand
-    - rust: 1.17.0
-    - rust: 1.17.0
-      env:
-      - FEATURES="serialize"
+env:
+  - FEATURES=""
+  - FEATURES="serialize"
+rust:
+  - nightly
+  - beta
+  - stable
+  # mimimum stable version because we use init shorthand
+  - 1.17.0
 
 matrix:
   allow_failures:
@@ -51,7 +41,8 @@ before_script:
     fi
 
 script:
-  - cargo build --verbose --all
+  - echo FEATURES="$FEATURES"
+  - cargo build --verbose --all --features="$FEATURES"
   - |
     if [[ "$TRAVIS_RUST_VERSION" == "nightly" &&
       -f ~/.cargo/bin/cargo-clippy ]]; then
