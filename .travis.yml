@@ -49,7 +49,7 @@ script:
 after_success:
   - |
       if [[ "$TRAVIS_OS_NAME" == "linux" && "$TRAVIS_RUST_VERSION" == "stable" ]]; then
-        wget https://github.com/SimonKagstrom/kcov/archive/master.tar.gz &&
+        wget https://github.com/SimonKagstrom/kcov/archive/v34.tar.gz &&
         tar xzf master.tar.gz &&
         cd kcov-master &&
         mkdir build &&
