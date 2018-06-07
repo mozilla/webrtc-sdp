@@ -1026,7 +1026,7 @@ fn parse_rtcp_fb(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError>
                         format!("Unknown rtcpfb ack parameter: {:?}",x).to_string()
                     ))
                 },
-            }
+            },
             None => {
                 return Err(SdpParserInternalError::Unsupported(
                     format!("The rtcpfb ack feeback type needs a parameter:").to_string()
@@ -1041,7 +1041,7 @@ fn parse_rtcp_fb(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError>
                         format!("Unknown rtcpfb ccm parameter: {:?}",x).to_string()
                     ))
                 },
-            }
+            },
             None => "".to_string(),
         },
         &SdpAttributeRtcpFbType::Nack => match tokens.get(2) {
@@ -1052,7 +1052,7 @@ fn parse_rtcp_fb(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError>
                         format!("Unknown rtcpfb nack parameter: {:?}",x).to_string()
                     ))
                 },
-            }
+            },
             None => "".to_string(),
         },
         &SdpAttributeRtcpFbType::TrrInt => match tokens.get(2) {
@@ -1063,7 +1063,7 @@ fn parse_rtcp_fb(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError>
                         format!("Unknown rtcpfb trr-int parameter: {:?}",x).to_string()
                     ))
                 },
-            }
+            },
             None => {
                     return Err(SdpParserInternalError::Generic(
                         format!("The rtcpfb trr-int feedback type needs a parameter").to_string()
@@ -1077,7 +1077,7 @@ fn parse_rtcp_fb(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError>
                         format!("Unknown rtcpfb remb parameter: {:?}",x).to_string()
                     ))
                 },
-            }
+            },
             None => "".to_string(),
         },
         &SdpAttributeRtcpFbType::TransCC => match tokens.get(2) {
@@ -1087,7 +1087,7 @@ fn parse_rtcp_fb(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError>
                         format!("Unknown rtcpfb transport-cc parameter: {:?}",x).to_string()
                     ))
                 },
-            }
+            },
             None => "".to_string(),
         }
     };
