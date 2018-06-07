@@ -212,6 +212,7 @@ pub enum SdpAttributeRtcpFbType {
 }
 
 #[derive(Clone)]
+#[cfg_attr(feature="serialize", derive(Serialize))]
 pub struct SdpAttributeRtcpFb {
     pub payload_type: SdpAttributePayloadType,
     pub feedback_type: SdpAttributeRtcpFbType,
