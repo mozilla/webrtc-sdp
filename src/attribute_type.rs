@@ -8,6 +8,7 @@ use network::{parse_nettype, parse_addrtype, parse_unicast_addr};
 
 
 #[derive(Clone)]
+#[cfg_attr(feature="serialize", derive(Serialize))]
 pub enum SdpAttributePayloadType {
     PayloadType(u8),
     Wildcard, // Wildcard means "*",
