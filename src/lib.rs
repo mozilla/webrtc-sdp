@@ -1,5 +1,7 @@
 #![cfg_attr(feature="clippy", feature(plugin))]
 
+#[macro_use]
+extern crate log;
 #[cfg(feature="serialize")]
 #[macro_use]
 extern crate serde_derive;
@@ -183,7 +185,7 @@ impl SdpSession {
 }
 
 fn parse_session(value: &str) -> Result<SdpType, SdpParserInternalError> {
-    println!("session: {}", value);
+    trace!("session: {}", value);
     Ok(SdpType::Session(String::from(value)))
 }
 
@@ -199,7 +201,7 @@ fn parse_version(value: &str) -> Result<SdpType, SdpParserInternalError> {
         return Err(SdpParserInternalError::Generic(format!("version type contains unsupported value {}",
                                                            ver)));
     };
-    println!("version: {}", ver);
+    trace!("version: {}", ver);
     Ok(SdpType::Version(ver))
 }
 
@@ -271,7 +273,7 @@ fn parse_origin(value: &str) -> Result<SdpType, SdpParserInternalError> {
         session_version,
         unicast_addr,
     };
-    println!("{}", o);
+    trace!("origin: {}", o);
     Ok(SdpType::Origin(o))
 }
 
@@ -333,7 +335,7 @@ fn parse_connection(value: &str) -> Result<SdpType, SdpParserInternalError> {
                                                        .to_string()));
     }
     let c = SdpConnection { addr, ttl, amount };
-    println!("connection: {}", c.addr);
+    trace!("connection: {}", c.addr);
     Ok(SdpType::Connection(c))
 }
 
@@ -388,7 +390,7 @@ fn parse_bandwidth(value: &str) -> Result<SdpType, SdpParserInternalError> {
         "TIAS" => SdpBandwidth::Tias(bandwidth),
         _ => SdpBandwidth::Unknown(String::from(bv[0]), bandwidth),
     };
-    println!("bandwidth: {}, {}", bv[0], bandwidth);
+    trace!("bandwidth: {}, {}", bv[0], bandwidth);
     Ok(SdpType::Bandwidth(bw))
 }
 
@@ -419,7 +421,7 @@ fn parse_timing(value: &str) -> Result<SdpType, SdpParserInternalError> {
     let start = tv[0].parse::<u64>()?;
     let stop = tv[1].parse::<u64>()?;
     let t = SdpTiming { start, stop };
-    println!("timing: {}, {}", t.start, t.stop);
+    trace!("timing: {}, {}", t.start, t.stop);
     Ok(SdpType::Timing(t))
 }
 
@@ -889,7 +891,7 @@ pub fn parse_sdp(sdp: &str, fail_on_warning: bool) -> Result<SdpSession, SdpPars
         if fail_on_warning {
             return Err(warning);
         } else {
-            println!("Warning: {}", warning);
+            warn!("Warning: {}", warning);
         };
     }
     // We just return the last of the errors here
