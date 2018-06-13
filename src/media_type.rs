@@ -332,7 +332,7 @@ pub fn parse_media(value: &str) -> Result<SdpType, SdpParserInternalError> {
         proto,
         formats,
     };
-    println!("media: {}, {}, {}, {}", m.media, m.port, m.proto, m.formats);
+    trace!("media: {}, {}, {}, {}", m.media, m.port, m.proto, m.formats);
     Ok(SdpType::Media(m))
 }
 
