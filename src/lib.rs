@@ -9,6 +9,7 @@ extern crate serde_derive;
 extern crate serde;
 
 use std::net::IpAddr;
+use std::str::FromStr;
 use std::fmt;
 
 pub mod attribute_type;
@@ -19,7 +20,8 @@ pub mod unsupported_types;
 
 use attribute_type::{SdpAttribute, SdpAttributeType, parse_attribute};
 use error::{SdpParserInternalError, SdpParserError};
-use media_type::{SdpMedia, SdpMediaLine, parse_media, parse_media_vector};
+use media_type::{SdpMedia, SdpMediaLine, parse_media, parse_media_vector, SdpProtocolValue,
+                 SdpMediaValue, SdpFormatList};
 use network::{parse_addrtype, parse_nettype, parse_unicast_addr};
 use unsupported_types::{parse_email, parse_information, parse_key, parse_phone, parse_repeat,
                         parse_uri, parse_zone};
@@ -103,6 +105,7 @@ pub struct SdpSession {
     pub timing: Option<SdpTiming>,
     pub attribute: Vec<SdpAttribute>,
     pub media: Vec<SdpMedia>,
+    pub warnings: Vec<SdpParserError>
     // unsupported values:
     // information: Option<String>,
     // uri: Option<String>,
@@ -124,6 +127,7 @@ impl SdpSession {
             timing: None,
             attribute: Vec::new(),
             media: Vec::new(),
+            warnings: Vec::new(),
         }
     }
 
@@ -181,6 +185,30 @@ impl SdpSession {
 
     pub fn has_media(&self) -> bool {
         !self.media.is_empty()
+    }
+
+    pub fn add_media(&mut self, media_type: SdpMediaValue, direction: SdpAttribute, port: u32,
+                     protocol: SdpProtocolValue, addr: String)
+                     -> Result<(),SdpParserInternalError> {
+       let mut media = SdpMedia::new(SdpMediaLine {
+           media: media_type,
+           port,
+           port_count: 1,
+           proto: protocol,
+           formats: SdpFormatList::Integers(Vec::new()),
+       });
+
+       media.add_attribute(&direction)?;
+
+       media.set_connection(&SdpConnection {
+           addr: IpAddr::from_str(addr.as_str())?,
+           ttl: None,
+           amount: None,
+       })?;
+
+       self.media.push(media);
+
+       Ok(())
     }
 }
 
@@ -887,18 +915,23 @@ pub fn parse_sdp(sdp: &str, fail_on_warning: bool) -> Result<SdpSession, SdpPars
             }
         };
     }
-    for warning in warnings {
-        if fail_on_warning {
-            return Err(warning);
-        } else {
-            warn!("Warning: {}", warning);
-        };
+
+    if fail_on_warning && (warnings.len() > 0) {
+        return Err(warnings[0].clone());
     }
+
     // We just return the last of the errors here
     if let Some(e) = errors.pop() {
         return Err(e);
     };
-    let session = parse_sdp_vector(&sdp_lines)?;
+
+    let mut session = parse_sdp_vector(&sdp_lines)?;
+    session.warnings = warnings;
+
+    for warning in &session.warnings {
+        warn!("Warning: {}", &warning);
+    }
+
     Ok(session)
 }
 
