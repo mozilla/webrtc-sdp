@@ -3,8 +3,7 @@ cache: cargo
 sudo: true
 os:
   - linux
-# Taken out temporarily because it's to slow
-#  - osx
+  - osx
 
 env:
   - FEATURES=""
