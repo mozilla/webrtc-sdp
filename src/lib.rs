@@ -171,20 +171,32 @@ impl SdpSession {
         self.media.extend(v)
     }
 
-    pub fn has_timing(&self) -> bool {
-        self.timing.is_some()
-    }
-
-    pub fn has_attributes(&self) -> bool {
-        !self.attribute.is_empty()
-    }
-
     pub fn get_attribute(&self, t: SdpAttributeType) -> Option<&SdpAttribute> {
        self.attribute.iter().filter(|a| SdpAttributeType::from(*a) == t).next()
     }
 
-    pub fn has_media(&self) -> bool {
-        !self.media.is_empty()
+    pub fn add_media(&mut self, media_type: SdpMediaValue, direction: SdpAttribute, port: u32,
+                     protocol: SdpProtocolValue, addr: String)
+                     -> Result<(),SdpParserInternalError> {
+       let mut media = SdpMedia::new(SdpMediaLine {
+           media: media_type,
+           port,
+           port_count: 1,
+           proto: protocol,
+           formats: SdpFormatList::Integers(Vec::new()),
+       });
+
+       media.add_attribute(&direction)?;
+
+       media.set_connection(&SdpConnection {
+           addr: IpAddr::from_str(addr.as_str())?,
+           ttl: None,
+           amount: None,
+       })?;
+
+       self.media.push(media);
+
+       Ok(())
     }
 
     pub fn add_media(&mut self, media_type: SdpMediaValue, direction: SdpAttribute, port: u32,
@@ -621,16 +633,16 @@ fn test_parse_sdp_line_invalid_a_line() {
 }
 
 fn sanity_check_sdp_session(session: &SdpSession) -> Result<(), SdpParserError> {
-    if !session.has_timing() {
+    if !session.timing.is_some() {
         return Err(SdpParserError::Sequence {
                        message: "Missing timing type".to_string(),
                        line_number: 0,
                    });
     }
 
-    if !session.has_media() {
+    if session.media.is_empty() {
         return Err(SdpParserError::Sequence {
-                       message: "Missing media setion".to_string(),
+                       message: "Missing media section".to_string(),
                        line_number: 0,
                    });
     }
@@ -840,7 +852,7 @@ fn parse_sdp_vector(lines: &[SdpLine]) -> Result<SdpSession, SdpParserError> {
             SdpType::Uri(_) |
             SdpType::Zone(_) => (),
         };
-        if sdp_session.has_media() {
+        if !sdp_session.media.is_empty() {
             break;
         };
     }
