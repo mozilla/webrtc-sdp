@@ -140,7 +140,7 @@ impl SdpSession {
         &self.origin
     }
 
-    pub fn get_session(&self) -> &String {
+    pub fn get_session(&self) -> &str {
         &self.session
     }
 
