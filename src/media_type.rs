@@ -264,7 +264,6 @@ fn test_parse_media_token() {
     assert!(parse_media_token("foobar").is_err());
 }
 
-
 fn parse_protocol_token(value: &str) -> Result<SdpProtocolValue, SdpParserInternalError> {
     Ok(match value.to_uppercase().as_ref() {
            "RTP/SAVPF" => SdpProtocolValue::RtpSavpf,
