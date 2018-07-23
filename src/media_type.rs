@@ -418,7 +418,6 @@ pub fn parse_media_vector(lines: &[SdpLine]) -> Result<Vec<SdpMedia>, SdpParserE
         }
     };
 
-
     for line in lines.iter().skip(1) {
         match line.sdp_type {
             SdpType::Connection(ref c) => {
@@ -434,6 +433,10 @@ pub fn parse_media_vector(lines: &[SdpLine]) -> Result<Vec<SdpMedia>, SdpParserE
             SdpType::Bandwidth(ref b) => sdp_media.add_bandwidth(b),
             SdpType::Attribute(ref a) => {
                 match a {
+                    &SdpAttribute::DtlsMessage(_) => {
+                        // Ignore this attribute on media level
+                        Ok(())
+                    },
                     &SdpAttribute::Rtpmap(ref rtpmap) => {
                         sdp_media.add_attribute(&SdpAttribute::Rtpmap(
                             SdpAttributeRtpmap {
