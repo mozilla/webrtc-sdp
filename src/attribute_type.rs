@@ -1,6 +1,7 @@
 use std::net::IpAddr;
 use std::str::FromStr;
 use std::fmt;
+use std::iter;
 
 use SdpType;
 use error::SdpParserInternalError;
@@ -14,7 +15,7 @@ pub enum SdpSingleDirection{
     Recv = 2,
 }
 
-#[derive(Clone)]
+#[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(feature="serialize", derive(Serialize))]
 pub enum SdpAttributePayloadType {
     PayloadType(u8),
@@ -112,6 +113,13 @@ impl SdpAttributeCandidate {
     fn set_network_cost(&mut self, n: u32) {
         self.networkcost = Some(n)
     }
+}
+
+#[derive(Clone)]
+#[cfg_attr(feature="serialize", derive(Serialize))]
+pub enum SdpAttributeDtlsMessage {
+    Client(String),
+    Server(String),
 }
 
 #[derive(Clone)]
@@ -274,12 +282,67 @@ pub struct SdpAttributeFmtp {
     pub parameters: SdpAttributeFmtpParameters,
 }
 
+#[derive(Clone, Copy)]
+#[cfg_attr(feature="serialize", derive(Serialize))]
+pub enum SdpAttributeFingerprintHashType {
+    Sha1,
+    Sha224,
+    Sha256,
+    Sha384,
+    Sha512,
+}
+
 #[derive(Clone)]
 #[cfg_attr(feature="serialize", derive(Serialize))]
 pub struct SdpAttributeFingerprint {
-    // TODO turn the supported hash algorithms into an enum?
-    pub hash_algorithm: String,
-    pub fingerprint: String,
+    pub hash_algorithm: SdpAttributeFingerprintHashType,
+    pub fingerprint: Vec<u8>
+}
+
+#[derive(Debug, PartialEq, Clone)]
+#[cfg_attr(feature="serialize", derive(Serialize))]
+pub enum SdpAttributeImageAttrXYRange {
+    Range(u32,u32,Option<u32>), // min, max, step
+    DiscreteValues(Vec<u32>),
+}
+
+#[derive(Debug, PartialEq, Clone)]
+#[cfg_attr(feature="serialize", derive(Serialize))]
+pub enum SdpAttributeImageAttrSRange {
+    Range(f32,f32), // min, max
+    DiscreteValues(Vec<f32>),
+}
+
+#[derive(Debug, PartialEq, Clone)]
+#[cfg_attr(feature="serialize", derive(Serialize))]
+pub struct SdpAttributeImageAttrPRange {
+    pub min: f32,
+    pub max: f32,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+#[cfg_attr(feature="serialize", derive(Serialize))]
+pub struct SdpAttributeImageAttrSet {
+    pub x: SdpAttributeImageAttrXYRange,
+    pub y: SdpAttributeImageAttrXYRange,
+    pub sar: Option<SdpAttributeImageAttrSRange>,
+    pub par: Option<SdpAttributeImageAttrPRange>,
+    pub q: Option<f32>,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+#[cfg_attr(feature="serialize", derive(Serialize))]
+pub enum SdpAttributeImageAttrSetList {
+    Sets(Vec<SdpAttributeImageAttrSet>),
+    Wildcard,
+}
+
+#[derive(Clone)]
+#[cfg_attr(feature="serialize", derive(Serialize))]
+pub struct SdpAttributeImageAttr {
+    pub pt: SdpAttributePayloadType,
+    pub send: SdpAttributeImageAttrSetList,
+    pub recv: SdpAttributeImageAttrSetList,
 }
 
 #[derive(Clone)]
@@ -411,6 +474,7 @@ impl SdpAttributeSsrc {
 pub enum SdpAttribute {
     BundleOnly,
     Candidate(SdpAttributeCandidate),
+    DtlsMessage(SdpAttributeDtlsMessage),
     EndOfCandidates,
     Extmap(SdpAttributeExtmap),
     Fingerprint(SdpAttributeFingerprint),
@@ -422,7 +486,7 @@ pub enum SdpAttribute {
     IcePwd(String),
     IceUfrag(String),
     Identity(String),
-    ImageAttr(String),
+    ImageAttr(SdpAttributeImageAttr),
     Inactive,
     Label(String),
     MaxMessageSize(u64),
@@ -476,6 +540,7 @@ impl SdpAttribute {
             SdpAttribute::Ssrc(..) |
             SdpAttribute::SsrcGroup(..) => false,
 
+            SdpAttribute::DtlsMessage{..} |
             SdpAttribute::EndOfCandidates |
             SdpAttribute::Extmap(..) |
             SdpAttribute::Fingerprint(..) |
@@ -496,6 +561,7 @@ impl SdpAttribute {
 
     pub fn allowed_at_media_level(&self) -> bool {
         match *self {
+            SdpAttribute::DtlsMessage{..} |
             SdpAttribute::Group(..) |
             SdpAttribute::IceLite |
             SdpAttribute::Identity(..) |
@@ -544,6 +610,7 @@ impl fmt::Display for SdpAttribute {
         let printable = match *self {
             SdpAttribute::BundleOnly => "bundle-only",
             SdpAttribute::Candidate(..) => "candidate",
+            SdpAttribute::DtlsMessage{..} => "dtls-message",
             SdpAttribute::EndOfCandidates => "end-of-candidates",
             SdpAttribute::Extmap(..) => "extmap",
             SdpAttribute::Fingerprint(..) => "fingerprint",
@@ -614,13 +681,14 @@ impl FromStr for SdpAttribute {
         }
         match name.as_str() {
             "bundle-only" => Ok(SdpAttribute::BundleOnly),
+            "dtls-message" => parse_dtls_message(val),
             "end-of-candidates" => Ok(SdpAttribute::EndOfCandidates),
             "ice-lite" => Ok(SdpAttribute::IceLite),
             "ice-mismatch" => Ok(SdpAttribute::IceMismatch),
             "ice-pwd" => Ok(SdpAttribute::IcePwd(string_or_empty(val)?)),
             "ice-ufrag" => Ok(SdpAttribute::IceUfrag(string_or_empty(val)?)),
             "identity" => Ok(SdpAttribute::Identity(string_or_empty(val)?)),
-            "imageattr" => Ok(SdpAttribute::ImageAttr(string_or_empty(val)?)),
+            "imageattr" => parse_image_attr(val),
             "inactive" => Ok(SdpAttribute::Inactive),
             "label" => Ok(SdpAttribute::Label(string_or_empty(val)?)),
             "max-message-size" => Ok(SdpAttribute::MaxMessageSize(val.parse()?)),
@@ -662,6 +730,7 @@ impl FromStr for SdpAttribute {
 pub enum SdpAttributeType {
     BundleOnly,
     Candidate,
+    DtlsMessage,
     EndOfCandidates,
     Extmap,
     Fingerprint,
@@ -705,6 +774,7 @@ impl<'a> From<&'a SdpAttribute> for SdpAttributeType {
         match *other {
             SdpAttribute::BundleOnly{..} => SdpAttributeType::BundleOnly,
             SdpAttribute::Candidate{..} => SdpAttributeType::Candidate,
+            SdpAttribute::DtlsMessage{..} => SdpAttributeType::DtlsMessage,
             SdpAttribute::EndOfCandidates{..} => SdpAttributeType::EndOfCandidates,
             SdpAttribute::Extmap{..} => SdpAttributeType::Extmap,
             SdpAttribute::Fingerprint{..} => SdpAttributeType::Fingerprint,
@@ -877,6 +947,26 @@ fn parse_candidate(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalErro
     Ok(SdpAttribute::Candidate(cand))
 }
 
+fn parse_dtls_message(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
+    let tokens:Vec<&str> = to_parse.split(" ").collect();
+
+    if tokens.len() != 2 {
+        return Err(SdpParserInternalError::Generic(
+            "dtls-message must have a role token and a value token.".to_string()
+        ));
+    }
+
+    Ok(SdpAttribute::DtlsMessage(match tokens[0] {
+        "client" => SdpAttributeDtlsMessage::Client(tokens[1].to_string()),
+        "server" => SdpAttributeDtlsMessage::Server(tokens[1].to_string()),
+        e @ _ => {
+            return Err(SdpParserInternalError::Generic(
+                format!("dtls-message has unknown role token '{}'",e).to_string()
+            ));
+        }
+    }))
+}
+
 // ABNF for extmap is defined in RFC 5285
 // https://tools.ietf.org/html/rfc5285#section-7
 fn parse_extmap(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
@@ -925,9 +1015,56 @@ fn parse_fingerprint(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalEr
         return Err(SdpParserInternalError::Generic("Fingerprint needs to have two tokens"
                                                        .to_string()));
     }
+
+    let fingerprint_token = tokens[1].to_string();
+    let parse_tokens = |expected_len| -> Result<Vec<u8>, SdpParserInternalError>{
+        let bytes = fingerprint_token.split(":")
+                                     .map(|byte_token| {
+                                         if byte_token.len() != 2 {
+                                             return Err(SdpParserInternalError::Generic(
+                                                 "fingerpint's byte tokens must have 2 hexdigits"
+                                                 .to_string()
+                                             ))
+                                         }
+                                         Ok(u8::from_str_radix(byte_token, 16)?)
+                                     })
+                                     .collect::<Result<Vec<u8>,_>>()?;
+
+        if bytes.len() != expected_len {
+            return Err(SdpParserInternalError::Generic(
+                format!("fingerprint has {} bytes but should have {} bytes",
+                        bytes.len(), expected_len)
+            ))
+        }
+
+        Ok(bytes)
+    };
+
+
+    let hash_algorithm = match tokens[0] {
+        "sha-1" => SdpAttributeFingerprintHashType::Sha1,
+        "sha-224" => SdpAttributeFingerprintHashType::Sha224,
+        "sha-256" => SdpAttributeFingerprintHashType::Sha256,
+        "sha-384" => SdpAttributeFingerprintHashType::Sha384,
+        "sha-512" => SdpAttributeFingerprintHashType::Sha512,
+        unknown => {
+            return Err(SdpParserInternalError::Unsupported(
+                format!("fingerprint contains an unsupported hash algorithm '{}'", unknown)
+            ))
+        }
+    };
+
+    let fingerprint = match hash_algorithm {
+        SdpAttributeFingerprintHashType::Sha1 => parse_tokens(20)?,
+        SdpAttributeFingerprintHashType::Sha224 => parse_tokens(28)?,
+        SdpAttributeFingerprintHashType::Sha256 => parse_tokens(32)?,
+        SdpAttributeFingerprintHashType::Sha384 => parse_tokens(48)?,
+        SdpAttributeFingerprintHashType::Sha512 => parse_tokens(64)?,
+    };
+
     Ok(SdpAttribute::Fingerprint(SdpAttributeFingerprint {
-                                     hash_algorithm: tokens[0].to_string(),
-                                     fingerprint: tokens[1].to_string(),
+                                     hash_algorithm,
+                                     fingerprint,
                                  }))
 }
 
@@ -1138,6 +1275,293 @@ fn parse_ice_options(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalEr
                                                        .to_string()));
     }
     Ok(SdpAttribute::IceOptions(to_parse.split_whitespace().map(|x| x.to_string()).collect()))
+}
+
+fn parse_imageattr_tokens(to_parse: &str, separator: char) -> Vec<String> {
+    let mut tokens = Vec::new();
+    let mut open_braces_counter = 0;
+    let mut current_tokens = Vec::new();
+
+    for token in to_parse.split(separator) {
+        if token.contains("[") {
+            open_braces_counter+=1;
+        }
+        if token.contains("]") {
+            open_braces_counter-=1;
+        }
+
+        current_tokens.push(token.to_string());
+
+        if open_braces_counter == 0 {
+            tokens.push(current_tokens.join(&separator.to_string()));
+            current_tokens = Vec::new();
+        }
+    }
+
+    tokens
+}
+
+fn parse_imagettr_braced_token(to_parse: &str) -> Option<&str> {
+    if !to_parse.ends_with("]") {
+        return None;
+    }
+
+    Some(&to_parse[1..to_parse.len()-1])
+}
+
+fn parse_image_attr_xyrange(to_parse: &str) -> Result<SdpAttributeImageAttrXYRange,
+                                                      SdpParserInternalError> {
+    if to_parse.starts_with("[") {
+        let value_tokens = parse_imagettr_braced_token(to_parse).ok_or(
+            SdpParserInternalError::Generic(
+                "imageattr's xyrange has no closing tag ']'".to_string()
+            )
+        )?;
+
+        if to_parse.contains(":") {
+            // Range values
+            let range_tokens:Vec<&str> = value_tokens.split(":").collect();
+
+            if range_tokens.len() == 3 {
+                Ok(SdpAttributeImageAttrXYRange::Range(
+                    range_tokens[0].parse::<u32>()?,
+                    range_tokens[2].parse::<u32>()?,
+                    Some(range_tokens[1].parse::<u32>()?),
+                ))
+            } else if range_tokens.len() == 2 {
+                Ok(SdpAttributeImageAttrXYRange::Range(
+                    range_tokens[0].parse::<u32>()?,
+                    range_tokens[1].parse::<u32>()?,
+                    None
+                ))
+            } else {
+                return Err(SdpParserInternalError::Generic(
+                    "imageattr's xyrange must contain 2 or 3 fields".to_string()
+                ))
+            }
+        } else {
+            // Discrete values
+            let values = value_tokens.split(",")
+                                     .map(|x| x.parse::<u32>())
+                                     .collect::<Result<Vec<u32>, _>>()?;
+
+            if values.len() < 2 {
+                return Err(SdpParserInternalError::Generic(
+                    "imageattr's discrete value list must have at least two elements".to_string()
+                ))
+            }
+
+            Ok(SdpAttributeImageAttrXYRange::DiscreteValues(values))
+        }
+
+    } else {
+        Ok(SdpAttributeImageAttrXYRange::DiscreteValues(vec![to_parse.parse::<u32>()?]))
+    }
+}
+
+fn parse_image_attr_set(to_parse: &str) -> Result<SdpAttributeImageAttrSet,
+                                                  SdpParserInternalError> {
+    let mut tokens = parse_imageattr_tokens(to_parse, ',').into_iter();
+
+    let x_token = tokens.next().ok_or(SdpParserInternalError::Generic(
+        "imageattr set is missing the 'x=' token".to_string()
+    ))?;
+    if !x_token.starts_with("x=") {
+        return Err(SdpParserInternalError::Generic(
+            "The first token in an imageattr set must begin with 'x='".to_string()
+        ))
+    }
+    let x = parse_image_attr_xyrange(&x_token[2..])?;
+
+
+    let y_token = tokens.next().ok_or(SdpParserInternalError::Generic(
+        "imageattr set is missing the 'y=' token".to_string()
+    ))?;
+    if !y_token.starts_with("y=") {
+        return Err(SdpParserInternalError::Generic(
+            "The second token in an imageattr set must begin with 'y='".to_string()
+        ))
+    }
+    let y = parse_image_attr_xyrange(&y_token[2..])?;
+
+    let mut sar = None;
+    let mut par = None;
+    let mut q = None;
+
+    let parse_ps_range = |resolution_range: &str| -> Result<(f32, f32), SdpParserInternalError> {
+        let minmax_pair:Vec<&str> = resolution_range.split("-").collect();
+
+        if minmax_pair.len() != 2 {
+            return Err(SdpParserInternalError::Generic(
+                "imageattr's par and sar ranges must have two components".to_string()
+            ))
+        }
+
+        let min = minmax_pair[0].parse::<f32>()?;
+        let max = minmax_pair[1].parse::<f32>()?;
+
+        if min >= max {
+            return Err(SdpParserInternalError::Generic(
+                "In imageattr's par and sar ranges, first must be < than the second".to_string()
+            ))
+        }
+
+        Ok((min,max))
+    };
+
+    while let Some(current_token) = tokens.next() {
+        if current_token.starts_with("sar=") {
+            let value_token = &current_token[4..];
+            if value_token.starts_with("[") {
+                let sar_values = parse_imagettr_braced_token(value_token).ok_or(
+                    SdpParserInternalError::Generic(
+                        "imageattr's sar value is missing closing tag ']'".to_string()
+                    )
+                )?;
+
+                if value_token.contains("-") {
+                    // Range
+                    let range = parse_ps_range(sar_values)?;
+                    sar = Some(SdpAttributeImageAttrSRange::Range(range.0,range.1))
+                } else if value_token.contains(",") {
+                    // Discrete values
+                    let values = sar_values.split(",")
+                                             .map(|x| x.parse::<f32>())
+                                             .collect::<Result<Vec<f32>, _>>()?;
+
+                    if values.len() < 2 {
+                        return Err(SdpParserInternalError::Generic(
+                            "imageattr's sar discrete value list must have at least two values"
+                            .to_string()
+                        ))
+                    }
+
+                    // Check that all the values are ascending
+                    let mut last_value = 0.0;
+                    for value in &values {
+                        if last_value >= *value {
+                            return Err(SdpParserInternalError::Generic(
+                                "imageattr's sar discrete value list must contain ascending values"
+                                .to_string()
+                            ))
+                        }
+                        last_value = *value;
+                    }
+                    sar = Some(SdpAttributeImageAttrSRange::DiscreteValues(values))
+                }
+            } else {
+                sar = Some(SdpAttributeImageAttrSRange::DiscreteValues(
+                    vec![value_token.parse::<f32>()?])
+                )
+            }
+        } else if current_token.starts_with("par=") {
+            let braced_value_token = &current_token[4..];
+            if !braced_value_token.starts_with("[") {
+                return Err(SdpParserInternalError::Generic(
+                    "imageattr's par value must start with '['".to_string()
+                ))
+            }
+
+            let par_values = parse_imagettr_braced_token(braced_value_token).ok_or(
+                SdpParserInternalError::Generic(
+                    "imageattr's par value must be enclosed with ']'".to_string()
+                )
+            )?;
+            let range = parse_ps_range(par_values)?;
+            par = Some(SdpAttributeImageAttrPRange {
+                min: range.0,
+                max: range.1,
+            })
+        } else if current_token.starts_with("q=") {
+            q = Some(current_token[2..].parse::<f32>()?);
+        }
+    }
+
+    Ok(SdpAttributeImageAttrSet {
+        x,
+        y,
+        sar,
+        par,
+        q
+    })
+}
+
+fn parse_image_attr_set_list<I>(tokens: &mut iter::Peekable<I>)
+                                -> Result<SdpAttributeImageAttrSetList, SdpParserInternalError>
+                            where I: Iterator<Item = String> + Clone {
+    let parse_set = |set_token:&str| -> Result<SdpAttributeImageAttrSet, SdpParserInternalError> {
+        Ok(parse_image_attr_set(parse_imagettr_braced_token(set_token).ok_or(
+            SdpParserInternalError::Generic(
+                "imageattr sets must be enclosed by ']'".to_string()
+        ))?)?)
+    };
+
+    match tokens.next().ok_or(SdpParserInternalError::Generic(
+        "imageattr must have a parameter set after a direction token".to_string()
+    ))?.as_str() {
+        "*" => Ok(SdpAttributeImageAttrSetList::Wildcard),
+        x => {
+            let mut sets = vec![parse_set(x)?];
+            while let Some(set_str) = tokens.clone().peek() {
+                if set_str.starts_with("[") {
+                    sets.push(parse_set(&tokens.next().unwrap())?);
+                } else {
+                    break;
+                }
+            }
+
+            Ok(SdpAttributeImageAttrSetList::Sets(sets))
+        }
+    }
+}
+
+fn parse_image_attr(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
+    let mut tokens = parse_imageattr_tokens(to_parse, ' ').into_iter().peekable();
+
+    let pt = parse_payload_type(tokens.next().ok_or(SdpParserInternalError::Generic(
+        "imageattr requires a payload token".to_string()
+    ))?.as_str())?;
+    let first_direction = parse_single_direction(tokens.next().ok_or(
+        SdpParserInternalError::Generic(
+            "imageattr's second token must be a direction token".to_string()
+    ))?.as_str())?;
+
+    let first_set_list = parse_image_attr_set_list(&mut tokens)?;
+
+    let mut second_set_list = SdpAttributeImageAttrSetList::Sets(Vec::new());
+
+    // Check if there is a second direction defined
+    if let Some(direction_token) = tokens.next() {
+        if parse_single_direction(direction_token.as_str())? == first_direction {
+            return Err(SdpParserInternalError::Generic(
+                "imageattr's second direction token must be different from the first one"
+                .to_string()
+            ))
+        }
+
+        second_set_list = parse_image_attr_set_list(&mut tokens)?;
+    }
+
+    if let Some(_) = tokens.next() {
+        return Err(SdpParserInternalError::Generic(
+            "imageattr must not contain any token after the second set list".to_string()
+        ))
+    }
+
+    Ok(SdpAttribute::ImageAttr(match first_direction {
+        SdpSingleDirection::Send =>
+            SdpAttributeImageAttr {
+                pt,
+                send: first_set_list,
+                recv: second_set_list,
+            },
+        SdpSingleDirection::Recv =>
+            SdpAttributeImageAttr {
+                pt,
+                send: second_set_list,
+                recv: first_set_list,
+            }
+    }))
 }
 
 fn parse_msid(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
@@ -1602,7 +2026,7 @@ fn parse_simulcast(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalErro
 }
 
 fn parse_ssrc(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
-    let mut tokens = to_parse.split_whitespace();
+    let mut tokens = to_parse.splitn(2,' ');
     let ssrc_id = match tokens.next() {
         None => {
             return Err(SdpParserInternalError::Generic("Ssrc attribute is missing ssrc-id value"
@@ -1703,6 +2127,42 @@ fn test_parse_attribute_candidate() {
 }
 
 #[test]
+fn test_parse_dtls_message() {
+    let check_parse = |x| -> SdpAttributeDtlsMessage {
+        if let Ok(SdpType::Attribute(SdpAttribute::DtlsMessage(x))) = parse_attribute(x) {
+            x
+        } else {
+            unreachable!();
+        }
+    };
+
+    assert!(parse_attribute("dtls-message:client SGVsbG8gV29ybGQ=").is_ok());
+    assert!(parse_attribute("dtls-message:server SGVsbG8gV29ybGQ=").is_ok());
+    assert!(parse_attribute("dtls-message:client IGlzdCBl/W4gUeiBtaXQg+JSB1bmQCAkJJkSNEQ=").is_ok());
+    assert!(parse_attribute("dtls-message:server IGlzdCBl/W4gUeiBtaXQg+JSB1bmQCAkJJkSNEQ=").is_ok());
+
+    let mut dtls_message = check_parse("dtls-message:client SGVsbG8gV29ybGQ=");
+    match dtls_message {
+        SdpAttributeDtlsMessage::Client(x) => {
+            assert_eq!(x, "SGVsbG8gV29ybGQ=");
+        },
+        _ => { unreachable!(); }
+    }
+
+    dtls_message = check_parse("dtls-message:server SGVsbG8gV29ybGQ=");
+    match dtls_message {
+        SdpAttributeDtlsMessage::Server(x) => {
+            assert_eq!(x, "SGVsbG8gV29ybGQ=");
+        },
+        _ => { unreachable!(); }
+    }
+
+
+    assert!(parse_attribute("dtls-message:client").is_err());
+    assert!(parse_attribute("dtls-message:server").is_err());
+}
+
+#[test]
 fn test_parse_attribute_end_of_candidates() {
     assert!(parse_attribute("end-of-candidates").is_ok());
     assert!(parse_attribute("end-of-candidates foobar").is_err());
@@ -1732,7 +2192,30 @@ fn test_parse_attribute_extmap() {
 
 #[test]
 fn test_parse_attribute_fingerprint() {
-    assert!(parse_attribute("fingerprint:sha-256 CD:34:D1:62:16:95:7B:B7:EB:74:E2:39:27:97:EB:0B:23:73:AC:BC:BF:2F:E3:91:CB:57:A9:9D:4A:A2:0B:40").is_ok())
+    assert!(parse_attribute("fingerprint:sha-1 CD:34:D1:62:16:95:7B:B7:EB:74:E2:39:27:97:EB:0B:23:73:AC:BC").is_ok());
+    assert!(parse_attribute("fingerprint:sha-224 CD:34:D1:62:16:95:7B:B7:EB:74:E2:39:27:97:EB:0B:23:73:AC:BC:\
+                                                 27:97:EB:0B:23:73:AC:BC").is_ok());
+    assert!(parse_attribute("fingerprint:sha-256 CD:34:D1:62:16:95:7B:B7:EB:74:E2:39:27:97:EB:0B:23:73:AC:BC:\
+                                                 27:97:EB:0B:23:73:AC:BC:CD:34:D1:62").is_ok());
+    assert!(parse_attribute("fingerprint:sha-384 CD:34:D1:62:16:95:7B:B7:EB:74:E2:39:27:97:EB:0B:23:73:AC:BC:\
+                                                 27:97:EB:0B:23:73:AC:BC:CD:34:D1:62:16:95:7B:B7:EB:74:E2:39:\
+                                                 27:97:EB:0B:23:73:AC:BC").is_ok());
+    assert!(parse_attribute("fingerprint:sha-512 CD:34:D1:62:16:95:7B:B7:EB:74:E2:39:27:97:EB:0B:23:73:AC:BC:\
+                                                 97:EB:0B:23:73:AC:BC:CD:34:D1:62:16:95:7B:B7:EB:74:E2:39:27:\
+                                                 EB:0B:23:73:AC:BC:27:97:EB:0B:23:73:AC:BC:27:97:EB:0B:23:73:\
+                                                 BC:EB:0B:23").is_ok());
+
+    assert!(parse_attribute("fingerprint:sha-1 CX:34:D1:62:16:95:7B:B7:EB:74:E1:39:27:97:EB:0B:23:73:AC:BC").is_err());
+    assert!(parse_attribute("fingerprint:sha-1 CDA:34:D1:62:16:95:7B:B7:EB:74:E1:39:27:97:EB:0B:23:73:AC:BC").is_err());
+    assert!(parse_attribute("fingerprint:sha-1 CD:34:D1:62:16:95:7B:B7:EB:74:E1:39:27:97:EB:0B:23:73:AC:").is_err());
+    assert!(parse_attribute("fingerprint:sha-1 CD:34:D1:62:16:95:7B:B7:EB:74:E1:39:27:97:EB:0B:23:73:AC").is_err());
+    assert!(parse_attribute("fingerprint:sha-1 CX:34:D1:62:16:95:7B:B7:EB:74:E1:39:27:97:EB:0B:23:73:AC:BC").is_err());
+
+    assert!(parse_attribute("fingerprint:sha-1 0xCD:34:D1:62:16:95:7B:B7:EB:74:E2:39:27:97:EB:0B:23:73:AC:BC").is_err());
+    assert!(parse_attribute("fingerprint:sha-1 CD:0x34:D1:62:16:95:7B:B7:EB:74:E2:39:27:97:EB:0B:23:73:AC:BC").is_err());
+    assert!(parse_attribute("fingerprint:sha-1 CD::D1:62:16:95:7B:B7:EB:74:E2:39:27:97:EB:0B:23:73:AC:BC").is_err());
+    assert!(parse_attribute("fingerprint:sha-1 CD:0000A:D1:62:16:95:7B:B7:EB:74:E2:39:27:97:EB:0B:23:73:AC:BC").is_err());
+    assert!(parse_attribute("fingerprint:sha-1 CD:B:D1:62:16:95:7B:B7:EB:74:E2:39:27:97:EB:0B:23:73:AC:BC").is_err());
 }
 
 #[test]
@@ -1814,16 +2297,86 @@ fn test_parse_attribute_identity() {
 
 #[test]
 fn test_parse_attribute_imageattr() {
+    let check_parse = |x| -> SdpAttributeImageAttr {
+        if let Ok(SdpType::Attribute(SdpAttribute::ImageAttr(x))) = parse_attribute(x) {
+            x
+        } else {
+            unreachable!();
+        }
+    };
+
     assert!(parse_attribute("imageattr:120 send * recv *").is_ok());
-    assert!(
-        parse_attribute(
-            "imageattr:97 send [x=800,y=640,sar=1.1,q=0.6] [x=480,y=320] recv [x=330,y=250]"
-        ).is_ok()
-    );
+    assert!(parse_attribute("imageattr:99 send [x=320,y=240] recv [x=320,y=240]").is_ok());
+    assert!(parse_attribute("imageattr:97 send [x=800,y=640,sar=1.1,q=0.6] [x=480,y=320] recv [x=330,y=250]").is_ok());
     assert!(parse_attribute("imageattr:97 recv [x=800,y=640,sar=1.1] send [x=330,y=250]").is_ok());
     assert!(parse_attribute("imageattr:97 send [x=[480:16:800],y=[320:16:640],par=[1.2-1.3],q=0.6] [x=[176:8:208],y=[144:8:176],par=[1.2-1.3]] recv *").is_ok());
 
+    let mut imageattr = check_parse("imageattr:* recv [x=800,y=[50,80,30],sar=1.1] send [x=330,y=250,sar=[1.1,1.3,1.9],q=0.1]");
+    assert_eq!(imageattr.pt, SdpAttributePayloadType::Wildcard);
+    match imageattr.recv {
+        SdpAttributeImageAttrSetList::Sets(sets) => {
+            assert_eq!(sets.len(), 1);
+
+            let set = &sets[0];
+            assert_eq!(set.x, SdpAttributeImageAttrXYRange::DiscreteValues(vec![800]));
+            assert_eq!(set.y, SdpAttributeImageAttrXYRange::DiscreteValues(vec![50,80,30]));
+            assert_eq!(set.par, None);
+            assert_eq!(set.sar, Some(SdpAttributeImageAttrSRange::DiscreteValues(vec![1.1])));
+            assert_eq!(set.q, None);
+
+        },
+        _ => { unreachable!(); }
+    }
+    match imageattr.send {
+        SdpAttributeImageAttrSetList::Sets(sets) => {
+            assert_eq!(sets.len(), 1);
+
+            let set = &sets[0];
+            assert_eq!(set.x, SdpAttributeImageAttrXYRange::DiscreteValues(vec![330]));
+            assert_eq!(set.y, SdpAttributeImageAttrXYRange::DiscreteValues(vec![250]));
+            assert_eq!(set.par, None);
+            assert_eq!(set.sar, Some(SdpAttributeImageAttrSRange::DiscreteValues(vec![1.1,1.3,1.9])));
+            assert_eq!(set.q, Some(0.1));
+        },
+        _ => { unreachable!(); }
+    }
+
+    imageattr = check_parse("imageattr:97 send [x=[480:16:800],y=[100,200,300],par=[1.2-1.3],q=0.6] [x=1080,y=[144:176],sar=[0.5-0.7]] recv *");
+    assert_eq!(imageattr.pt, SdpAttributePayloadType::PayloadType(97));
+    match imageattr.send {
+        SdpAttributeImageAttrSetList::Sets(sets) => {
+            assert_eq!(sets.len(), 2);
+
+            let first_set = &sets[0];
+            assert_eq!(first_set.x, SdpAttributeImageAttrXYRange::Range(480, 800, Some(16)));
+            assert_eq!(first_set.y, SdpAttributeImageAttrXYRange::DiscreteValues(vec![100, 200, 300]));
+            assert_eq!(first_set.par, Some(SdpAttributeImageAttrPRange {
+                min: 1.2,
+                max: 1.3
+            }));
+            assert_eq!(first_set.sar, None);
+            assert_eq!(first_set.q, Some(0.6));
+
+            let second_set = &sets[1];
+            assert_eq!(second_set.x, SdpAttributeImageAttrXYRange::DiscreteValues(vec![1080]));
+            assert_eq!(second_set.y, SdpAttributeImageAttrXYRange::Range(144, 176, None));
+            assert_eq!(second_set.par, None);
+            assert_eq!(second_set.sar, Some(SdpAttributeImageAttrSRange::Range(0.5, 0.7)));
+            assert_eq!(second_set.q, None);
+        },
+        _ => { unreachable!(); }
+    }
+    assert_eq!(imageattr.recv, SdpAttributeImageAttrSetList::Wildcard);
+
+    assert!(parse_attribute("imageattr:99 send [x=320,y=240]").is_ok());
+    assert!(parse_attribute("imageattr:100 recv [x=320,y=240]").is_ok());
+    assert!(parse_attribute("imageattr:97 recv [x=800,y=640,sar=1.1,foo=[123,456],q=0.5] send [x=330,y=250,bar=foo,sar=[20-40]]").is_ok());
+    assert!(parse_attribute("imageattr:97 recv [x=800,y=640,sar=1.1,foo=abc xyz,q=0.5] send [x=330,y=250,bar=foo,sar=[20-40]]").is_ok());
+
     assert!(parse_attribute("imageattr:").is_err());
+    assert!(parse_attribute("imageattr:100").is_err());
+    assert!(parse_attribute("imageattr:120 send * recv * send *").is_err());
+    assert!(parse_attribute("imageattr:97 send [x=800,y=640,sar=1.1] send [x=330,y=250]").is_err());
 }
 
 #[test]
@@ -2100,6 +2653,8 @@ fn test_parse_attribute_ssrc() {
     assert!(parse_attribute("ssrc:2655508255").is_ok());
     assert!(parse_attribute("ssrc:2655508255 foo").is_ok());
     assert!(parse_attribute("ssrc:2655508255 cname:{735484ea-4f6c-f74a-bd66-7425f8476c2e}")
+                .is_ok());
+    assert!(parse_attribute("ssrc:2082260239 msid:1d0cdb4e-5934-4f0f-9f88-40392cb60d31 315b086a-5cb6-4221-89de-caf0b038c79d")
                 .is_ok());
 
     assert!(parse_attribute("ssrc:").is_err());
