@@ -1,18 +1,68 @@
 use std::net::IpAddr;
 use std::str::FromStr;
-use std::fmt;
 use std::iter;
 
 use SdpType;
 use error::SdpParserInternalError;
 use network::{parse_nettype, parse_addrtype, parse_unicast_addr};
+use serialization_helper::{maybe_print_param, maybe_print_bool_param, addr_to_string};
+
+
+// Serialization helper marcos
+#[macro_export]
+macro_rules! option_to_string {
+    ($fmt_str:expr, $opt:expr) => {
+        match $opt {
+            Some(ref x) => format!($fmt_str, x.to_string()),
+            None => "".to_string()
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! maybe_vector_to_string {
+    ($fmt_str:expr, $vec:expr, $sep:expr) => {
+        match $vec.len() {
+           0 => "".to_string(),
+           _ => format!($fmt_str, $vec.iter()
+                                      .map(|x| x.to_string())
+                                      .collect::<Vec<String>>()
+                                      .join($sep)),
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! non_empty_string_vec {
+    ( $( $x:expr ),* ) => {
+        {
+            let mut temp_vec = Vec::new();
+            $(
+                if !$x.is_empty() {
+                    temp_vec.push($x);
+                }
+            )*
+            temp_vec
+        }
+    };
+}
+
 
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature="serialize", derive(Serialize))]
-pub enum SdpSingleDirection{
+pub enum SdpSingleDirection {
     // This is explicitly 1 and 2 to match the defines in the C++ glue code.
     Send = 1,
     Recv = 2,
+}
+
+impl ToString for SdpSingleDirection {
+    fn to_string(&self) -> String {
+        match *self {
+            SdpSingleDirection::Send => "send",
+            SdpSingleDirection::Recv => "recv",
+        }.to_string()
+    }
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -20,6 +70,15 @@ pub enum SdpSingleDirection{
 pub enum SdpAttributePayloadType {
     PayloadType(u8),
     Wildcard, // Wildcard means "*",
+}
+
+impl ToString for SdpAttributePayloadType {
+    fn to_string(&self) -> String {
+        match *self {
+            SdpAttributePayloadType::PayloadType(pt) => pt.to_string(),
+            SdpAttributePayloadType::Wildcard => "*".to_string()
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -147,16 +206,7 @@ impl SdpAttributeCandidate {
 
 impl ToString for SdpAttributeCandidate {
     fn to_string(&self) -> String {
-        macro_rules! option_to_string {
-            ($fmt_str:expr, $opt:expr) => {
-                match $opt {
-                    Some(ref x) => format!($fmt_str, x.to_string()),
-                    None => "".to_string()
-                }
-            };
-        }
-
-        format!("candidate:{foundation} {component_id} {transport} {priority} \
+        format!("{foundation} {component_id} {transport} {priority} \
                            {connection_address} {port} typ {cand_type}\
                            {rel_addr}{rel_port}{tcp_type}{generation}{ufrag}{network_cost}",
                 foundation = self.foundation,
@@ -182,12 +232,30 @@ pub enum SdpAttributeDtlsMessage {
     Server(String),
 }
 
+impl ToString for SdpAttributeDtlsMessage {
+    fn to_string(&self) -> String {
+        match *self {
+            SdpAttributeDtlsMessage::Client(ref msg) => format!("client {}", msg),
+            SdpAttributeDtlsMessage::Server(ref msg) => format!("server {}", msg),
+        }
+    }
+}
+
 #[derive(Clone)]
 #[cfg_attr(feature="serialize", derive(Serialize))]
 pub struct SdpAttributeRemoteCandidate {
     pub component: u32,
     pub address: IpAddr,
     pub port: u32,
+}
+
+impl ToString for SdpAttributeRemoteCandidate {
+    fn to_string(&self) -> String {
+        format!("{component} {addr} {port}",
+                component = self.component.to_string(),
+                addr = self.address.to_string(),
+                port = self.port.to_string())
+    }
 }
 
 #[derive(Clone)]
@@ -213,6 +281,15 @@ impl SdpAttributeSimulcastId {
     }
 }
 
+impl ToString for SdpAttributeSimulcastId {
+    fn to_string(&self) -> String {
+        match self.paused {
+            true => format!("~{}", self.id),
+            false => self.id.clone()
+        }
+    }
+}
+
 #[repr(C)]
 #[derive(Clone)]
 #[cfg_attr(feature="serialize", derive(Serialize))]
@@ -231,11 +308,26 @@ impl SdpAttributeSimulcastVersion {
     }
 }
 
+impl ToString for SdpAttributeSimulcastVersion {
+    fn to_string(&self) -> String {
+        self.ids.iter().map(|id| id.to_string()).collect::<Vec<String>>().join(",")
+    }
+}
+
 #[derive(Clone)]
 #[cfg_attr(feature="serialize", derive(Serialize))]
 pub struct SdpAttributeSimulcast {
     pub send: Vec<SdpAttributeSimulcastVersion>,
     pub receive: Vec<SdpAttributeSimulcastVersion>,
+}
+
+impl ToString for SdpAttributeSimulcast {
+    fn to_string(&self) -> String {
+        format!("{versions}", versions = non_empty_string_vec![
+            maybe_vector_to_string!("send {}", self.send, ";"),
+            maybe_vector_to_string!("recv {}", self.receive, ";")
+        ].join(" "))
+    }
 }
 
 #[derive(Clone)]
@@ -258,6 +350,18 @@ impl SdpAttributeRtcp {
     }
 }
 
+impl ToString for SdpAttributeRtcp {
+    fn to_string(&self) -> String {
+        let unicast_addr_str_opt = match self.unicast_addr {
+            None => None,
+            Some(x) => Some(addr_to_string(x))
+        };
+        format!("{port}{unicast_addr}",
+                port = self.port.to_string(),
+                unicast_addr = option_to_string!(" {}", unicast_addr_str_opt))
+    }
+}
+
 #[derive(Clone)]
 #[cfg_attr(feature="serialize", derive(Serialize))]
 pub enum SdpAttributeRtcpFbType {
@@ -271,6 +375,19 @@ pub enum SdpAttributeRtcpFbType {
     TransCC
 }
 
+impl ToString for SdpAttributeRtcpFbType {
+    fn to_string(&self) -> String {
+        match *self {
+            SdpAttributeRtcpFbType::Ack => "ack",
+            SdpAttributeRtcpFbType::Ccm => "ccm",
+            SdpAttributeRtcpFbType::Nack => "nack",
+            SdpAttributeRtcpFbType::TrrInt => "trr-int",
+            SdpAttributeRtcpFbType::Remb => "goog-remb",
+            SdpAttributeRtcpFbType::TransCC => "transport-cc",
+        }.to_string()
+    }
+}
+
 #[derive(Clone)]
 #[cfg_attr(feature="serialize", derive(Serialize))]
 pub struct SdpAttributeRtcpFb {
@@ -278,6 +395,22 @@ pub struct SdpAttributeRtcpFb {
     pub feedback_type: SdpAttributeRtcpFbType,
     pub parameter: String,
     pub extra: String,
+}
+
+impl ToString for SdpAttributeRtcpFb {
+    fn to_string(&self) -> String {
+        format!("{pt} {feeback}{parameter_and_extra}",
+                pt = self.payload_type.to_string(),
+                feeback = self.feedback_type.to_string(),
+                parameter_and_extra = match self.parameter.is_empty() {
+                    true => "".to_string(),
+                    false => format!(" {parameter}{extra}",
+                                     parameter = self.parameter,
+                                     extra = maybe_print_param(" ", self.extra.clone(),
+                                                               "".to_string()),
+                                     )
+                })
+    }
 }
 
 #[derive(Clone)]
@@ -288,6 +421,16 @@ pub enum SdpAttributeDirection {
     Sendrecv,
 }
 
+impl ToString for SdpAttributeDirection {
+    fn to_string(&self) -> String {
+        match *self {
+            SdpAttributeDirection::Recvonly => "recvonly",
+            SdpAttributeDirection::Sendonly => "sendonly",
+            SdpAttributeDirection::Sendrecv => "sendrecv",
+        }.to_string()
+    }
+}
+
 #[derive(Clone)]
 #[cfg_attr(feature="serialize", derive(Serialize))]
 pub struct SdpAttributeExtmap {
@@ -295,6 +438,16 @@ pub struct SdpAttributeExtmap {
     pub direction: Option<SdpAttributeDirection>,
     pub url: String,
     pub extension_attributes: Option<String>,
+}
+
+impl ToString for SdpAttributeExtmap {
+    fn to_string(&self) -> String {
+        format!("{id}{direction} {url}{ext}",
+                id = self.id.to_string(),
+                direction = option_to_string!("/{}", self.direction),
+                url = self.url,
+                ext = option_to_string!(" {}", self.extension_attributes))
+    }
 }
 
 #[derive(Clone)]
@@ -334,12 +487,44 @@ pub struct SdpAttributeFmtpParameters {
     pub unknown_tokens: Vec<String>,
 }
 
+impl ToString for SdpAttributeFmtpParameters {
+    fn to_string(&self) -> String {
+        format!("{parameters}{red}{dtmf_tones}{unknown}",
+            parameters = non_empty_string_vec![
+                maybe_print_param("packetization-mode=", self.packetization_mode, 0),
+                maybe_print_bool_param("level-asymmetry-allowed", self.level_asymmetry_allowed, false),
+                maybe_print_param("profile-level-id=", self.profile_level_id, 0x420010),
+                maybe_print_param("max-fs=", self.max_fs, 0),
+                maybe_print_param("max-cpb=", self.max_cpb, 0),
+                maybe_print_param("max-dpb=", self.max_dpb, 0),
+                maybe_print_param("max-br=", self.max_br, 0),
+                maybe_print_param("max-mbps=", self.max_mbps, 0),
+                maybe_print_param("max-fr=", self.max_fr, 0),
+                maybe_print_param("maxplaybackrate=", self.maxplaybackrate, 48000),
+                maybe_print_bool_param("usedtx", self.usedtx, false),
+                maybe_print_bool_param("stereo", self.stereo, false),
+                maybe_print_bool_param("useinbandfec", self.useinbandfec, false),
+                maybe_print_bool_param("cbr", self.cbr, false)
+            ].join(";"),
+            red = maybe_vector_to_string!("{}", self.encodings, "/"),
+            dtmf_tones = maybe_print_param("", self.dtmf_tones.clone(), "".to_string()),
+            unknown = maybe_vector_to_string!("{}", self.unknown_tokens, ","))
+    }
+}
 
 #[derive(Clone)]
 #[cfg_attr(feature="serialize", derive(Serialize))]
 pub struct SdpAttributeFmtp {
     pub payload_type: u8,
     pub parameters: SdpAttributeFmtpParameters,
+}
+
+impl ToString for SdpAttributeFmtp {
+    fn to_string(&self) -> String {
+        format!("{pt} {params}",
+                pt = self.payload_type.to_string(),
+                params = self.parameters.to_string())
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -352,11 +537,42 @@ pub enum SdpAttributeFingerprintHashType {
     Sha512,
 }
 
+impl ToString for SdpAttributeFingerprintHashType {
+    fn to_string(&self) -> String {
+        match *self {
+            SdpAttributeFingerprintHashType::Sha1 => "sha-1",
+            SdpAttributeFingerprintHashType::Sha224 => "sha-224",
+            SdpAttributeFingerprintHashType::Sha256 => "sha-256",
+            SdpAttributeFingerprintHashType::Sha384 => "sha-384",
+            SdpAttributeFingerprintHashType::Sha512 => "sha-512",
+        }.to_string()
+    }
+}
+
 #[derive(Clone)]
 #[cfg_attr(feature="serialize", derive(Serialize))]
 pub struct SdpAttributeFingerprint {
     pub hash_algorithm: SdpAttributeFingerprintHashType,
     pub fingerprint: Vec<u8>
+}
+
+impl ToString for SdpAttributeFingerprint {
+    fn to_string(&self) -> String {
+        format!("{hash_algo} {fingerprint}",
+                hash_algo = self.hash_algorithm.to_string(),
+                fingerprint = self.fingerprint.iter().map(|byte| format!("{:02X}", byte))
+                                              .collect::<Vec<String>>()
+                                              .join(":"))
+    }
+}
+
+fn imageattr_discrete_value_list_to_string<T>(values: Vec<T>) -> String where T: ToString {
+    match values.len() {
+        1 => values[0].to_string(),
+        _ => format!("[{}]", values.iter().map(|x| x.to_string())
+                                   .collect::<Vec<String>>()
+                                   .join(","))
+    }
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -366,6 +582,21 @@ pub enum SdpAttributeImageAttrXYRange {
     DiscreteValues(Vec<u32>),
 }
 
+impl ToString for SdpAttributeImageAttrXYRange {
+    fn to_string(&self) -> String {
+        match *self {
+            SdpAttributeImageAttrXYRange::Range(ref min, ref max, ref step_opt) => {
+                match step_opt {
+                    Some(step) => format!("[{}:{}:{}]", min, step, max),
+                    None => format!("[{}:{}]", min, max)
+                }
+            },
+            SdpAttributeImageAttrXYRange::DiscreteValues(ref values) =>
+                imageattr_discrete_value_list_to_string(values.to_vec()),
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(feature="serialize", derive(Serialize))]
 pub enum SdpAttributeImageAttrSRange {
@@ -373,11 +604,27 @@ pub enum SdpAttributeImageAttrSRange {
     DiscreteValues(Vec<f32>),
 }
 
+impl ToString for SdpAttributeImageAttrSRange {
+    fn to_string(&self) -> String {
+        match *self {
+            SdpAttributeImageAttrSRange::Range(ref min, ref max) => format!("[{}-{}]", min, max),
+            SdpAttributeImageAttrSRange::DiscreteValues(ref values) =>
+                imageattr_discrete_value_list_to_string(values.to_vec()),
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(feature="serialize", derive(Serialize))]
 pub struct SdpAttributeImageAttrPRange {
     pub min: f32,
     pub max: f32,
+}
+
+impl ToString for SdpAttributeImageAttrPRange {
+    fn to_string(&self) -> String {
+        format!("[{}-{}]", self.min, self.max)
+    }
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -390,11 +637,32 @@ pub struct SdpAttributeImageAttrSet {
     pub q: Option<f32>,
 }
 
+impl ToString for SdpAttributeImageAttrSet {
+    fn to_string(&self) -> String {
+        format!("[x={x},y={y}{sar}{par}{q}]",
+                x = self.x.to_string(),
+                y = self.y.to_string(),
+                sar = option_to_string!(",sar={}", self.sar),
+                par = option_to_string!(",par={}", self.par),
+                q = option_to_string!(",q={}", self.q))
+    }
+}
+
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(feature="serialize", derive(Serialize))]
 pub enum SdpAttributeImageAttrSetList {
     Sets(Vec<SdpAttributeImageAttrSet>),
     Wildcard,
+}
+
+impl ToString for SdpAttributeImageAttrSetList {
+    fn to_string(&self) -> String {
+        match *self {
+            SdpAttributeImageAttrSetList::Sets(ref sets) => sets.iter().map(|set| set.to_string())
+                                                                .collect::<Vec<String>>().join(" "),
+            SdpAttributeImageAttrSetList::Wildcard => "*".to_string()
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -405,6 +673,24 @@ pub struct SdpAttributeImageAttr {
     pub recv: SdpAttributeImageAttrSetList,
 }
 
+impl ToString for SdpAttributeImageAttr {
+    fn to_string(&self) -> String {
+        let maybe_sets_to_string = |set_list| {
+            match set_list {
+                SdpAttributeImageAttrSetList::Sets(sets) => match sets.len() {
+                    0 => None,
+                    _ => Some(SdpAttributeImageAttrSetList::Sets(sets)),
+                },
+                x => Some(x)
+            }
+        };
+        format!("{pt}{send_sets}{recv_sets}",
+                pt = self.pt.to_string(),
+                send_sets = option_to_string!(" send {}", maybe_sets_to_string(self.send.clone())),
+                recv_sets = option_to_string!(" recv {}", maybe_sets_to_string(self.recv.clone())))
+    }
+}
+
 #[derive(Clone)]
 #[cfg_attr(feature="serialize", derive(Serialize))]
 pub struct SdpAttributeSctpmap {
@@ -412,16 +698,38 @@ pub struct SdpAttributeSctpmap {
     pub channels: u32,
 }
 
+impl ToString for SdpAttributeSctpmap {
+    fn to_string(&self) -> String {
+        format!("{port} webrtc-datachannel {channels}",
+                port = self.port.to_string(),
+                channels = self.channels.to_string())
+    }
+}
+
 #[derive(Clone)]
 #[cfg_attr(feature="serialize", derive(Serialize))]
 pub enum SdpAttributeGroupSemantic {
-    LipSynchronization,
-    FlowIdentification,
-    SingleReservationFlow,
-    AlternateNetworkAddressType,
-    ForwardErrorCorrection,
-    DecodingDependency,
-    Bundle,
+    LipSynchronization, // rfc5888
+    FlowIdentification, // rfc5888
+    SingleReservationFlow, // rfc3524
+    AlternateNetworkAddressType, // rfc4091
+    ForwardErrorCorrection, // rfc4756
+    DecodingDependency, // rfc5583
+    Bundle, //
+}
+
+impl ToString for SdpAttributeGroupSemantic {
+    fn to_string(&self) -> String {
+        match *self {
+            SdpAttributeGroupSemantic::LipSynchronization => "LS",
+            SdpAttributeGroupSemantic::FlowIdentification => "FID",
+            SdpAttributeGroupSemantic::SingleReservationFlow => "SRF",
+            SdpAttributeGroupSemantic::AlternateNetworkAddressType => "ANAT",
+            SdpAttributeGroupSemantic::ForwardErrorCorrection => "FEC",
+            SdpAttributeGroupSemantic::DecodingDependency => "DDP",
+            SdpAttributeGroupSemantic::Bundle => "BUNDLE",
+        }.to_string()
+    }
 }
 
 #[derive(Clone)]
@@ -431,11 +739,27 @@ pub struct SdpAttributeGroup {
     pub tags: Vec<String>,
 }
 
+impl ToString for SdpAttributeGroup {
+    fn to_string(&self) -> String {
+        format!("{semantics}{tags}",
+                semantics = self.semantics.to_string(),
+                tags = maybe_vector_to_string!(" {}", self.tags, " "))
+    }
+}
+
 #[derive(Clone)]
 #[cfg_attr(feature="serialize", derive(Serialize))]
 pub struct SdpAttributeMsid {
     pub id: String,
     pub appdata: Option<String>,
+}
+
+impl ToString for SdpAttributeMsid {
+    fn to_string(&self) -> String {
+        format!("{id}{appdata}",
+                id = self.id,
+                appdata = option_to_string!(" {}", self.appdata))
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -445,9 +769,20 @@ pub struct SdpAttributeMsidSemantic {
     pub msids: Vec<String>,
 }
 
+impl ToString for SdpAttributeMsidSemantic {
+    fn to_string(&self) -> String {
+        format!("{semantic} {msids}",
+                semantic = self.semantic,
+                msids = match self.msids.len() {
+                    0 => "*".to_string(),
+                    _ => self.msids.join(" ")
+                })
+    }
+}
+
 #[derive(Clone)]
 #[cfg_attr(feature="serialize", derive(Serialize))]
-pub struct SdpAttributeRidParameters{
+pub struct SdpAttributeRidParameters {
     pub max_width: u32,
     pub max_height: u32,
     pub max_fps: u32,
@@ -458,6 +793,20 @@ pub struct SdpAttributeRidParameters{
     pub unknown: Vec<String>
 }
 
+impl ToString for SdpAttributeRidParameters {
+    fn to_string(&self) -> String {
+        non_empty_string_vec![
+            maybe_print_param("max-width=", self.max_width, 0),
+            maybe_print_param("max-height=", self.max_height, 0),
+            maybe_print_param("max-fps=", self.max_fps, 0),
+            maybe_print_param("max-fs=", self.max_fs, 0),
+            maybe_print_param("max-br=", self.max_br, 0),
+            maybe_print_param("max-pps=", self.max_pps, 0),
+            maybe_vector_to_string!("{}", self.unknown, ";")
+        ].join(";")
+    }
+}
+
 #[derive(Clone)]
 #[cfg_attr(feature="serialize", derive(Serialize))]
 pub struct SdpAttributeRid {
@@ -466,6 +815,23 @@ pub struct SdpAttributeRid {
     pub formats: Vec<u16>,
     pub params: SdpAttributeRidParameters,
     pub depends: Vec<String>
+}
+
+impl ToString for SdpAttributeRid {
+    fn to_string(&self) -> String {
+        format!("{id} {direction}{formats_and_prameters_and_depends}",
+                id = self.id,
+                direction = self.direction.to_string(),
+                formats_and_prameters_and_depends = match non_empty_string_vec![
+                    maybe_vector_to_string!("pt={}", self.formats, ","),
+                    self.params.to_string(),
+                    maybe_vector_to_string!("depends={}", self.depends, ",")
+                ].join(";").as_str() {
+                    "" => "".to_string(),
+                    x => format!(" {}", x)
+                }
+            )
+    }
 }
 
 #[derive(Clone)]
@@ -492,6 +858,16 @@ impl SdpAttributeRtpmap {
     }
 }
 
+impl ToString for SdpAttributeRtpmap {
+    fn to_string(&self) -> String {
+        format!("{pt} {codec_name}/{freq}{channels}",
+                pt = self.payload_type.to_string(),
+                codec_name = self.codec_name.clone(),
+                freq = self.frequency.to_string(),
+                channels = option_to_string!("/{}", self.channels))
+    }
+}
+
 #[derive(Clone)]
 #[cfg_attr(feature="serialize", derive(Serialize))]
 pub enum SdpAttributeSetup {
@@ -499,6 +875,18 @@ pub enum SdpAttributeSetup {
     Actpass,
     Holdconn,
     Passive,
+}
+
+impl ToString for SdpAttributeSetup {
+    fn to_string(&self) -> String {
+        format!("{}",
+            match *self {
+                SdpAttributeSetup::Active => "active",
+                SdpAttributeSetup::Actpass => "actpass",
+                SdpAttributeSetup::Holdconn => "holdconn",
+                SdpAttributeSetup::Passive => "passive",
+            }.to_string())
+    }
 }
 
 #[derive(Clone)]
@@ -526,6 +914,15 @@ impl SdpAttributeSsrc {
             self.attribute = Some(v[0].to_string());
             self.value = Some(v[1].to_string());
         }
+    }
+}
+
+impl ToString for SdpAttributeSsrc {
+    fn to_string(&self) -> String {
+        format!("{id}{attribute}{value}",
+                id = self.id.to_string(),
+                attribute = option_to_string!(" {}", self.attribute.clone()),
+                value = option_to_string!(":{}", self.value.clone()))
     }
 }
 
@@ -665,52 +1062,6 @@ impl SdpAttribute {
     }
 }
 
-impl fmt::Display for SdpAttribute {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let printable = match *self {
-            SdpAttribute::BundleOnly => "bundle-only",
-            SdpAttribute::Candidate(..) => "candidate",
-            SdpAttribute::DtlsMessage{..} => "dtls-message",
-            SdpAttribute::EndOfCandidates => "end-of-candidates",
-            SdpAttribute::Extmap(..) => "extmap",
-            SdpAttribute::Fingerprint(..) => "fingerprint",
-            SdpAttribute::Fmtp(..) => "fmtp",
-            SdpAttribute::Group(..) => "group",
-            SdpAttribute::IceLite => "ice-lite",
-            SdpAttribute::IceMismatch => "ice-mismatch",
-            SdpAttribute::IceOptions(..) => "ice-options",
-            SdpAttribute::IcePwd(..) => "ice-pwd",
-            SdpAttribute::IceUfrag(..) => "ice-ufrag",
-            SdpAttribute::Identity(..) => "identity",
-            SdpAttribute::ImageAttr(..) => "imageattr",
-            SdpAttribute::Inactive => "inactive",
-            SdpAttribute::Label(..) => "label",
-            SdpAttribute::MaxMessageSize(..) => "max-message-size",
-            SdpAttribute::MaxPtime(..) => "max-ptime",
-            SdpAttribute::Mid(..) => "mid",
-            SdpAttribute::Msid(..) => "msid",
-            SdpAttribute::MsidSemantic(..) => "msid-semantic",
-            SdpAttribute::Ptime(..) => "ptime",
-            SdpAttribute::Rid(..) => "rid",
-            SdpAttribute::Recvonly => "recvonly",
-            SdpAttribute::RemoteCandidate(..) => "remote-candidate",
-            SdpAttribute::Rtpmap(..) => "rtpmap",
-            SdpAttribute::Rtcp(..) => "rtcp",
-            SdpAttribute::Rtcpfb(..) => "rtcp-fb",
-            SdpAttribute::RtcpMux => "rtcp-mux",
-            SdpAttribute::RtcpRsize => "rtcp-rsize",
-            SdpAttribute::Sctpmap(..) => "sctpmap",
-            SdpAttribute::SctpPort(..) => "sctp-port",
-            SdpAttribute::Sendonly => "sendonly",
-            SdpAttribute::Sendrecv => "sendrecv",
-            SdpAttribute::Setup(..) => "setup",
-            SdpAttribute::Simulcast(..) => "simulcast",
-            SdpAttribute::Ssrc(..) => "ssrc",
-            SdpAttribute::SsrcGroup(..) => "ssrc-group",
-        };
-        write!(f, "attribute: {}", printable)
-    }
-}
 impl FromStr for SdpAttribute {
     type Err = SdpParserInternalError;
 
@@ -782,6 +1133,54 @@ impl FromStr for SdpAttribute {
             _ => {
                 Err(SdpParserInternalError::Unsupported(format!("Unknown attribute type {}", name)))
             }
+        }
+    }
+}
+
+impl ToString for SdpAttribute {
+    fn to_string(&self) -> String {
+        let attr_type_name = SdpAttributeType::from(self).to_string();
+        let attr_to_string = |attr_str: String| attr_type_name + ":" + &attr_str;
+        match *self {
+            SdpAttribute::BundleOnly => SdpAttributeType::BundleOnly.to_string(),
+            SdpAttribute::Candidate(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::DtlsMessage(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::EndOfCandidates => SdpAttributeType::EndOfCandidates.to_string(),
+            SdpAttribute::Extmap(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::Fingerprint(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::Fmtp(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::Group(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::IceLite => SdpAttributeType::IceLite.to_string(),
+            SdpAttribute::IceMismatch => SdpAttributeType::IceMismatch.to_string(),
+            SdpAttribute::IceOptions(ref a) => attr_to_string(a.join(" ")),
+            SdpAttribute::IcePwd(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::IceUfrag(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::Identity(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::ImageAttr(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::Inactive => SdpAttributeType::Inactive.to_string(),
+            SdpAttribute::Label(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::MaxMessageSize(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::MaxPtime(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::Mid(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::Msid(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::MsidSemantic(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::Ptime(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::Rid(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::Recvonly => SdpAttributeType::Recvonly.to_string(),
+            SdpAttribute::RemoteCandidate(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::Rtpmap(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::Rtcp(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::Rtcpfb(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::RtcpMux => SdpAttributeType::RtcpMux.to_string(),
+            SdpAttribute::RtcpRsize => SdpAttributeType::RtcpRsize.to_string(),
+            SdpAttribute::Sctpmap(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::SctpPort(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::Sendonly => SdpAttributeType::Sendonly.to_string(),
+            SdpAttribute::Sendrecv => SdpAttributeType::Sendrecv.to_string(),
+            SdpAttribute::Setup(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::Simulcast(ref a) =>attr_to_string(a.to_string()),
+            SdpAttribute::Ssrc(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::SsrcGroup(ref a) => attr_to_string(a.to_string()),
         }
     }
 }
@@ -875,6 +1274,52 @@ impl<'a> From<&'a SdpAttribute> for SdpAttributeType {
     }
 }
 
+impl ToString for SdpAttributeType {
+    fn to_string(&self) -> String {
+        match *self {
+            SdpAttributeType::BundleOnly => "bundle-only",
+            SdpAttributeType::Candidate => "candidate",
+            SdpAttributeType::DtlsMessage => "dtls-message",
+            SdpAttributeType::EndOfCandidates => "end-of-candidates",
+            SdpAttributeType::Extmap => "extmap",
+            SdpAttributeType::Fingerprint => "fingerprint",
+            SdpAttributeType::Fmtp => "fmtp",
+            SdpAttributeType::Group => "group",
+            SdpAttributeType::IceLite => "ice-lite",
+            SdpAttributeType::IceMismatch => "ice-mismatch",
+            SdpAttributeType::IceOptions => "ice-options",
+            SdpAttributeType::IcePwd => "ice-pwd",
+            SdpAttributeType::IceUfrag => "ice-ufrag",
+            SdpAttributeType::Identity => "identity",
+            SdpAttributeType::ImageAttr => "imageattr",
+            SdpAttributeType::Inactive => "inactive",
+            SdpAttributeType::Label => "label",
+            SdpAttributeType::MaxMessageSize => "max-message-size",
+            SdpAttributeType::MaxPtime => "maxptime",
+            SdpAttributeType::Mid => "mid",
+            SdpAttributeType::Msid => "msid",
+            SdpAttributeType::MsidSemantic => "msid-semantic",
+            SdpAttributeType::Ptime => "ptime",
+            SdpAttributeType::Rid => "rid",
+            SdpAttributeType::Recvonly => "recvonly",
+            SdpAttributeType::RemoteCandidate => "remote-candidates",
+            SdpAttributeType::Rtpmap => "rtpmap",
+            SdpAttributeType::Rtcp => "rtcp",
+            SdpAttributeType::Rtcpfb => "rtcp-fb",
+            SdpAttributeType::RtcpMux => "rtcp-mux",
+            SdpAttributeType::RtcpRsize => "rtcp-rsize",
+            SdpAttributeType::Sctpmap => "sctpmap",
+            SdpAttributeType::SctpPort => "sctp-port",
+            SdpAttributeType::Sendonly => "sendonly",
+            SdpAttributeType::Sendrecv => "sendrecv",
+            SdpAttributeType::Setup => "setup",
+            SdpAttributeType::Simulcast => "simulcast",
+            SdpAttributeType::Ssrc => "ssrc",
+            SdpAttributeType::SsrcGroup => "ssrc-group",
+        }.to_string()
+    }
+}
+
 
 fn string_or_empty(to_parse: &str) -> Result<String, SdpParserInternalError> {
     if to_parse.is_empty() {
@@ -885,8 +1330,7 @@ fn string_or_empty(to_parse: &str) -> Result<String, SdpParserInternalError> {
     }
 }
 
-fn parse_payload_type(to_parse: &str) -> Result<SdpAttributePayloadType, SdpParserInternalError>
-{
+fn parse_payload_type(to_parse: &str) -> Result<SdpAttributePayloadType, SdpParserInternalError> {
     Ok(match to_parse {
              "*" => SdpAttributePayloadType::Wildcard,
              _ => SdpAttributePayloadType::PayloadType(to_parse.parse::<u8>()?)
@@ -1638,7 +2082,6 @@ fn parse_msid(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
         Some(x) => Some(x.to_string()),
     };
     Ok(SdpAttribute::Msid(SdpAttributeMsid { id, appdata }))
-
 }
 
 fn parse_msid_semantic(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
@@ -2117,17 +2560,41 @@ macro_rules! make_check_parse {
                 unreachable!();
             }
         }
+    };
+
+    ($attr_kind:path) => {
+        |attr_str: &str| -> SdpAttribute {
+            if let Ok(SdpType::Attribute($attr_kind)) = parse_attribute(attr_str) {
+                $attr_kind
+            } else {
+                unreachable!();
+            }
+        }
+    };
+}
+
+#[cfg(test)]
+macro_rules! make_check_parse_and_serialize {
+    ($check_parse_func:ident, $attr_kind:path) => {
+        |attr_str: &str| {
+            let parsed = $attr_kind($check_parse_func(attr_str));
+            assert_eq!(parsed.to_string(), attr_str.to_string());
+        }
+    };
+
+    ($check_parse_func:ident) => {
+        |attr_str: &str| {
+            let parsed = $check_parse_func(attr_str);
+            assert_eq!(parsed.to_string(), attr_str.to_string());
+        }
     }
 }
 
 #[test]
 fn test_parse_attribute_candidate() {
     let check_parse = make_check_parse!(SdpAttributeCandidate, SdpAttribute::Candidate);
-
-    let check_parse_and_serialize = |attr_str| {
-        let parsed = check_parse(attr_str);
-        assert_eq!(parsed.to_string(), attr_str.to_string());
-    };
+    let check_parse_and_serialize = make_check_parse_and_serialize!(check_parse,
+                                                                    SdpAttribute::Candidate);
 
     check_parse_and_serialize("candidate:0 1 UDP 2122252543 172.16.156.106 49760 typ host");
     check_parse_and_serialize("candidate:foo 1 UDP 2122252543 172.16.156.106 49760 typ host");
@@ -2206,18 +2673,14 @@ fn test_parse_attribute_candidate() {
 
 #[test]
 fn test_parse_dtls_message() {
-    let check_parse = |x| -> SdpAttributeDtlsMessage {
-        if let Ok(SdpType::Attribute(SdpAttribute::DtlsMessage(x))) = parse_attribute(x) {
-            x
-        } else {
-            unreachable!();
-        }
-    };
+    let check_parse = make_check_parse!(SdpAttributeDtlsMessage, SdpAttribute::DtlsMessage);
+    let check_parse_and_serialize = make_check_parse_and_serialize!(check_parse,
+                                                                    SdpAttribute::DtlsMessage);
 
-    assert!(parse_attribute("dtls-message:client SGVsbG8gV29ybGQ=").is_ok());
-    assert!(parse_attribute("dtls-message:server SGVsbG8gV29ybGQ=").is_ok());
-    assert!(parse_attribute("dtls-message:client IGlzdCBl/W4gUeiBtaXQg+JSB1bmQCAkJJkSNEQ=").is_ok());
-    assert!(parse_attribute("dtls-message:server IGlzdCBl/W4gUeiBtaXQg+JSB1bmQCAkJJkSNEQ=").is_ok());
+    check_parse_and_serialize("dtls-message:client SGVsbG8gV29ybGQ=");
+    check_parse_and_serialize("dtls-message:server SGVsbG8gV29ybGQ=");
+    check_parse_and_serialize("dtls-message:client IGlzdCBl/W4gUeiBtaXQg+JSB1bmQCAkJJkSNEQ=");
+    check_parse_and_serialize("dtls-message:server IGlzdCBl/W4gUeiBtaXQg+JSB1bmQCAkJJkSNEQ=");
 
     let mut dtls_message = check_parse("dtls-message:client SGVsbG8gV29ybGQ=");
     match dtls_message {
@@ -2242,21 +2705,23 @@ fn test_parse_dtls_message() {
 
 #[test]
 fn test_parse_attribute_end_of_candidates() {
-    assert!(parse_attribute("end-of-candidates").is_ok());
+    let check_parse = make_check_parse!(SdpAttribute::EndOfCandidates);
+    let check_parse_and_serialize = make_check_parse_and_serialize!(check_parse);
+
+    check_parse_and_serialize("end-of-candidates");
     assert!(parse_attribute("end-of-candidates foobar").is_err());
 }
 
 #[test]
 fn test_parse_attribute_extmap() {
-    assert!(parse_attribute("extmap:1/sendonly urn:ietf:params:rtp-hdrext:ssrc-audio-level")
-                .is_ok());
-    assert!(parse_attribute("extmap:2/sendrecv urn:ietf:params:rtp-hdrext:ssrc-audio-level")
-                .is_ok());
-    assert!(parse_attribute("extmap:3 http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time")
-                .is_ok());
+    let check_parse = make_check_parse!(SdpAttributeExtmap, SdpAttribute::Extmap);
+    let check_parse_and_serialize = make_check_parse_and_serialize!(check_parse,
+                                                                    SdpAttribute::Extmap);
 
-    assert!(parse_attribute("extmap:3 http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time ext_attributes")
-            .is_ok());
+    check_parse_and_serialize("extmap:1/sendonly urn:ietf:params:rtp-hdrext:ssrc-audio-level");
+    check_parse_and_serialize("extmap:2/sendrecv urn:ietf:params:rtp-hdrext:ssrc-audio-level");
+    check_parse_and_serialize("extmap:3 http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time");
+    check_parse_and_serialize("extmap:3 http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time ext_attributes");
 
     assert!(parse_attribute("extmap:a/sendrecv urn:ietf:params:rtp-hdrext:ssrc-audio-level")
                 .is_err());
@@ -2270,18 +2735,22 @@ fn test_parse_attribute_extmap() {
 
 #[test]
 fn test_parse_attribute_fingerprint() {
-    assert!(parse_attribute("fingerprint:sha-1 CD:34:D1:62:16:95:7B:B7:EB:74:E2:39:27:97:EB:0B:23:73:AC:BC").is_ok());
-    assert!(parse_attribute("fingerprint:sha-224 CD:34:D1:62:16:95:7B:B7:EB:74:E2:39:27:97:EB:0B:23:73:AC:BC:\
-                                                 27:97:EB:0B:23:73:AC:BC").is_ok());
-    assert!(parse_attribute("fingerprint:sha-256 CD:34:D1:62:16:95:7B:B7:EB:74:E2:39:27:97:EB:0B:23:73:AC:BC:\
-                                                 27:97:EB:0B:23:73:AC:BC:CD:34:D1:62").is_ok());
-    assert!(parse_attribute("fingerprint:sha-384 CD:34:D1:62:16:95:7B:B7:EB:74:E2:39:27:97:EB:0B:23:73:AC:BC:\
-                                                 27:97:EB:0B:23:73:AC:BC:CD:34:D1:62:16:95:7B:B7:EB:74:E2:39:\
-                                                 27:97:EB:0B:23:73:AC:BC").is_ok());
-    assert!(parse_attribute("fingerprint:sha-512 CD:34:D1:62:16:95:7B:B7:EB:74:E2:39:27:97:EB:0B:23:73:AC:BC:\
-                                                 97:EB:0B:23:73:AC:BC:CD:34:D1:62:16:95:7B:B7:EB:74:E2:39:27:\
-                                                 EB:0B:23:73:AC:BC:27:97:EB:0B:23:73:AC:BC:27:97:EB:0B:23:73:\
-                                                 BC:EB:0B:23").is_ok());
+    let check_parse = make_check_parse!(SdpAttributeFingerprint, SdpAttribute::Fingerprint);
+    let check_parse_and_serialize = make_check_parse_and_serialize!(check_parse,
+                                                                    SdpAttribute::Fingerprint);
+
+    check_parse_and_serialize("fingerprint:sha-1 CD:34:D1:62:16:95:7B:B7:EB:74:E2:39:27:97:EB:0B:23:73:AC:BC");
+    check_parse_and_serialize("fingerprint:sha-224 CD:34:D1:62:16:95:7B:B7:EB:74:E2:39:27:97:EB:0B:23:73:AC:BC:\
+                                                   27:97:EB:0B:23:73:AC:BC");
+    check_parse_and_serialize("fingerprint:sha-256 CD:34:D1:62:16:95:7B:B7:EB:74:E2:39:27:97:EB:0B:23:73:AC:BC:\
+                                                   27:97:EB:0B:23:73:AC:BC:CD:34:D1:62");
+    check_parse_and_serialize("fingerprint:sha-384 CD:34:D1:62:16:95:7B:B7:EB:74:E2:39:27:97:EB:0B:23:73:AC:BC:\
+                                                   27:97:EB:0B:23:73:AC:BC:CD:34:D1:62:16:95:7B:B7:EB:74:E2:39:\
+                                                   27:97:EB:0B:23:73:AC:BC");
+    check_parse_and_serialize("fingerprint:sha-512 CD:34:D1:62:16:95:7B:B7:EB:74:E2:39:27:97:EB:0B:23:73:AC:BC:\
+                                                   97:EB:0B:23:73:AC:BC:CD:34:D1:62:16:95:7B:B7:EB:74:E2:39:27:\
+                                                   EB:0B:23:73:AC:BC:27:97:EB:0B:23:73:AC:BC:27:97:EB:0B:23:73:\
+                                                   BC:EB:0B:23");
 
     assert!(parse_attribute("fingerprint:sha-1 CX:34:D1:62:16:95:7B:B7:EB:74:E1:39:27:97:EB:0B:23:73:AC:BC").is_err());
     assert!(parse_attribute("fingerprint:sha-1 CDA:34:D1:62:16:95:7B:B7:EB:74:E1:39:27:97:EB:0B:23:73:AC:BC").is_err());
@@ -2298,14 +2767,18 @@ fn test_parse_attribute_fingerprint() {
 
 #[test]
 fn test_parse_attribute_fmtp() {
-    assert!(parse_attribute("fmtp:109 maxplaybackrate=48000;stereo=1;useinbandfec=1").is_ok());
-    assert!(parse_attribute("fmtp:66 0-15").is_ok());
-    assert!(parse_attribute("fmtp:109 0-15,66").is_ok());
-    assert!(parse_attribute("fmtp:66 111/115").is_ok());
+    let check_parse = make_check_parse!(SdpAttributeFmtp, SdpAttribute::Fmtp);
+    let check_parse_and_serialize = make_check_parse_and_serialize!(check_parse,
+                                                                    SdpAttribute::Fmtp);
+
+    check_parse_and_serialize("fmtp:109 maxplaybackrate=46000;stereo=1;useinbandfec=1");
+    check_parse_and_serialize("fmtp:66 0-15");
+    check_parse_and_serialize("fmtp:109 0-15,66");
+    check_parse_and_serialize("fmtp:66 111/115");
     assert!(parse_attribute("fmtp:109 maxplaybackrate=48000;stereo=1;useinbandfec=1").is_ok());
     assert!(parse_attribute("fmtp:109 maxplaybackrate=48000; stereo=1; useinbandfec=1").is_ok());
     assert!(parse_attribute("fmtp:109 maxplaybackrate=48000; stereo=1;useinbandfec=1").is_ok());
-    assert!(parse_attribute("fmtp:8 maxplaybackrate=48000").is_ok());
+    check_parse_and_serialize("fmtp:8 maxplaybackrate=46000");
 
     assert!(parse_attribute("fmtp:77 ").is_err());
     assert!(parse_attribute("fmtp:109 maxplaybackrate=48000stereo=1;").is_err());
@@ -2314,9 +2787,17 @@ fn test_parse_attribute_fmtp() {
 
 #[test]
 fn test_parse_attribute_group() {
-    assert!(parse_attribute("group:LS").is_ok());
-    assert!(parse_attribute("group:LS 1 2").is_ok());
-    assert!(parse_attribute("group:BUNDLE sdparta_0 sdparta_1 sdparta_2").is_ok());
+    let check_parse = make_check_parse!(SdpAttributeGroup, SdpAttribute::Group);
+    let check_parse_and_serialize = make_check_parse_and_serialize!(check_parse,
+                                                                    SdpAttribute::Group);
+
+    check_parse_and_serialize("group:LS");
+    check_parse_and_serialize("group:LS 1 2");
+    check_parse_and_serialize("group:FID 1 2");
+    check_parse_and_serialize("group:SRF 1 2");
+    check_parse_and_serialize("group:FEC S1 R1");
+    check_parse_and_serialize("group:DDP L1 L2 L3");
+    check_parse_and_serialize("group:BUNDLE sdparta_0 sdparta_1 sdparta_2");
 
     assert!(parse_attribute("group:").is_err());
     assert!(match parse_attribute("group:NEVER_SUPPORTED_SEMANTICS") {
@@ -2327,67 +2808,89 @@ fn test_parse_attribute_group() {
 
 #[test]
 fn test_parse_attribute_bundle_only() {
-    assert!(parse_attribute("bundle-only").is_ok());
+    let check_parse = make_check_parse!(SdpAttribute::BundleOnly);
+    let check_parse_and_serialize = make_check_parse_and_serialize!(check_parse);
+
+    check_parse_and_serialize("bundle-only");
+
     assert!(parse_attribute("bundle-only foobar").is_err());
 }
 
 #[test]
 fn test_parse_attribute_ice_lite() {
-    assert!(parse_attribute("ice-lite").is_ok());
+    let check_parse = make_check_parse!(SdpAttribute::IceLite);
+    let check_parse_and_serialize = make_check_parse_and_serialize!(check_parse);
+
+    check_parse_and_serialize("ice-lite");
 
     assert!(parse_attribute("ice-lite foobar").is_err());
 }
 
 #[test]
 fn test_parse_attribute_ice_mismatch() {
-    assert!(parse_attribute("ice-mismatch").is_ok());
+    let check_parse = make_check_parse!(SdpAttribute::IceMismatch);
+    let check_parse_and_serialize = make_check_parse_and_serialize!(check_parse);
+
+    check_parse_and_serialize("ice-mismatch");
 
     assert!(parse_attribute("ice-mismatch foobar").is_err());
 }
 
 #[test]
 fn test_parse_attribute_ice_options() {
-    assert!(parse_attribute("ice-options:trickle").is_ok());
+    let check_parse = make_check_parse!(Vec<String>, SdpAttribute::IceOptions);
+    let check_parse_and_serialize = make_check_parse_and_serialize!(check_parse,
+                                                                    SdpAttribute::IceOptions);
+
+    check_parse_and_serialize("ice-options:trickle");
 
     assert!(parse_attribute("ice-options:").is_err());
 }
 
 #[test]
 fn test_parse_attribute_ice_pwd() {
-    assert!(parse_attribute("ice-pwd:e3baa26dd2fa5030d881d385f1e36cce").is_ok());
+    let check_parse = make_check_parse!(String, SdpAttribute::IcePwd);
+    let check_parse_and_serialize = make_check_parse_and_serialize!(check_parse,
+                                                                    SdpAttribute::IcePwd);
+
+    check_parse_and_serialize("ice-pwd:e3baa26dd2fa5030d881d385f1e36cce");
 
     assert!(parse_attribute("ice-pwd:").is_err());
 }
 
 #[test]
 fn test_parse_attribute_ice_ufrag() {
-    assert!(parse_attribute("ice-ufrag:58b99ead").is_ok());
+    let check_parse = make_check_parse!(String, SdpAttribute::IceUfrag);
+    let check_parse_and_serialize = make_check_parse_and_serialize!(check_parse,
+                                                                    SdpAttribute::IceUfrag);
+
+    check_parse_and_serialize("ice-ufrag:58b99ead");
 
     assert!(parse_attribute("ice-ufrag:").is_err());
 }
 
 #[test]
 fn test_parse_attribute_identity() {
-    assert!(parse_attribute("identity:eyJpZHAiOnsiZG9tYWluIjoiZXhhbXBsZS5vcmciLCJwcm90b2NvbCI6ImJvZ3VzIn0sImFzc2VydGlvbiI6IntcImlkZW50aXR5XCI6XCJib2JAZXhhbXBsZS5vcmdcIixcImNvbnRlbnRzXCI6XCJhYmNkZWZnaGlqa2xtbm9wcXJzdHV2d3l6XCIsXCJzaWduYXR1cmVcIjpcIjAxMDIwMzA0MDUwNlwifSJ9").is_ok());
+    let check_parse = make_check_parse!(String, SdpAttribute::Identity);
+    let check_parse_and_serialize = make_check_parse_and_serialize!(check_parse,
+                                                                    SdpAttribute::Identity);
+
+    check_parse_and_serialize("identity:eyJpZHAiOnsiZG9tYWluIjoiZXhhbXBsZS5vcmciLCJwcm90b2NvbCI6ImJvZ3VzIn0sImFzc2VydGlvbiI6IntcImlkZW50aXR5XCI6XCJib2JAZXhhbXBsZS5vcmdcIixcImNvbnRlbnRzXCI6XCJhYmNkZWZnaGlqa2xtbm9wcXJzdHV2d3l6XCIsXCJzaWduYXR1cmVcIjpcIjAxMDIwMzA0MDUwNlwifSJ9");
 
     assert!(parse_attribute("identity:").is_err());
 }
 
 #[test]
 fn test_parse_attribute_imageattr() {
-    let check_parse = |x| -> SdpAttributeImageAttr {
-        if let Ok(SdpType::Attribute(SdpAttribute::ImageAttr(x))) = parse_attribute(x) {
-            x
-        } else {
-            unreachable!();
-        }
-    };
+    let check_parse = make_check_parse!(SdpAttributeImageAttr, SdpAttribute::ImageAttr);
+    let check_parse_and_serialize = make_check_parse_and_serialize!(check_parse,
+                                                                    SdpAttribute::ImageAttr);
 
-    assert!(parse_attribute("imageattr:120 send * recv *").is_ok());
-    assert!(parse_attribute("imageattr:99 send [x=320,y=240] recv [x=320,y=240]").is_ok());
-    assert!(parse_attribute("imageattr:97 send [x=800,y=640,sar=1.1,q=0.6] [x=480,y=320] recv [x=330,y=250]").is_ok());
+    check_parse_and_serialize("imageattr:120 send * recv *");
+    check_parse_and_serialize("imageattr:99 send [x=320,y=240] recv [x=320,y=240]");
+    check_parse_and_serialize("imageattr:97 send [x=800,y=640,sar=1.1,q=0.6] [x=480,y=320] recv [x=330,y=250]");
+    check_parse_and_serialize("imageattr:97 send [x=[480:16:800],y=[320:16:640],par=[1.2-1.3],q=0.6] [x=[176:8:208],y=[144:8:176],par=[1.2-1.3]] recv *");
     assert!(parse_attribute("imageattr:97 recv [x=800,y=640,sar=1.1] send [x=330,y=250]").is_ok());
-    assert!(parse_attribute("imageattr:97 send [x=[480:16:800],y=[320:16:640],par=[1.2-1.3],q=0.6] [x=[176:8:208],y=[144:8:176],par=[1.2-1.3]] recv *").is_ok());
 
     let mut imageattr = check_parse("imageattr:* recv [x=800,y=[50,80,30],sar=1.1] send [x=330,y=250,sar=[1.1,1.3,1.9],q=0.1]");
     assert_eq!(imageattr.pt, SdpAttributePayloadType::Wildcard);
@@ -2446,7 +2949,7 @@ fn test_parse_attribute_imageattr() {
     }
     assert_eq!(imageattr.recv, SdpAttributeImageAttrSetList::Wildcard);
 
-    assert!(parse_attribute("imageattr:99 send [x=320,y=240]").is_ok());
+    check_parse_and_serialize("imageattr:99 send [x=320,y=240]");
     assert!(parse_attribute("imageattr:100 recv [x=320,y=240]").is_ok());
     assert!(parse_attribute("imageattr:97 recv [x=800,y=640,sar=1.1,foo=[123,456],q=0.5] send [x=330,y=250,bar=foo,sar=[20-40]]").is_ok());
     assert!(parse_attribute("imageattr:97 recv [x=800,y=640,sar=1.1,foo=abc xyz,q=0.5] send [x=330,y=250,bar=foo,sar=[20-40]]").is_ok());
@@ -2459,87 +2962,109 @@ fn test_parse_attribute_imageattr() {
 
 #[test]
 fn test_parse_attribute_inactive() {
-    assert!(parse_attribute("inactive").is_ok());
+    let check_parse = make_check_parse!(SdpAttribute::Inactive);
+    let check_parse_and_serialize = make_check_parse_and_serialize!(check_parse);
+
+    check_parse_and_serialize("inactive");
     assert!(parse_attribute("inactive foobar").is_err());
 }
 
 #[test]
 fn test_parse_attribute_label() {
-    assert!(parse_attribute("label:1").is_ok());
-    assert!(parse_attribute("label:foobar").is_ok());
-    assert!(parse_attribute("label:foobar barfoo").is_ok());
+    let check_parse = make_check_parse!(String, SdpAttribute::Label);
+    let check_parse_and_serialize = make_check_parse_and_serialize!(check_parse,
+                                                                    SdpAttribute::Label);
+
+    check_parse_and_serialize("label:1");
+    check_parse_and_serialize("label:foobar");
+    check_parse_and_serialize("label:foobar barfoo");
 
     assert!(parse_attribute("label:").is_err());
 }
 
 #[test]
 fn test_parse_attribute_maxptime() {
-    assert!(parse_attribute("maxptime:60").is_ok());
+    let check_parse = make_check_parse!(u64, SdpAttribute::MaxPtime);
+    let check_parse_and_serialize = make_check_parse_and_serialize!(check_parse,
+                                                                    SdpAttribute::MaxPtime);
+
+
+    check_parse_and_serialize("maxptime:60");
 
     assert!(parse_attribute("maxptime:").is_err());
 }
 
 #[test]
 fn test_parse_attribute_mid() {
-    assert!(parse_attribute("mid:sdparta_0").is_ok());
-    assert!(parse_attribute("mid:sdparta_0 sdparta_1 sdparta_2").is_ok());
+    let check_parse = make_check_parse!(String, SdpAttribute::Mid);
+    let check_parse_and_serialize = make_check_parse_and_serialize!(check_parse,
+                                                                    SdpAttribute::Mid);
+
+
+    check_parse_and_serialize("mid:sdparta_0");
+    check_parse_and_serialize("mid:sdparta_0 sdparta_1 sdparta_2");
 
     assert!(parse_attribute("mid:").is_err());
 }
 
 #[test]
 fn test_parse_attribute_msid() {
-    assert!(parse_attribute("msid:{5a990edd-0568-ac40-8d97-310fc33f3411}").is_ok());
-    assert!(
-        parse_attribute(
-            "msid:{5a990edd-0568-ac40-8d97-310fc33f3411} {218cfa1c-617d-2249-9997-60929ce4c405}"
-        ).is_ok()
-    );
+    let check_parse = make_check_parse!(SdpAttributeMsid, SdpAttribute::Msid);
+    let check_parse_and_serialize = make_check_parse_and_serialize!(check_parse,
+                                                                    SdpAttribute::Msid);
+
+    check_parse_and_serialize("msid:{5a990edd-0568-ac40-8d97-310fc33f3411}");
+    check_parse_and_serialize("msid:{5a990edd-0568-ac40-8d97-310fc33f3411} {218cfa1c-617d-2249-9997-60929ce4c405}");
 
     assert!(parse_attribute("msid:").is_err());
 }
 
 #[test]
 fn test_parse_attribute_msid_semantics() {
-    assert!(parse_attribute("msid-semantic:WMS *").is_ok())
+    let check_parse = make_check_parse!(SdpAttributeMsidSemantic, SdpAttribute::MsidSemantic);
+    let check_parse_and_serialize = make_check_parse_and_serialize!(check_parse,
+                                                                    SdpAttribute::MsidSemantic);
+
+    check_parse_and_serialize("msid-semantic:WMS *");
+    check_parse_and_serialize("msid-semantic:WMS foo");
+
+    assert!(parse_attribute("msid-semantic:").is_err());
 }
 
 #[test]
 fn test_parse_attribute_ptime() {
-    assert!(parse_attribute("ptime:30").is_ok());
+    let check_parse = make_check_parse!(u64, SdpAttribute::Ptime);
+    let check_parse_and_serialize = make_check_parse_and_serialize!(check_parse,
+                                                                    SdpAttribute::Ptime);
+
+    check_parse_and_serialize("ptime:30");
 
     assert!(parse_attribute("ptime:").is_err());
 }
 
 #[test]
 fn test_parse_attribute_rid() {
+    let check_parse = make_check_parse!(SdpAttributeRid, SdpAttribute::Rid);
+    let check_parse_and_serialize = make_check_parse_and_serialize!(check_parse,
+                                                                    SdpAttribute::Rid);
 
-    let check_parse = |x| -> SdpAttributeRid {
-        if let Ok(SdpType::Attribute(SdpAttribute::Rid(x))) = parse_attribute(x) {
-            x
-        } else {
-            unreachable!();
-        }
-    };
-
-    // assert!(parse_attribute("rid:foo send").is_ok());
+    check_parse_and_serialize("rid:foo send");
     let mut rid = check_parse("rid:foo send");
     assert_eq!(rid.id, "foo");
     assert_eq!(rid.direction, SdpSingleDirection::Send);
 
-
-    // assert!(parse_attribute("rid:110 send pt=9").is_ok());
+    check_parse_and_serialize("rid:110 send pt=9");
     rid = check_parse("rid:110 send pt=9");
     assert_eq!(rid.id, "110");
     assert_eq!(rid.direction, SdpSingleDirection::Send);
     assert_eq!(rid.formats, vec![9]);
 
-    assert!(parse_attribute("rid:foo send pt=10").is_ok());
-    assert!(parse_attribute("rid:110 send pt=9,10").is_ok());
-    assert!(parse_attribute("rid:110 send pt=9,10;max-fs=10").is_ok());
-    assert!(parse_attribute("rid:110 send pt=9,10;max-width=10;depends=1,2,3").is_ok());
+    check_parse_and_serialize("rid:foo send pt=10");
+    check_parse_and_serialize("rid:110 send pt=9,10");
+    check_parse_and_serialize("rid:110 send pt=9,10;max-fs=10");
+    check_parse_and_serialize("rid:110 send pt=9,10;max-width=10;depends=1,2,3");
 
-    // assert!(parse_attribute("rid:110 send pt=9,10;max-fs=10;UNKNOWN=100;depends=1,2,3").is_ok());
+    check_parse_and_serialize("rid:110 send pt=9,10;max-fs=10;UNKNOWN=100;depends=1,2,3");
     rid = check_parse("rid:110 send pt=9,10;max-fs=10;UNKNOWN=100;depends=1,2,3");
     assert_eq!(rid.id, "110");
     assert_eq!(rid.direction, SdpSingleDirection::Send);
@@ -2552,7 +3077,7 @@ fn test_parse_attribute_rid() {
     assert!(parse_attribute("rid:110 send max-fs=10").is_ok());
     assert!(parse_attribute("rid:110 recv max-width=1920;max-height=1080").is_ok());
 
-    // assert!(parse_attribute("rid:110 recv max-fps=42;max-fs=10;max-br=3;max-pps=1000").is_ok());
+    check_parse_and_serialize("rid:110 recv max-fps=42;max-fs=10;max-br=3;max-pps=1000");
     rid = check_parse("rid:110 recv max-fps=42;max-fs=10;max-br=3;max-pps=1000");
     assert_eq!(rid.id, "110");
     assert_eq!(rid.direction, SdpSingleDirection::Recv);
@@ -2561,10 +3086,10 @@ fn test_parse_attribute_rid() {
     assert_eq!(rid.params.max_br, 3);
     assert_eq!(rid.params.max_pps, 1000);
 
-    assert!(parse_attribute("rid:110 recv max-mbps=420;max-cpb=3;max-dpb=3").is_ok());
-    assert!(parse_attribute("rid:110 recv scale-down-by=1.35;depends=1,2,3").is_ok());
-    assert!(parse_attribute("rid:110 recv max-width=10;depends=1,2,3").is_ok());
-    assert!(parse_attribute("rid:110 recv max-fs=10;UNKNOWN=100;depends=1,2,3").is_ok());
+    check_parse_and_serialize("rid:110 recv max-mbps=420;max-cpb=3;max-dpb=3");
+    check_parse_and_serialize("rid:110 recv scale-down-by=1.35;depends=1,2,3");
+    check_parse_and_serialize("rid:110 recv max-width=10;depends=1,2,3");
+    check_parse_and_serialize("rid:110 recv max-fs=10;UNKNOWN=100;depends=1,2,3");
 
     assert!(parse_attribute("rid:").is_err());
     assert!(parse_attribute("rid:120 send pt=").is_err());
@@ -2575,14 +3100,21 @@ fn test_parse_attribute_rid() {
 
 #[test]
 fn test_parse_attribute_recvonly() {
-    assert!(parse_attribute("recvonly").is_ok());
+    let check_parse = make_check_parse!(SdpAttribute::Recvonly);
+    let check_parse_and_serialize = make_check_parse_and_serialize!(check_parse);
+
+    check_parse_and_serialize("recvonly");
     assert!(parse_attribute("recvonly foobar").is_err());
 }
 
 #[test]
 fn test_parse_attribute_remote_candidate() {
-    assert!(parse_attribute("remote-candidates:0 10.0.0.1 5555").is_ok());
-    assert!(parse_attribute("remote-candidates:12345 ::1 5555").is_ok());
+    let check_parse = make_check_parse!(SdpAttributeRemoteCandidate, SdpAttribute::RemoteCandidate);
+    let check_parse_and_serialize = make_check_parse_and_serialize!(check_parse,
+                                                                    SdpAttribute::RemoteCandidate);
+
+    check_parse_and_serialize("remote-candidates:0 10.0.0.1 5555");
+    check_parse_and_serialize("remote-candidates:12345 ::1 5555");
 
     assert!(parse_attribute("remote-candidates:abc 10.0.0.1 5555").is_err());
     assert!(parse_attribute("remote-candidates:0 10.a.0.1 5555").is_err());
@@ -2594,22 +3126,32 @@ fn test_parse_attribute_remote_candidate() {
 
 #[test]
 fn test_parse_attribute_sendonly() {
-    assert!(parse_attribute("sendonly").is_ok());
+    let check_parse = make_check_parse!(SdpAttribute::Sendonly);
+    let check_parse_and_serialize = make_check_parse_and_serialize!(check_parse);
+
+    check_parse_and_serialize("sendonly");
     assert!(parse_attribute("sendonly foobar").is_err());
 }
 
 #[test]
 fn test_parse_attribute_sendrecv() {
-    assert!(parse_attribute("sendrecv").is_ok());
+    let check_parse = make_check_parse!(SdpAttribute::Sendrecv);
+    let check_parse_and_serialize = make_check_parse_and_serialize!(check_parse);
+
+    check_parse_and_serialize("sendrecv");
     assert!(parse_attribute("sendrecv foobar").is_err());
 }
 
 #[test]
 fn test_parse_attribute_setup() {
-    assert!(parse_attribute("setup:active").is_ok());
-    assert!(parse_attribute("setup:passive").is_ok());
-    assert!(parse_attribute("setup:actpass").is_ok());
-    assert!(parse_attribute("setup:holdconn").is_ok());
+    let check_parse = make_check_parse!(SdpAttributeSetup, SdpAttribute::Setup);
+    let check_parse_and_serialize = make_check_parse_and_serialize!(check_parse,
+                                                                    SdpAttribute::Setup);
+
+    check_parse_and_serialize("setup:active");
+    check_parse_and_serialize("setup:passive");
+    check_parse_and_serialize("setup:actpass");
+    check_parse_and_serialize("setup:holdconn");
 
     assert!(parse_attribute("setup:").is_err());
     assert!(parse_attribute("setup:foobar").is_err());
@@ -2617,8 +3159,12 @@ fn test_parse_attribute_setup() {
 
 #[test]
 fn test_parse_attribute_rtcp() {
-    assert!(parse_attribute("rtcp:5000").is_ok());
-    assert!(parse_attribute("rtcp:9 IN IP4 0.0.0.0").is_ok());
+    let check_parse = make_check_parse!(SdpAttributeRtcp, SdpAttribute::Rtcp);
+    let check_parse_and_serialize = make_check_parse_and_serialize!(check_parse,
+                                                                    SdpAttribute::Rtcp);
+
+    check_parse_and_serialize("rtcp:5000");
+    check_parse_and_serialize("rtcp:9 IN IP4 0.0.0.0");
 
     assert!(parse_attribute("rtcp:").is_err());
     assert!(parse_attribute("rtcp:70000").is_err());
@@ -2629,21 +3175,25 @@ fn test_parse_attribute_rtcp() {
 
 #[test]
 fn test_parse_attribute_rtcp_fb() {
-    assert!(parse_attribute("rtcp-fb:101 ack rpsi").is_ok());
-    assert!(parse_attribute("rtcp-fb:101 ack app").is_ok());
-    assert!(parse_attribute("rtcp-fb:101 ccm").is_ok());
-    assert!(parse_attribute("rtcp-fb:101 ccm fir").is_ok());
-    assert!(parse_attribute("rtcp-fb:101 ccm tmmbr").is_ok());
-    assert!(parse_attribute("rtcp-fb:101 ccm tstr").is_ok());
-    assert!(parse_attribute("rtcp-fb:101 ccm vbcm").is_ok());
-    assert!(parse_attribute("rtcp-fb:101 nack").is_ok());
-    assert!(parse_attribute("rtcp-fb:101 nack sli").is_ok());
-    assert!(parse_attribute("rtcp-fb:101 nack pli").is_ok());
-    assert!(parse_attribute("rtcp-fb:101 nack rpsi").is_ok());
-    assert!(parse_attribute("rtcp-fb:101 nack app").is_ok());
-    assert!(parse_attribute("rtcp-fb:101 trr-int 1").is_ok());
-    assert!(parse_attribute("rtcp-fb:101 goog-remb").is_ok());
-    assert!(parse_attribute("rtcp-fb:101 transport-cc").is_ok());
+    let check_parse = make_check_parse!(SdpAttributeRtcpFb, SdpAttribute::Rtcpfb);
+    let check_parse_and_serialize = make_check_parse_and_serialize!(check_parse,
+                                                                    SdpAttribute::Rtcpfb);
+
+    check_parse_and_serialize("rtcp-fb:101 ack rpsi");
+    check_parse_and_serialize("rtcp-fb:101 ack app");
+    check_parse_and_serialize("rtcp-fb:101 ccm");
+    check_parse_and_serialize("rtcp-fb:101 ccm fir");
+    check_parse_and_serialize("rtcp-fb:101 ccm tmmbr");
+    check_parse_and_serialize("rtcp-fb:101 ccm tstr");
+    check_parse_and_serialize("rtcp-fb:101 ccm vbcm");
+    check_parse_and_serialize("rtcp-fb:101 nack");
+    check_parse_and_serialize("rtcp-fb:101 nack sli");
+    check_parse_and_serialize("rtcp-fb:101 nack pli");
+    check_parse_and_serialize("rtcp-fb:101 nack rpsi");
+    check_parse_and_serialize("rtcp-fb:101 nack app");
+    check_parse_and_serialize("rtcp-fb:101 trr-int 1");
+    check_parse_and_serialize("rtcp-fb:101 goog-remb");
+    check_parse_and_serialize("rtcp-fb:101 transport-cc");
 
     assert!(parse_attribute("rtcp-fb:101 unknown").is_err());
     assert!(parse_attribute("rtcp-fb:101 ack").is_err());
@@ -2657,20 +3207,30 @@ fn test_parse_attribute_rtcp_fb() {
 
 #[test]
 fn test_parse_attribute_rtcp_mux() {
-    assert!(parse_attribute("rtcp-mux").is_ok());
+    let check_parse = make_check_parse!(SdpAttribute::RtcpMux);
+    let check_parse_and_serialize = make_check_parse_and_serialize!(check_parse);
+
+    check_parse_and_serialize("rtcp-mux");
     assert!(parse_attribute("rtcp-mux foobar").is_err());
 }
 
 #[test]
 fn test_parse_attribute_rtcp_rsize() {
-    assert!(parse_attribute("rtcp-rsize").is_ok());
+    let check_parse = make_check_parse!(SdpAttribute::RtcpRsize);
+    let check_parse_and_serialize = make_check_parse_and_serialize!(check_parse);
+
+    check_parse_and_serialize("rtcp-rsize");
     assert!(parse_attribute("rtcp-rsize foobar").is_err());
 }
 
 #[test]
 fn test_parse_attribute_rtpmap() {
-    assert!(parse_attribute("rtpmap:109 opus/48000").is_ok());
-    assert!(parse_attribute("rtpmap:109 opus/48000/2").is_ok());
+    let check_parse = make_check_parse!(SdpAttributeRtpmap, SdpAttribute::Rtpmap);
+    let check_parse_and_serialize = make_check_parse_and_serialize!(check_parse,
+                                                                    SdpAttribute::Rtpmap);
+
+    check_parse_and_serialize("rtpmap:109 opus/48000");
+    check_parse_and_serialize("rtpmap:109 opus/48000/2");
 
     assert!(parse_attribute("rtpmap:109 ").is_err());
     assert!(parse_attribute("rtpmap:109 opus").is_err());
@@ -2679,7 +3239,11 @@ fn test_parse_attribute_rtpmap() {
 
 #[test]
 fn test_parse_attribute_sctpmap() {
-    assert!(parse_attribute("sctpmap:5000 webrtc-datachannel 256").is_ok());
+    let check_parse = make_check_parse!(SdpAttributeSctpmap, SdpAttribute::Sctpmap);
+    let check_parse_and_serialize = make_check_parse_and_serialize!(check_parse,
+                                                                    SdpAttribute::Sctpmap);
+
+    check_parse_and_serialize("sctpmap:5000 webrtc-datachannel 256");
 
     assert!(parse_attribute("sctpmap:70000 webrtc-datachannel 256").is_err());
     assert!(parse_attribute("sctpmap:5000 unsupported 256").is_err());
@@ -2688,7 +3252,11 @@ fn test_parse_attribute_sctpmap() {
 
 #[test]
 fn test_parse_attribute_sctp_port() {
-    assert!(parse_attribute("sctp-port:5000").is_ok());
+    let check_parse = make_check_parse!(u64, SdpAttribute::SctpPort);
+    let check_parse_and_serialize = make_check_parse_and_serialize!(check_parse,
+                                                                    SdpAttribute::SctpPort);
+
+    check_parse_and_serialize("sctp-port:5000");
 
     assert!(parse_attribute("sctp-port:").is_err());
     assert!(parse_attribute("sctp-port:70000").is_err());
@@ -2696,10 +3264,14 @@ fn test_parse_attribute_sctp_port() {
 
 #[test]
 fn test_parse_attribute_max_message_size() {
-    assert!(parse_attribute("max-message-size:1").is_ok());
-    assert!(parse_attribute("max-message-size:100000").is_ok());
-    assert!(parse_attribute("max-message-size:4294967297").is_ok());
-    assert!(parse_attribute("max-message-size:0").is_ok());
+    let check_parse = make_check_parse!(u64, SdpAttribute::MaxMessageSize);
+    let check_parse_and_serialize = make_check_parse_and_serialize!(check_parse,
+                                                                    SdpAttribute::MaxMessageSize);
+
+    check_parse_and_serialize("max-message-size:1");
+    check_parse_and_serialize("max-message-size:100000");
+    check_parse_and_serialize("max-message-size:4294967297");
+    check_parse_and_serialize("max-message-size:0");
 
     assert!(parse_attribute("max-message-size:").is_err());
     assert!(parse_attribute("max-message-size:abc").is_err());
@@ -2707,16 +3279,20 @@ fn test_parse_attribute_max_message_size() {
 
 #[test]
 fn test_parse_attribute_simulcast() {
-    assert!(parse_attribute("simulcast:send 1").is_ok());
-    assert!(parse_attribute("simulcast:recv test").is_ok());
-    assert!(parse_attribute("simulcast:recv ~test").is_ok());
-    assert!(parse_attribute("simulcast:recv test;foo").is_ok());
-    assert!(parse_attribute("simulcast:recv foo,bar").is_ok());
-    assert!(parse_attribute("simulcast:recv foo,bar;test").is_ok());
-    assert!(parse_attribute("simulcast:recv 1;4,5 send 6;7").is_ok());
-    assert!(parse_attribute("simulcast:send 1,2,3;~4,~5 recv 6;~7,~8").is_ok());
+    let check_parse = make_check_parse!(SdpAttributeSimulcast, SdpAttribute::Simulcast);
+    let check_parse_and_serialize = make_check_parse_and_serialize!(check_parse,
+                                                                    SdpAttribute::Simulcast);
+
+    check_parse_and_serialize("simulcast:send 1");
+    check_parse_and_serialize("simulcast:recv test");
+    check_parse_and_serialize("simulcast:recv ~test");
+    check_parse_and_serialize("simulcast:recv test;foo");
+    check_parse_and_serialize("simulcast:recv foo,bar");
+    check_parse_and_serialize("simulcast:recv foo,bar;test");
+    check_parse_and_serialize("simulcast:send 1;4,5 recv 6;7");
+    check_parse_and_serialize("simulcast:send 1,2,3;~4,~5 recv 6;~7,~8");
     // old draft 03 notation used by Firefox 55
-    assert!(parse_attribute("simulcast: send rid=foo;bar").is_ok());
+    assert!(parse_attribute("simulcast:send rid=foo;bar").is_ok());
 
     assert!(parse_attribute("simulcast:").is_err());
     assert!(parse_attribute("simulcast:send").is_err());
@@ -2728,12 +3304,14 @@ fn test_parse_attribute_simulcast() {
 
 #[test]
 fn test_parse_attribute_ssrc() {
-    assert!(parse_attribute("ssrc:2655508255").is_ok());
-    assert!(parse_attribute("ssrc:2655508255 foo").is_ok());
-    assert!(parse_attribute("ssrc:2655508255 cname:{735484ea-4f6c-f74a-bd66-7425f8476c2e}")
-                .is_ok());
-    assert!(parse_attribute("ssrc:2082260239 msid:1d0cdb4e-5934-4f0f-9f88-40392cb60d31 315b086a-5cb6-4221-89de-caf0b038c79d")
-                .is_ok());
+    let check_parse = make_check_parse!(SdpAttributeSsrc, SdpAttribute::Ssrc);
+    let check_parse_and_serialize = make_check_parse_and_serialize!(check_parse,
+                                                                    SdpAttribute::Ssrc);
+
+    check_parse_and_serialize("ssrc:2655508255");
+    check_parse_and_serialize("ssrc:2655508255 foo");
+    check_parse_and_serialize("ssrc:2655508255 cname:{735484ea-4f6c-f74a-bd66-7425f8476c2e}");
+    check_parse_and_serialize("ssrc:2082260239 msid:1d0cdb4e-5934-4f0f-9f88-40392cb60d31 315b086a-5cb6-4221-89de-caf0b038c79d");
 
     assert!(parse_attribute("ssrc:").is_err());
     assert!(parse_attribute("ssrc:foo").is_err());
@@ -2741,7 +3319,13 @@ fn test_parse_attribute_ssrc() {
 
 #[test]
 fn test_parse_attribute_ssrc_group() {
-    assert!(parse_attribute("ssrc-group:FID 3156517279 2673335628").is_ok())
+    let check_parse = make_check_parse!(String, SdpAttribute::SsrcGroup);
+    let check_parse_and_serialize = make_check_parse_and_serialize!(check_parse,
+                                                                    SdpAttribute::SsrcGroup);
+
+    check_parse_and_serialize("ssrc-group:FID 3156517279 2673335628");
+
+    assert!(parse_attribute("ssrc-group:").is_err());
 }
 
 #[test]
