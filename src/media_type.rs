@@ -1,7 +1,7 @@
-use std::fmt;
 use {SdpType, SdpLine, SdpBandwidth, SdpConnection};
 use attribute_type::{SdpAttribute, SdpAttributeType, SdpAttributeRtpmap, SdpAttributeSctpmap};
 use error::{SdpParserError, SdpParserInternalError};
+use serialization_helper::{maybe_print_param};
 
 #[derive(Clone)]
 #[cfg_attr(feature="serialize", derive(Serialize))]
@@ -13,6 +13,17 @@ pub struct SdpMediaLine {
     pub formats: SdpFormatList,
 }
 
+impl ToString for SdpMediaLine {
+    fn to_string(&self) -> String {
+        format!("{media_line} {port}{port_count} {protocol} {formats}",
+                media_line = self.media.to_string(),
+                port_count = maybe_print_param("/", self.port_count, 0),
+                port = self.port.to_string(),
+                protocol = self.proto.to_string(),
+                formats = self.formats.to_string())
+    }
+}
+
 #[derive(Clone,Debug,PartialEq)]
 #[cfg_attr(feature="serialize", derive(Serialize))]
 pub enum SdpMediaValue {
@@ -21,14 +32,13 @@ pub enum SdpMediaValue {
     Application,
 }
 
-impl fmt::Display for SdpMediaValue {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let printable = match *self {
-            SdpMediaValue::Audio => "Audio",
-            SdpMediaValue::Video => "Video",
-            SdpMediaValue::Application => "Application",
-        };
-        write!(f, "{}", printable)
+impl ToString for SdpMediaValue {
+    fn to_string(&self) -> String {
+        match *self {
+            SdpMediaValue::Audio => "audio",
+            SdpMediaValue::Video => "video",
+            SdpMediaValue::Application => "application",
+        }.to_string()
     }
 }
 
@@ -43,17 +53,16 @@ pub enum SdpProtocolValue {
     TcpDtlsSctp,
 }
 
-impl fmt::Display for SdpProtocolValue {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let printable = match *self {
-            SdpProtocolValue::RtpSavpf => "Rtp/Savpf",
-            SdpProtocolValue::UdpTlsRtpSavpf => "Udp/Tls/Rtp/Savpf",
-            SdpProtocolValue::TcpTlsRtpSavpf => "Tcp/Tls/Rtp/Savpf",
-            SdpProtocolValue::DtlsSctp => "Dtls/Sctp",
-            SdpProtocolValue::UdpDtlsSctp => "Udp/Dtls/Sctp",
-            SdpProtocolValue::TcpDtlsSctp => "Tcp/Dtls/Sctp",
-        };
-        write!(f, "{}", printable)
+impl ToString for SdpProtocolValue {
+    fn to_string(&self) -> String {
+        match *self {
+            SdpProtocolValue::RtpSavpf => "RTP/SAVPF",
+            SdpProtocolValue::UdpTlsRtpSavpf => "UDP/TLS/RTP/SAVPF",
+            SdpProtocolValue::TcpTlsRtpSavpf => "TCP/TLS/RTP/SAVPF",
+            SdpProtocolValue::DtlsSctp => "DTLS/SCTP",
+            SdpProtocolValue::UdpDtlsSctp => "UDP/DTLS/SCTP",
+            SdpProtocolValue::TcpDtlsSctp => "TCP/DTLS/SCTP",
+        }.to_string()
     }
 }
 
@@ -64,11 +73,11 @@ pub enum SdpFormatList {
     Strings(Vec<String>),
 }
 
-impl fmt::Display for SdpFormatList {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+impl ToString for SdpFormatList {
+    fn to_string(&self) -> String {
         match *self {
-            SdpFormatList::Integers(ref x) => write!(f, "{:?}", x),
-            SdpFormatList::Strings(ref x) => write!(f, "{:?}", x),
+            SdpFormatList::Integers(ref x) => maybe_vector_to_string!("{}", x, " "),
+            SdpFormatList::Strings(ref x) => x.join(" "),
         }
     }
 }
@@ -133,7 +142,7 @@ impl SdpMedia {
     pub fn add_attribute(&mut self, attr: &SdpAttribute) -> Result<(), SdpParserInternalError> {
         if !attr.allowed_at_media_level() {
             return Err(SdpParserInternalError::Generic(format!("{} not allowed at media level",
-                                                               attr)));
+                                                               SdpAttributeType::from(attr).to_string())));
         }
         Ok(self.attribute.push(attr.clone()))
     }
@@ -220,6 +229,19 @@ impl SdpMedia {
         }
 
         Ok(())
+    }
+}
+
+impl ToString for SdpMedia {
+    fn to_string(&self) -> String {
+        format!("m={media_line}\r\n\
+                {bandwidth}\
+                {connection}\
+                {attributes}",
+                media_line = self.media.to_string(),
+                connection = option_to_string!("c={}\r\n", self.connection),
+                bandwidth = maybe_vector_to_string!("b={}\r\n", self.bandwidth, "\r\nb="),
+                attributes = maybe_vector_to_string!("a={}\r\n", self.attribute, "\r\na="))
     }
 }
 
@@ -359,20 +381,37 @@ pub fn parse_media(value: &str) -> Result<SdpType, SdpParserInternalError> {
         proto,
         formats,
     };
-    trace!("media: {}, {}, {}, {}", m.media, m.port, m.proto, m.formats);
+    trace!("media: {}, {}, {}, {}", m.media.to_string(), m.port.to_string(),
+                                    m.proto.to_string(), m.formats.to_string());
     Ok(SdpType::Media(m))
+}
+
+
+#[cfg(test)]
+fn check_parse(media_line_str: &str) -> SdpMediaLine {
+    if let Ok(SdpType::Media(media_line)) = parse_media(media_line_str) {
+        media_line
+    } else {
+        unreachable!();
+    }
+}
+
+#[cfg(test)]
+fn check_parse_and_serialize(media_line_str: &str) {
+    let parsed = check_parse(media_line_str);
+    assert_eq!(parsed.to_string(), media_line_str.to_string());
 }
 
 #[test]
 fn test_media_works() {
-    assert!(parse_media("audio 9 UDP/TLS/RTP/SAVPF 109").is_ok());
-    assert!(parse_media("video 9 UDP/TLS/RTP/SAVPF 126").is_ok());
-    assert!(parse_media("application 9 DTLS/SCTP 5000").is_ok());
-    assert!(parse_media("application 9 UDP/DTLS/SCTP webrtc-datachannel").is_ok());
+    check_parse_and_serialize("audio 9 UDP/TLS/RTP/SAVPF 109");
+    check_parse_and_serialize("video 9 UDP/TLS/RTP/SAVPF 126");
+    check_parse_and_serialize("application 9 DTLS/SCTP 5000");
+    check_parse_and_serialize("application 9 UDP/DTLS/SCTP webrtc-datachannel");
 
-    assert!(parse_media("audio 9 UDP/TLS/RTP/SAVPF 109 9 0 8").is_ok());
-    assert!(parse_media("audio 0 UDP/TLS/RTP/SAVPF 8").is_ok());
-    assert!(parse_media("audio 9/2 UDP/TLS/RTP/SAVPF 8").is_ok());
+    check_parse_and_serialize("audio 9 UDP/TLS/RTP/SAVPF 109 9 0 8");
+    check_parse_and_serialize("audio 0 UDP/TLS/RTP/SAVPF 8");
+    check_parse_and_serialize("audio 9/2 UDP/TLS/RTP/SAVPF 8");
 }
 
 #[test]
