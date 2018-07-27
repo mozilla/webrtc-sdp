@@ -587,8 +587,13 @@ impl ToString for SdpAttributeImageAttrXYRange {
         match *self {
             SdpAttributeImageAttrXYRange::Range(ref min, ref max, ref step_opt) => {
                 match step_opt {
+<<<<<<< HEAD
                     &Some(step) => format!("[{}:{}:{}]", min, step, max),
                     &None => format!("[{}:{}]", min, max)
+=======
+                    Some(step) => format!("[{}:{}:{}]", min, step, max),
+                    None => format!("[{}:{}]", min, max)
+>>>>>>> 486ea592006a4dafc7c51e3ce180e78414a53cd8
                 }
             },
             SdpAttributeImageAttrXYRange::DiscreteValues(ref values) =>
