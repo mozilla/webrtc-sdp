@@ -17,17 +17,15 @@ pub mod error;
 pub mod media_type;
 pub mod network;
 pub mod unsupported_types;
-pub mod serialization_helper;
 
 use attribute_type::{SdpAttribute, SdpSingleDirection, SdpAttributeType, parse_attribute,
-                     SdpAttributeSimulcastVersion, SdpAttributeRid};
+                     SdpAttributeSimulcastVersion, SdpAttributeRid, addr_to_string};
 use error::{SdpParserInternalError, SdpParserError};
 use media_type::{SdpMedia, SdpMediaLine, parse_media, parse_media_vector, SdpProtocolValue,
                  SdpMediaValue, SdpFormatList};
 use network::{parse_addrtype, parse_nettype, parse_unicast_addr};
 use unsupported_types::{parse_email, parse_information, parse_key, parse_phone, parse_repeat,
                         parse_uri, parse_zone};
-use serialization_helper::{addr_to_string};
 
 #[derive(Clone)]
 #[cfg_attr(feature="serialize", derive(Serialize))]

@@ -1,7 +1,7 @@
 use {SdpType, SdpLine, SdpBandwidth, SdpConnection};
-use attribute_type::{SdpAttribute, SdpAttributeType, SdpAttributeRtpmap, SdpAttributeSctpmap};
+use attribute_type::{SdpAttribute, SdpAttributeType, SdpAttributeRtpmap, SdpAttributeSctpmap,
+                     maybe_print_param};
 use error::{SdpParserError, SdpParserInternalError};
-use serialization_helper::{maybe_print_param};
 
 #[derive(Clone)]
 #[cfg_attr(feature="serialize", derive(Serialize))]

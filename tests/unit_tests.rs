@@ -174,8 +174,6 @@ a=ssrc:2655508255 cname:{735484ea-4f6c-f74a-bd66-7425f8476c2e}\r\n";
     assert!(msection.get_attribute(rsdparsa::attribute_type::SdpAttributeType::Rtpmap).is_some());
     assert!(msection.get_attribute(rsdparsa::attribute_type::SdpAttributeType::Setup).is_some());
     assert!(msection.get_attribute(rsdparsa::attribute_type::SdpAttributeType::Ssrc).is_some());
-
-    // check_parse_and_serialize(sdp_str);
 }
 
 #[test]
@@ -245,10 +243,7 @@ a=ssrc:2709871439 cname:{735484ea-4f6c-f74a-bd66-7425f8476c2e}";
     assert!(msection.get_attribute(rsdparsa::attribute_type::SdpAttributeType::Rtpmap).is_some());
     assert!(msection.get_attribute(rsdparsa::attribute_type::SdpAttributeType::Setup).is_some());
     assert!(msection.get_attribute(rsdparsa::attribute_type::SdpAttributeType::Ssrc).is_some());
-
-    // check_parse_and_serialize(sdp_str);
 }
-
 #[test]
 fn parse_firefox_datachannel_offer() {
     let sdp_str = "v=0\r\n\
@@ -518,6 +513,4 @@ fn parse_firefox_simulcast_answer() {
     let sdp = sdp_opt.unwrap();
     assert_eq!(sdp.version, 0);
     assert_eq!(sdp.media.len(), 1);
-
-    // check_parse_and_serialize(sdp_str);
 }

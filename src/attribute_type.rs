@@ -5,10 +5,9 @@ use std::iter;
 use SdpType;
 use error::SdpParserInternalError;
 use network::{parse_nettype, parse_addrtype, parse_unicast_addr};
-use serialization_helper::{maybe_print_param, maybe_print_bool_param, addr_to_string};
 
 
-// Serialization helper marcos
+// Serialization helper marcos and functions
 #[macro_export]
 macro_rules! option_to_string {
     ($fmt_str:expr, $opt:expr) => {
@@ -45,6 +44,33 @@ macro_rules! non_empty_string_vec {
             temp_vec
         }
     };
+}
+
+pub fn maybe_print_param<T>(name: &str, param:T, default_value: T) -> String
+                    where T: PartialEq+ToString {
+    if param != default_value {
+        name.to_owned() + &param.to_string()
+    } else {
+        "".to_string()
+    }
+}
+
+pub fn maybe_print_bool_param(name: &str, param:bool, default_value: bool) -> String {
+    if param != default_value {
+        name.to_owned() + "=" + &(match param {
+            true => "1",
+            false => "0",
+        }.to_string())
+    } else {
+        "".to_string()
+    }
+}
+
+pub fn addr_to_string(addr: IpAddr) -> String {
+    match addr {
+        IpAddr::V4(ipv4) => format!("IN IP4 {}", ipv4.to_string()),
+        IpAddr::V6(ipv6) => format!("IN IP4 {}", ipv6.to_string()),
+    }
 }
 
 
@@ -3292,7 +3318,7 @@ fn test_parse_attribute_simulcast() {
     check_parse_and_serialize("simulcast:send 1;4,5 recv 6;7");
     check_parse_and_serialize("simulcast:send 1,2,3;~4,~5 recv 6;~7,~8");
     // old draft 03 notation used by Firefox 55
-    assert!(parse_attribute("simulcast:send rid=foo;bar").is_ok());
+    assert!(parse_attribute("simulcast: send rid=foo;bar").is_ok());
 
     assert!(parse_attribute("simulcast:").is_err());
     assert!(parse_attribute("simulcast:send").is_err());
