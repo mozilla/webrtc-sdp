@@ -10,8 +10,8 @@ extern crate serde;
 
 use std::net::IpAddr;
 use std::str::FromStr;
-use std::fmt;
 
+#[macro_use]
 pub mod attribute_type;
 pub mod error;
 pub mod media_type;
@@ -19,7 +19,7 @@ pub mod network;
 pub mod unsupported_types;
 
 use attribute_type::{SdpAttribute, SdpSingleDirection, SdpAttributeType, parse_attribute,
-                     SdpAttributeSimulcastVersion, SdpAttributeRid};
+                     SdpAttributeSimulcastVersion, SdpAttributeRid, addr_to_string};
 use error::{SdpParserInternalError, SdpParserError};
 use media_type::{SdpMedia, SdpMediaLine, parse_media, parse_media_vector, SdpProtocolValue,
                  SdpMediaValue, SdpFormatList};
@@ -36,12 +36,36 @@ pub enum SdpBandwidth {
     Unknown(String, u32),
 }
 
+impl ToString for SdpBandwidth {
+    fn to_string(&self) -> String {
+        match *self {
+            SdpBandwidth::As(ref x) => format!("AS:{}", x.to_string()),
+            SdpBandwidth::Ct(ref x) => format!("CT:{}", x.to_string()),
+            SdpBandwidth::Tias(ref x) => format!("TIAS:{}", x.to_string()),
+            SdpBandwidth::Unknown(ref tp, ref x) => format!("{}:{}", tp.to_string(),
+                                                                     x.to_string()),
+        }
+    }
+}
+
 #[derive(Clone)]
 #[cfg_attr(feature="serialize", derive(Serialize))]
 pub struct SdpConnection {
     pub addr: IpAddr,
     pub ttl: Option<u8>,
     pub amount: Option<u32>,
+}
+
+impl ToString for SdpConnection {
+    fn to_string(&self) -> String {
+        format!("IN {addr}{ttl}{amount}",
+                addr = match self.addr {
+                    IpAddr::V4(ipv4) => format!("IP4 {}", ipv4.to_string()),
+                    IpAddr::V6(ipv6) => format!("IP6 {}", ipv6.to_string()),
+                },
+                ttl = option_to_string!("/{}", self.ttl),
+                amount = option_to_string!("/{}", self.amount))
+    }
 }
 
 #[derive(Clone)]
@@ -53,14 +77,13 @@ pub struct SdpOrigin {
     pub unicast_addr: IpAddr,
 }
 
-impl fmt::Display for SdpOrigin {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f,
-               "origin: {}, {}, {}, {}",
-               self.username,
-               self.session_id,
-               self.session_version,
-               self.unicast_addr)
+impl ToString for SdpOrigin {
+    fn to_string(&self) -> String {
+        format!("{username} {sess_id} {sess_vers} {unicast_addr}",
+                username = self.username.clone(),
+                sess_id = self.session_id.to_string(),
+                sess_vers = self.session_version.to_string(),
+                unicast_addr = addr_to_string(self.unicast_addr))
     }
 }
 
@@ -69,6 +92,12 @@ impl fmt::Display for SdpOrigin {
 pub struct SdpTiming {
     pub start: u64,
     pub stop: u64,
+}
+
+impl ToString for SdpTiming {
+    fn to_string(&self) -> String {
+        format!("{} {}", self.start.to_string(), self.stop.to_string())
+    }
 }
 
 #[cfg_attr(feature="serialize", derive(Serialize))]
@@ -163,7 +192,7 @@ impl SdpSession {
     pub fn add_attribute(&mut self, a: &SdpAttribute) -> Result<(), SdpParserInternalError> {
         if !a.allowed_at_session_level() {
             return Err(SdpParserInternalError::Generic(format!("{} not allowed at session level",
-                                                               a)));
+                                                               SdpAttributeType::from(a).to_string())));
         };
         Ok(self.attribute.push(a.clone()))
     }
@@ -198,6 +227,27 @@ impl SdpSession {
        self.media.push(media);
 
        Ok(())
+    }
+}
+
+impl ToString for SdpSession {
+    fn to_string(&self) -> String {
+        format!("v={version}\r\n\
+                o={origin}\r\n\
+                s={sess}\r\n\
+                {timing}\
+                {bandwidth}\
+                {connection}\
+                {sess_attributes}\
+                {media_sections}",
+                version = self.version.to_string(),
+                origin = self.origin.to_string(),
+                sess = self.session.clone(),
+                timing = option_to_string!("t={}\r\n", self.timing),
+                bandwidth = maybe_vector_to_string!("b={}\r\n", self.bandwidth, "\r\nb="),
+                connection = option_to_string!("c={}\r\n", self.connection),
+                sess_attributes = maybe_vector_to_string!("a={}\r\n", self.attribute, "\r\na="),
+                media_sections = maybe_vector_to_string!("{}", self.media, "\r\n"))
     }
 }
 
@@ -290,7 +340,7 @@ fn parse_origin(value: &str) -> Result<SdpType, SdpParserInternalError> {
         session_version,
         unicast_addr,
     };
-    trace!("origin: {}", o);
+    trace!("origin: {}", o.to_string());
     Ok(SdpType::Origin(o))
 }
 
