@@ -1,6 +1,5 @@
 extern crate rsdparsa;
 
-
 #[cfg(test)]
 fn check_parse_and_serialize(sdp_str: &str) {
     let sdp = rsdparsa::parse_sdp(sdp_str, true);
@@ -10,12 +9,12 @@ fn check_parse_and_serialize(sdp_str: &str) {
 
 #[test]
 fn parse_minimal_sdp() {
-    let sdp_str =  "v=0\r\n\
-                    o=- 0 0 IN IP4 0.0.0.0\r\n\
-                    s=-\r\n\
-                    t=0 0\r\n\
-                    c=IN IP4 0.0.0.0\r\n\
-                    m=audio 0 UDP/TLS/RTP/SAVPF 0\r\n";
+    let sdp_str = "v=0\r\n\
+                   o=- 0 0 IN IP4 0.0.0.0\r\n\
+                   s=-\r\n\
+                   t=0 0\r\n\
+                   c=IN IP4 0.0.0.0\r\n\
+                   m=audio 0 UDP/TLS/RTP/SAVPF 0\r\n";
     let sdp_res = rsdparsa::parse_sdp(sdp_str, true);
     assert!(sdp_res.is_ok());
     let sdp_opt = sdp_res.ok();
@@ -28,11 +27,15 @@ fn parse_minimal_sdp() {
     assert_eq!(sdp.media.len(), 1);
 
     let msection = &(sdp.media[0]);
-    assert_eq!(*msection.get_type(),
-               rsdparsa::media_type::SdpMediaValue::Audio);
+    assert_eq!(
+        *msection.get_type(),
+        rsdparsa::media_type::SdpMediaValue::Audio
+    );
     assert_eq!(msection.get_port(), 0);
-    assert_eq!(*msection.get_proto(),
-               rsdparsa::media_type::SdpProtocolValue::UdpTlsRtpSavpf);
+    assert_eq!(
+        *msection.get_proto(),
+        rsdparsa::media_type::SdpProtocolValue::UdpTlsRtpSavpf
+    );
     assert!(msection.get_attributes().is_empty());
     assert!(msection.get_bandwidth().is_empty());
     assert!(msection.get_connection().is_none());
@@ -61,16 +64,16 @@ m=audio 0 UDP/TLS/RTP/SAVPF 0\r\n";
 
 #[test]
 fn parse_minimal_sdp_with_most_session_types() {
-    let sdp_str =  "v=0\r\n\
-                    o=- 0 0 IN IP4 0.0.0.0\r\n\
-                    s=-\r\n\
-                    t=0 0\r\n\
-                    b=AS:1\r\n\
-                    b=CT:123\r\n\
-                    b=TIAS:12345\r\n\
-                    c=IN IP4 0.0.0.0\r\n\
-                    a=ice-options:trickle\r\n\
-                    m=audio 0 UDP/TLS/RTP/SAVPF 0\r\n";
+    let sdp_str = "v=0\r\n\
+                   o=- 0 0 IN IP4 0.0.0.0\r\n\
+                   s=-\r\n\
+                   t=0 0\r\n\
+                   b=AS:1\r\n\
+                   b=CT:123\r\n\
+                   b=TIAS:12345\r\n\
+                   c=IN IP4 0.0.0.0\r\n\
+                   a=ice-options:trickle\r\n\
+                   m=audio 0 UDP/TLS/RTP/SAVPF 0\r\n";
     let sdp_res = rsdparsa::parse_sdp(sdp_str, false);
     assert!(sdp_res.is_ok());
     let sdp_opt = sdp_res.ok();
@@ -85,16 +88,16 @@ fn parse_minimal_sdp_with_most_session_types() {
 
 #[test]
 fn parse_minimal_sdp_with_most_media_types() {
-    let sdp_str =  "v=0\r\n\
-                    o=- 0 0 IN IP4 0.0.0.0\r\n\
-                    s=-\r\n\
-                    t=0 0\r\n\
-                    m=video 0 UDP/TLS/RTP/SAVPF 0\r\n\
-                    b=AS:1\r\n\
-                    b=CT:123\r\n\
-                    b=TIAS:12345\r\n\
-                    c=IN IP4 0.0.0.0\r\n\
-                    a=sendrecv\r\n";
+    let sdp_str = "v=0\r\n\
+                   o=- 0 0 IN IP4 0.0.0.0\r\n\
+                   s=-\r\n\
+                   t=0 0\r\n\
+                   m=video 0 UDP/TLS/RTP/SAVPF 0\r\n\
+                   b=AS:1\r\n\
+                   b=CT:123\r\n\
+                   b=TIAS:12345\r\n\
+                   c=IN IP4 0.0.0.0\r\n\
+                   a=sendrecv\r\n";
     let sdp_res = rsdparsa::parse_sdp(sdp_str, false);
     assert!(sdp_res.is_ok());
     let sdp_opt = sdp_res.ok();
@@ -106,15 +109,23 @@ fn parse_minimal_sdp_with_most_media_types() {
     assert_eq!(sdp.media.len(), 1);
 
     let msection = &(sdp.media[0]);
-    assert_eq!(*msection.get_type(),
-               rsdparsa::media_type::SdpMediaValue::Video);
+    assert_eq!(
+        *msection.get_type(),
+        rsdparsa::media_type::SdpMediaValue::Video
+    );
     assert_eq!(msection.get_port(), 0);
-    assert_eq!(*msection.get_proto(),
-               rsdparsa::media_type::SdpProtocolValue::UdpTlsRtpSavpf);
+    assert_eq!(
+        *msection.get_proto(),
+        rsdparsa::media_type::SdpProtocolValue::UdpTlsRtpSavpf
+    );
     assert!(!msection.get_bandwidth().is_empty());
     assert!(!msection.get_connection().is_none());
     assert!(!msection.get_attributes().is_empty());
-    assert!(msection.get_attribute(rsdparsa::attribute_type::SdpAttributeType::Sendrecv).is_some());
+    assert!(
+        msection
+            .get_attribute(rsdparsa::attribute_type::SdpAttributeType::Sendrecv)
+            .is_some()
+    );
 
     check_parse_and_serialize(sdp_str);
 }
@@ -154,26 +165,78 @@ a=ssrc:2655508255 cname:{735484ea-4f6c-f74a-bd66-7425f8476c2e}\r\n";
     assert_eq!(sdp.media.len(), 1);
 
     let msection = &(sdp.media[0]);
-    assert_eq!(*msection.get_type(),
-               rsdparsa::media_type::SdpMediaValue::Audio);
+    assert_eq!(
+        *msection.get_type(),
+        rsdparsa::media_type::SdpMediaValue::Audio
+    );
     assert_eq!(msection.get_port(), 9);
-    assert_eq!(*msection.get_proto(),
-               rsdparsa::media_type::SdpProtocolValue::UdpTlsRtpSavpf);
+    assert_eq!(
+        *msection.get_proto(),
+        rsdparsa::media_type::SdpProtocolValue::UdpTlsRtpSavpf
+    );
     assert!(msection.get_connection().is_some());
     assert!(msection.get_bandwidth().is_empty());
     assert!(!msection.get_attributes().is_empty());
-    assert!(msection.get_attribute(rsdparsa::attribute_type::SdpAttributeType::Sendrecv).is_some());
-    assert!(msection.get_attribute(rsdparsa::attribute_type::SdpAttributeType::Extmap).is_some());
-    assert!(msection.get_attribute(rsdparsa::attribute_type::SdpAttributeType::Fmtp).is_some());
-    assert!(msection.get_attribute(rsdparsa::attribute_type::SdpAttributeType::IcePwd).is_some());
-    assert!(msection.get_attribute(rsdparsa::attribute_type::SdpAttributeType::IceUfrag).is_some());
-    assert!(msection.get_attribute(rsdparsa::attribute_type::SdpAttributeType::Mid).is_some());
-    assert!(msection.get_attribute(rsdparsa::attribute_type::SdpAttributeType::Mid).is_some());
-    assert!(msection.get_attribute(rsdparsa::attribute_type::SdpAttributeType::Msid).is_some());
-    assert!(msection.get_attribute(rsdparsa::attribute_type::SdpAttributeType::RtcpMux).is_some());
-    assert!(msection.get_attribute(rsdparsa::attribute_type::SdpAttributeType::Rtpmap).is_some());
-    assert!(msection.get_attribute(rsdparsa::attribute_type::SdpAttributeType::Setup).is_some());
-    assert!(msection.get_attribute(rsdparsa::attribute_type::SdpAttributeType::Ssrc).is_some());
+    assert!(
+        msection
+            .get_attribute(rsdparsa::attribute_type::SdpAttributeType::Sendrecv)
+            .is_some()
+    );
+    assert!(
+        msection
+            .get_attribute(rsdparsa::attribute_type::SdpAttributeType::Extmap)
+            .is_some()
+    );
+    assert!(
+        msection
+            .get_attribute(rsdparsa::attribute_type::SdpAttributeType::Fmtp)
+            .is_some()
+    );
+    assert!(
+        msection
+            .get_attribute(rsdparsa::attribute_type::SdpAttributeType::IcePwd)
+            .is_some()
+    );
+    assert!(
+        msection
+            .get_attribute(rsdparsa::attribute_type::SdpAttributeType::IceUfrag)
+            .is_some()
+    );
+    assert!(
+        msection
+            .get_attribute(rsdparsa::attribute_type::SdpAttributeType::Mid)
+            .is_some()
+    );
+    assert!(
+        msection
+            .get_attribute(rsdparsa::attribute_type::SdpAttributeType::Mid)
+            .is_some()
+    );
+    assert!(
+        msection
+            .get_attribute(rsdparsa::attribute_type::SdpAttributeType::Msid)
+            .is_some()
+    );
+    assert!(
+        msection
+            .get_attribute(rsdparsa::attribute_type::SdpAttributeType::RtcpMux)
+            .is_some()
+    );
+    assert!(
+        msection
+            .get_attribute(rsdparsa::attribute_type::SdpAttributeType::Rtpmap)
+            .is_some()
+    );
+    assert!(
+        msection
+            .get_attribute(rsdparsa::attribute_type::SdpAttributeType::Setup)
+            .is_some()
+    );
+    assert!(
+        msection
+            .get_attribute(rsdparsa::attribute_type::SdpAttributeType::Ssrc)
+            .is_some()
+    );
 }
 
 #[test]
@@ -222,27 +285,83 @@ a=ssrc:2709871439 cname:{735484ea-4f6c-f74a-bd66-7425f8476c2e}";
     assert_eq!(sdp.media.len(), 1);
 
     let msection = &(sdp.media[0]);
-    assert_eq!(*msection.get_type(),
-               rsdparsa::media_type::SdpMediaValue::Video);
+    assert_eq!(
+        *msection.get_type(),
+        rsdparsa::media_type::SdpMediaValue::Video
+    );
     assert_eq!(msection.get_port(), 9);
-    assert_eq!(*msection.get_proto(),
-               rsdparsa::media_type::SdpProtocolValue::UdpTlsRtpSavpf);
+    assert_eq!(
+        *msection.get_proto(),
+        rsdparsa::media_type::SdpProtocolValue::UdpTlsRtpSavpf
+    );
     assert!(msection.get_connection().is_some());
     assert!(msection.get_bandwidth().is_empty());
     assert!(!msection.get_attributes().is_empty());
-    assert!(msection.get_attribute(rsdparsa::attribute_type::SdpAttributeType::Recvonly).is_some());
-    assert!(!msection.get_attribute(rsdparsa::attribute_type::SdpAttributeType::Extmap).is_some());
-    assert!(msection.get_attribute(rsdparsa::attribute_type::SdpAttributeType::Fmtp).is_some());
-    assert!(msection.get_attribute(rsdparsa::attribute_type::SdpAttributeType::IcePwd).is_some());
-    assert!(msection.get_attribute(rsdparsa::attribute_type::SdpAttributeType::IceUfrag).is_some());
-    assert!(msection.get_attribute(rsdparsa::attribute_type::SdpAttributeType::Mid).is_some());
-    assert!(msection.get_attribute(rsdparsa::attribute_type::SdpAttributeType::Mid).is_some());
-    assert!(!msection.get_attribute(rsdparsa::attribute_type::SdpAttributeType::Msid).is_some());
-    assert!(msection.get_attribute(rsdparsa::attribute_type::SdpAttributeType::Rtcpfb).is_some());
-    assert!(msection.get_attribute(rsdparsa::attribute_type::SdpAttributeType::RtcpMux).is_some());
-    assert!(msection.get_attribute(rsdparsa::attribute_type::SdpAttributeType::Rtpmap).is_some());
-    assert!(msection.get_attribute(rsdparsa::attribute_type::SdpAttributeType::Setup).is_some());
-    assert!(msection.get_attribute(rsdparsa::attribute_type::SdpAttributeType::Ssrc).is_some());
+    assert!(
+        msection
+            .get_attribute(rsdparsa::attribute_type::SdpAttributeType::Recvonly)
+            .is_some()
+    );
+    assert!(
+        !msection
+            .get_attribute(rsdparsa::attribute_type::SdpAttributeType::Extmap)
+            .is_some()
+    );
+    assert!(
+        msection
+            .get_attribute(rsdparsa::attribute_type::SdpAttributeType::Fmtp)
+            .is_some()
+    );
+    assert!(
+        msection
+            .get_attribute(rsdparsa::attribute_type::SdpAttributeType::IcePwd)
+            .is_some()
+    );
+    assert!(
+        msection
+            .get_attribute(rsdparsa::attribute_type::SdpAttributeType::IceUfrag)
+            .is_some()
+    );
+    assert!(
+        msection
+            .get_attribute(rsdparsa::attribute_type::SdpAttributeType::Mid)
+            .is_some()
+    );
+    assert!(
+        msection
+            .get_attribute(rsdparsa::attribute_type::SdpAttributeType::Mid)
+            .is_some()
+    );
+    assert!(
+        !msection
+            .get_attribute(rsdparsa::attribute_type::SdpAttributeType::Msid)
+            .is_some()
+    );
+    assert!(
+        msection
+            .get_attribute(rsdparsa::attribute_type::SdpAttributeType::Rtcpfb)
+            .is_some()
+    );
+    assert!(
+        msection
+            .get_attribute(rsdparsa::attribute_type::SdpAttributeType::RtcpMux)
+            .is_some()
+    );
+    assert!(
+        msection
+            .get_attribute(rsdparsa::attribute_type::SdpAttributeType::Rtpmap)
+            .is_some()
+    );
+    assert!(
+        msection
+            .get_attribute(rsdparsa::attribute_type::SdpAttributeType::Setup)
+            .is_some()
+    );
+    assert!(
+        msection
+            .get_attribute(rsdparsa::attribute_type::SdpAttributeType::Ssrc)
+            .is_some()
+    );
 }
 #[test]
 fn parse_firefox_datachannel_offer() {
@@ -274,27 +393,83 @@ fn parse_firefox_datachannel_offer() {
     assert_eq!(sdp.media.len(), 1);
 
     let msection = &(sdp.media[0]);
-    assert_eq!(*msection.get_type(),
-               rsdparsa::media_type::SdpMediaValue::Application);
+    assert_eq!(
+        *msection.get_type(),
+        rsdparsa::media_type::SdpMediaValue::Application
+    );
     assert_eq!(msection.get_port(), 49760);
-    assert_eq!(*msection.get_proto(),
-               rsdparsa::media_type::SdpProtocolValue::DtlsSctp);
+    assert_eq!(
+        *msection.get_proto(),
+        rsdparsa::media_type::SdpProtocolValue::DtlsSctp
+    );
     assert!(msection.get_connection().is_some());
     assert!(msection.get_bandwidth().is_empty());
     assert!(!msection.get_attributes().is_empty());
-    assert!(msection.get_attribute(rsdparsa::attribute_type::SdpAttributeType::Sendrecv).is_some());
-    assert!(!msection.get_attribute(rsdparsa::attribute_type::SdpAttributeType::Extmap).is_some());
-    assert!(msection.get_attribute(rsdparsa::attribute_type::SdpAttributeType::IcePwd).is_some());
-    assert!(msection.get_attribute(rsdparsa::attribute_type::SdpAttributeType::IceUfrag).is_some());
-    assert!(msection.get_attribute(rsdparsa::attribute_type::SdpAttributeType::EndOfCandidates).is_some());
-    assert!(msection.get_attribute(rsdparsa::attribute_type::SdpAttributeType::Mid).is_some());
-    assert!(!msection.get_attribute(rsdparsa::attribute_type::SdpAttributeType::Msid).is_some());
-    assert!(!msection.get_attribute(rsdparsa::attribute_type::SdpAttributeType::Rtcpfb).is_some());
-    assert!(!msection.get_attribute(rsdparsa::attribute_type::SdpAttributeType::RtcpMux).is_some());
-    assert!(!msection.get_attribute(rsdparsa::attribute_type::SdpAttributeType::Rtpmap).is_some());
-    assert!(msection.get_attribute(rsdparsa::attribute_type::SdpAttributeType::Sctpmap).is_some());
-    assert!(msection.get_attribute(rsdparsa::attribute_type::SdpAttributeType::Setup).is_some());
-    assert!(msection.get_attribute(rsdparsa::attribute_type::SdpAttributeType::Ssrc).is_some());
+    assert!(
+        msection
+            .get_attribute(rsdparsa::attribute_type::SdpAttributeType::Sendrecv)
+            .is_some()
+    );
+    assert!(
+        !msection
+            .get_attribute(rsdparsa::attribute_type::SdpAttributeType::Extmap)
+            .is_some()
+    );
+    assert!(
+        msection
+            .get_attribute(rsdparsa::attribute_type::SdpAttributeType::IcePwd)
+            .is_some()
+    );
+    assert!(
+        msection
+            .get_attribute(rsdparsa::attribute_type::SdpAttributeType::IceUfrag)
+            .is_some()
+    );
+    assert!(
+        msection
+            .get_attribute(rsdparsa::attribute_type::SdpAttributeType::EndOfCandidates)
+            .is_some()
+    );
+    assert!(
+        msection
+            .get_attribute(rsdparsa::attribute_type::SdpAttributeType::Mid)
+            .is_some()
+    );
+    assert!(
+        !msection
+            .get_attribute(rsdparsa::attribute_type::SdpAttributeType::Msid)
+            .is_some()
+    );
+    assert!(
+        !msection
+            .get_attribute(rsdparsa::attribute_type::SdpAttributeType::Rtcpfb)
+            .is_some()
+    );
+    assert!(
+        !msection
+            .get_attribute(rsdparsa::attribute_type::SdpAttributeType::RtcpMux)
+            .is_some()
+    );
+    assert!(
+        !msection
+            .get_attribute(rsdparsa::attribute_type::SdpAttributeType::Rtpmap)
+            .is_some()
+    );
+    assert!(
+        msection
+            .get_attribute(rsdparsa::attribute_type::SdpAttributeType::Sctpmap)
+            .is_some()
+    );
+    assert!(
+        msection
+            .get_attribute(rsdparsa::attribute_type::SdpAttributeType::Setup)
+            .is_some()
+    );
+    assert!(
+        msection
+            .get_attribute(rsdparsa::attribute_type::SdpAttributeType::Ssrc)
+            .is_some()
+    );
 
     check_parse_and_serialize(sdp_str);
 }
@@ -397,21 +572,29 @@ a=ssrc:2673335628 label:b6ec5178-c611-403f-bbec-3833ed547c09\r\n";
     assert_eq!(sdp.media.len(), 2);
 
     let msection1 = &(sdp.media[0]);
-    assert_eq!(*msection1.get_type(),
-               rsdparsa::media_type::SdpMediaValue::Audio);
+    assert_eq!(
+        *msection1.get_type(),
+        rsdparsa::media_type::SdpMediaValue::Audio
+    );
     assert_eq!(msection1.get_port(), 9);
-    assert_eq!(*msection1.get_proto(),
-               rsdparsa::media_type::SdpProtocolValue::UdpTlsRtpSavpf);
+    assert_eq!(
+        *msection1.get_proto(),
+        rsdparsa::media_type::SdpProtocolValue::UdpTlsRtpSavpf
+    );
     assert!(!msection1.get_attributes().is_empty());
     assert!(msection1.get_connection().is_some());
     assert!(msection1.get_bandwidth().is_empty());
 
     let msection2 = &(sdp.media[1]);
-    assert_eq!(*msection2.get_type(),
-               rsdparsa::media_type::SdpMediaValue::Video);
+    assert_eq!(
+        *msection2.get_type(),
+        rsdparsa::media_type::SdpMediaValue::Video
+    );
     assert_eq!(msection2.get_port(), 9);
-    assert_eq!(*msection2.get_proto(),
-               rsdparsa::media_type::SdpProtocolValue::UdpTlsRtpSavpf);
+    assert_eq!(
+        *msection2.get_proto(),
+        rsdparsa::media_type::SdpProtocolValue::UdpTlsRtpSavpf
+    );
     assert!(!msection2.get_attributes().is_empty());
     assert!(msection2.get_connection().is_some());
     assert!(msection2.get_bandwidth().is_empty());
