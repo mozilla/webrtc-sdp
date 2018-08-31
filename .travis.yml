@@ -34,7 +34,10 @@ addons:
 # Add clippy
 before_script:
   - export PATH=$PATH:~/.cargo/bin
-  - rustup component add rustfmt-preview
+  - |
+    if [[ "$TRAVIS_RUST_VERSION" == "stable" ]]; then
+      rustup component add rustfmt-preview
+    fi
   - |
     if [[ "$TRAVIS_RUST_VERSION" == "nightly" ]]; then
       cargo install --force clippy;
@@ -42,7 +45,10 @@ before_script:
 
 script:
   - echo FEATURES="$FEATURES"
-  - cargo fmt --all -- --check
+  - |
+    if [[ "$TRAVIS_RUST_VERSION" == "stable" ]]; then
+      cargo fmt --all -- --check
+    fi
   - cargo build --verbose --all --features="$FEATURES"
   - |
     if [[ "$TRAVIS_RUST_VERSION" == "nightly" &&
