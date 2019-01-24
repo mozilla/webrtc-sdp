@@ -61,10 +61,13 @@ where
 
 pub fn maybe_print_bool_param(name: &str, param: bool, default_value: bool) -> String {
     if param != default_value {
-        name.to_owned() + "=" + &(match param {
-            true => "1",
-            false => "0",
-        }.to_string())
+        name.to_owned()
+            + "="
+            + &(match param {
+                true => "1",
+                false => "0",
+            }
+            .to_string())
     } else {
         "".to_string()
     }
@@ -90,7 +93,8 @@ impl ToString for SdpSingleDirection {
         match *self {
             SdpSingleDirection::Send => "send",
             SdpSingleDirection::Recv => "recv",
-        }.to_string()
+        }
+        .to_string()
     }
 }
 
@@ -366,7 +370,8 @@ impl ToString for SdpAttributeSimulcast {
             versions = non_empty_string_vec![
                 maybe_vector_to_string!("send {}", self.send, ";"),
                 maybe_vector_to_string!("recv {}", self.receive, ";")
-            ].join(" ")
+            ]
+            .join(" ")
         )
     }
 }
@@ -427,7 +432,8 @@ impl ToString for SdpAttributeRtcpFbType {
             SdpAttributeRtcpFbType::TrrInt => "trr-int",
             SdpAttributeRtcpFbType::Remb => "goog-remb",
             SdpAttributeRtcpFbType::TransCC => "transport-cc",
-        }.to_string()
+        }
+        .to_string()
     }
 }
 
@@ -472,7 +478,8 @@ impl ToString for SdpAttributeDirection {
             SdpAttributeDirection::Recvonly => "recvonly",
             SdpAttributeDirection::Sendonly => "sendonly",
             SdpAttributeDirection::Sendrecv => "sendrecv",
-        }.to_string()
+        }
+        .to_string()
     }
 }
 
@@ -557,7 +564,8 @@ impl ToString for SdpAttributeFmtpParameters {
                 maybe_print_bool_param("stereo", self.stereo, false),
                 maybe_print_bool_param("useinbandfec", self.useinbandfec, false),
                 maybe_print_bool_param("cbr", self.cbr, false)
-            ].join(";"),
+            ]
+            .join(";"),
             red = maybe_vector_to_string!("{}", self.encodings, "/"),
             dtmf_tones = maybe_print_param("", self.dtmf_tones.clone(), "".to_string()),
             unknown = maybe_vector_to_string!("{}", self.unknown_tokens, ",")
@@ -600,7 +608,8 @@ impl ToString for SdpAttributeFingerprintHashType {
             SdpAttributeFingerprintHashType::Sha256 => "sha-256",
             SdpAttributeFingerprintHashType::Sha384 => "sha-384",
             SdpAttributeFingerprintHashType::Sha512 => "sha-512",
-        }.to_string()
+        }
+        .to_string()
     }
 }
 
@@ -803,7 +812,8 @@ impl ToString for SdpAttributeGroupSemantic {
             SdpAttributeGroupSemantic::ForwardErrorCorrection => "FEC",
             SdpAttributeGroupSemantic::DecodingDependency => "DDP",
             SdpAttributeGroupSemantic::Bundle => "BUNDLE",
-        }.to_string()
+        }
+        .to_string()
     }
 }
 
@@ -884,7 +894,8 @@ impl ToString for SdpAttributeRidParameters {
             maybe_print_param("max-br=", self.max_br, 0),
             maybe_print_param("max-pps=", self.max_pps, 0),
             maybe_vector_to_string!("{}", self.unknown, ";")
-        ].join(";")
+        ]
+        .join(";")
     }
 }
 
@@ -908,8 +919,9 @@ impl ToString for SdpAttributeRid {
                 maybe_vector_to_string!("pt={}", self.formats, ","),
                 self.params.to_string(),
                 maybe_vector_to_string!("depends={}", self.depends, ",")
-            ].join(";")
-                .as_str()
+            ]
+            .join(";")
+            .as_str()
             {
                 "" => "".to_string(),
                 x => format!(" {}", x),
@@ -972,7 +984,8 @@ impl ToString for SdpAttributeSetup {
                 SdpAttributeSetup::Actpass => "actpass",
                 SdpAttributeSetup::Holdconn => "holdconn",
                 SdpAttributeSetup::Passive => "passive",
-            }.to_string()
+            }
+            .to_string()
         )
     }
 }
@@ -1401,7 +1414,8 @@ impl ToString for SdpAttributeType {
             SdpAttributeType::Simulcast => "simulcast",
             SdpAttributeType::Ssrc => "ssrc",
             SdpAttributeType::SsrcGroup => "ssrc-group",
-        }.to_string()
+        }
+        .to_string()
     }
 }
 
@@ -1457,7 +1471,7 @@ fn parse_candidate(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalErro
         _ => {
             return Err(SdpParserInternalError::Generic(
                 "Unknonw candidate transport value".to_string(),
-            ))
+            ));
         }
     };
     let priority = tokens[3].parse::<u64>()?;
@@ -1473,7 +1487,7 @@ fn parse_candidate(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalErro
         _ => {
             return Err(SdpParserInternalError::Generic(
                 "Candidate attribute token must be 'typ'".to_string(),
-            ))
+            ));
         }
     };
     let cand_type = match tokens[7].to_lowercase().as_ref() {
@@ -1484,7 +1498,7 @@ fn parse_candidate(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalErro
         _ => {
             return Err(SdpParserInternalError::Generic(
                 "Unknow candidate type value".to_string(),
-            ))
+            ));
         }
     };
     let mut cand = SdpAttributeCandidate::new(
@@ -1533,7 +1547,7 @@ fn parse_candidate(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalErro
                         _ => {
                             return Err(SdpParserInternalError::Generic(
                                 "Unknown tcptype value in candidate line".to_string(),
-                            ))
+                            ));
                         }
                     });
                     index += 2;
@@ -1546,7 +1560,7 @@ fn parse_candidate(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalErro
                 _ => {
                     return Err(SdpParserInternalError::Unsupported(
                         "Uknown candidate extension name".to_string(),
-                    ))
+                    ));
                 }
             };
         }
@@ -1597,7 +1611,7 @@ fn parse_extmap(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> 
             _ => {
                 return Err(SdpParserInternalError::Generic(
                     "Unsupported direction in extmap value".to_string(),
-                ))
+                ));
             }
         })
     }
@@ -1664,7 +1678,7 @@ fn parse_fingerprint(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalEr
             return Err(SdpParserInternalError::Unsupported(format!(
                 "fingerprint contains an unsupported hash algorithm '{}'",
                 unknown
-            )))
+            )));
         }
     };
 
@@ -1738,7 +1752,7 @@ fn parse_fmtp(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
                             return Err(SdpParserInternalError::Generic(
                                 format!("The fmtp parameter '{:}' must be 0 or 1", param_name)
                                     .to_string(),
-                            ))
+                            ));
                         }
                     }
                 };
@@ -1764,7 +1778,7 @@ fn parse_fmtp(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
                             return Err(SdpParserInternalError::Generic(
                                 "The fmtp parameter 'packetization-mode' must be 0,1 or 2"
                                     .to_string(),
-                            ))
+                            ));
                         }
                     }
                 }
@@ -1802,7 +1816,7 @@ fn parse_fmtp(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
                     _ => {
                         return Err(SdpParserInternalError::Generic(
                             "Red codec must be in range [0,128]".to_string(),
-                        ))
+                        ));
                     }
                 }
             }
@@ -1871,7 +1885,7 @@ fn parse_group(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
         None => {
             return Err(SdpParserInternalError::Generic(
                 "Group attribute is missing semantics token".to_string(),
-            ))
+            ));
         }
         Some(x) => match x.to_uppercase().as_ref() {
             "LS" => SdpAttributeGroupSemantic::LipSynchronization,
@@ -1885,7 +1899,7 @@ fn parse_group(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
                 return Err(SdpParserInternalError::Unsupported(format!(
                     "Unknown group semantic '{:?}' found",
                     unknown
-                )))
+                )));
             }
         },
     };
@@ -1985,7 +1999,7 @@ fn parse_image_attr_xyrange(
         }
     } else {
         Ok(SdpAttributeImageAttrXYRange::DiscreteValues(vec![
-            to_parse.parse::<u32>()?,
+            to_parse.parse::<u32>()?
         ]))
     }
 }
@@ -2211,7 +2225,7 @@ fn parse_msid(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
         None => {
             return Err(SdpParserInternalError::Generic(
                 "Msid attribute is missing msid-id token".to_string(),
-            ))
+            ));
         }
         Some(x) => x.to_string(),
     };
@@ -2314,7 +2328,7 @@ fn parse_remote_candidates(to_parse: &str) -> Result<SdpAttribute, SdpParserInte
         None => {
             return Err(SdpParserInternalError::Generic(
                 "Remote-candidate attribute is missing component ID".to_string(),
-            ))
+            ));
         }
         Some(x) => x.parse::<u32>()?,
     };
@@ -2322,7 +2336,7 @@ fn parse_remote_candidates(to_parse: &str) -> Result<SdpAttribute, SdpParserInte
         None => {
             return Err(SdpParserInternalError::Generic(
                 "Remote-candidate attribute is missing connection address".to_string(),
-            ))
+            ));
         }
         Some(x) => parse_unicast_addr(x)?,
     };
@@ -2330,7 +2344,7 @@ fn parse_remote_candidates(to_parse: &str) -> Result<SdpAttribute, SdpParserInte
         None => {
             return Err(SdpParserInternalError::Generic(
                 "Remote-candidate attribute is missing port number".to_string(),
-            ))
+            ));
         }
         Some(x) => x.parse::<u32>()?,
     };
@@ -2352,7 +2366,7 @@ fn parse_rtpmap(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> 
         None => {
             return Err(SdpParserInternalError::Generic(
                 "Rtpmap missing payload type".to_string(),
-            ))
+            ));
         }
         Some(x) => {
             let pt = x.parse::<u8>()?;
@@ -2368,7 +2382,7 @@ fn parse_rtpmap(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> 
         None => {
             return Err(SdpParserInternalError::Generic(
                 "Rtpmap missing payload type".to_string(),
-            ))
+            ));
         }
         Some(x) => x.split('/'),
     };
@@ -2376,7 +2390,7 @@ fn parse_rtpmap(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> 
         None => {
             return Err(SdpParserInternalError::Generic(
                 "Rtpmap missing codec name".to_string(),
-            ))
+            ));
         }
         Some(x) => x.to_string(),
     };
@@ -2384,7 +2398,7 @@ fn parse_rtpmap(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> 
         None => {
             return Err(SdpParserInternalError::Generic(
                 "Rtpmap missing codec name".to_string(),
-            ))
+            ));
         }
         Some(x) => x.parse::<u32>()?,
     };
@@ -2402,7 +2416,7 @@ fn parse_rtcp(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
         None => {
             return Err(SdpParserInternalError::Generic(
                 "Rtcp attribute is missing port number".to_string(),
-            ))
+            ));
         }
         Some(x) => x.parse::<u16>()?,
     };
@@ -2415,7 +2429,7 @@ fn parse_rtcp(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
                 None => {
                     return Err(SdpParserInternalError::Generic(
                         "Rtcp attribute is missing address type token".to_string(),
-                    ))
+                    ));
                 }
                 Some(x) => {
                     let addrtype = parse_addrtype(x)?;
@@ -2423,7 +2437,7 @@ fn parse_rtcp(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
                         None => {
                             return Err(SdpParserInternalError::Generic(
                                 "Rtcp attribute is missing ip address token".to_string(),
-                            ))
+                            ));
                         }
                         Some(x) => {
                             let addr = parse_unicast_addr(x)?;
@@ -2460,13 +2474,13 @@ fn parse_rtcp_fb(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError>
             _ => {
                 return Err(SdpParserInternalError::Unsupported(
                     format!("Unknown rtcpfb feedback type: {:?}", x).to_string(),
-                ))
+                ));
             }
         },
         None => {
             return Err(SdpParserInternalError::Generic(
                 "Error parsing rtcpfb: no feedback type".to_string(),
-            ))
+            ));
         }
     };
 
@@ -2478,13 +2492,13 @@ fn parse_rtcp_fb(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError>
                 _ => {
                     return Err(SdpParserInternalError::Unsupported(
                         format!("Unknown rtcpfb ack parameter: {:?}", x).to_string(),
-                    ))
+                    ));
                 }
             },
             None => {
                 return Err(SdpParserInternalError::Unsupported(
                     format!("The rtcpfb ack feeback type needs a parameter:").to_string(),
-                ))
+                ));
             }
         },
         &SdpAttributeRtcpFbType::Ccm => match tokens.get(2) {
@@ -2493,7 +2507,7 @@ fn parse_rtcp_fb(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError>
                 _ => {
                     return Err(SdpParserInternalError::Unsupported(
                         format!("Unknown rtcpfb ccm parameter: {:?}", x).to_string(),
-                    ))
+                    ));
                 }
             },
             None => "".to_string(),
@@ -2504,7 +2518,7 @@ fn parse_rtcp_fb(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError>
                 _ => {
                     return Err(SdpParserInternalError::Unsupported(
                         format!("Unknown rtcpfb nack parameter: {:?}", x).to_string(),
-                    ))
+                    ));
                 }
             },
             None => "".to_string(),
@@ -2515,13 +2529,13 @@ fn parse_rtcp_fb(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError>
                 _ => {
                     return Err(SdpParserInternalError::Generic(
                         format!("Unknown rtcpfb trr-int parameter: {:?}", x).to_string(),
-                    ))
+                    ));
                 }
             },
             None => {
                 return Err(SdpParserInternalError::Generic(
                     format!("The rtcpfb trr-int feedback type needs a parameter").to_string(),
-                ))
+                ));
             }
         },
         &SdpAttributeRtcpFbType::Remb => match tokens.get(2) {
@@ -2529,7 +2543,7 @@ fn parse_rtcp_fb(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError>
                 _ => {
                     return Err(SdpParserInternalError::Unsupported(
                         format!("Unknown rtcpfb remb parameter: {:?}", x).to_string(),
-                    ))
+                    ));
                 }
             },
             None => "".to_string(),
@@ -2539,7 +2553,7 @@ fn parse_rtcp_fb(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError>
                 _ => {
                     return Err(SdpParserInternalError::Unsupported(
                         format!("Unknown rtcpfb transport-cc parameter: {:?}", x).to_string(),
-                    ))
+                    ));
                 }
             },
             None => "".to_string(),
@@ -2589,7 +2603,7 @@ fn parse_setup(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
             _ => {
                 return Err(SdpParserInternalError::Generic(
                     "Unsupported setup value".to_string(),
-                ))
+                ));
             }
         },
     ))
@@ -2616,8 +2630,9 @@ fn parse_simulcast_version_list(
                     format!(
                         "Simulcast attribute has unknown list descriptor '{:?}'",
                         descriptor
-                    ).to_string(),
-                ))
+                    )
+                    .to_string(),
+                ));
             }
         }
     } else {
@@ -2633,7 +2648,7 @@ fn parse_simulcast(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalErro
         None => {
             return Err(SdpParserInternalError::Generic(
                 "Simulcast attribute is missing send/recv value".to_string(),
-            ))
+            ));
         }
     };
 
@@ -2663,7 +2678,8 @@ fn parse_simulcast(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalErro
                         "{:?}{:?}",
                         "Simulcast has defined a second direction but",
                         "no second list of simulcast stream versions"
-                    ).to_string(),
+                    )
+                    .to_string(),
                 ));
             }
         }
@@ -2687,7 +2703,7 @@ fn parse_ssrc(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
         None => {
             return Err(SdpParserInternalError::Generic(
                 "Ssrc attribute is missing ssrc-id value".to_string(),
-            ))
+            ));
         }
         Some(x) => x.parse::<u32>()?,
     };
@@ -2817,33 +2833,31 @@ fn test_parse_attribute_candidate() {
     );
     assert!(parse_attribute("candidate:0 1 UDP 2122252543 172.16.156.106 49760 typ fost").is_err());
     // FIXME this should fail without the extra 'foobar' at the end
-    assert!(
-        parse_attribute(
-            "candidate:0 1 TCP 2122252543 172.16.156.106 49760 typ host unsupported foobar"
-        ).is_err()
-    );
+    assert!(parse_attribute(
+        "candidate:0 1 TCP 2122252543 172.16.156.106 49760 typ host unsupported foobar"
+    )
+    .is_err());
     assert!(parse_attribute("candidate:1 1 UDP 1685987071 24.23.204.141 54609 typ srflx raddr 192.168.1.4 rport 61665 generation B").is_err());
-    assert!(
-        parse_attribute(
-            "candidate:0 1 TCP 2122252543 172.16.156.106 49760 typ host network-cost C"
-        ).is_err()
-    );
-    assert!(
-        parse_attribute(
-            "candidate:1 1 UDP 1685987071 24.23.204.141 54609 typ srflx raddr 192.168.1 rport 61665"
-        ).is_err()
-    );
-    assert!(
-        parse_attribute(
-            "candidate:0 1 TCP 2122252543 172.16.156.106 49760 typ host tcptype foobar"
-        ).is_err()
-    );
-    assert!(
-        parse_attribute(
-            "candidate:1 1 UDP 1685987071 24.23.204.141 54609 typ srflx raddr 192.168.1 rport 61665"
-        ).is_err()
-    );
-    assert!(parse_attribute("candidate:1 1 UDP 1685987071 24.23.204.141 54609 typ srflx raddr 192.168.1.4 rport 70000").is_err());
+    assert!(parse_attribute(
+        "candidate:0 1 TCP 2122252543 172.16.156.106 49760 typ host network-cost C"
+    )
+    .is_err());
+    assert!(parse_attribute(
+        "candidate:1 1 UDP 1685987071 24.23.204.141 54609 typ srflx raddr 192.168.1 rport 61665"
+    )
+    .is_err());
+    assert!(parse_attribute(
+        "candidate:0 1 TCP 2122252543 172.16.156.106 49760 typ host tcptype foobar"
+    )
+    .is_err());
+    assert!(parse_attribute(
+        "candidate:1 1 UDP 1685987071 24.23.204.141 54609 typ srflx raddr 192.168.1 rport 61665"
+    )
+    .is_err());
+    assert!(parse_attribute(
+        "candidate:1 1 UDP 1685987071 24.23.204.141 54609 typ srflx raddr 192.168.1.4 rport 70000"
+    )
+    .is_err());
 }
 
 #[test]
@@ -2948,57 +2962,47 @@ fn test_parse_attribute_fingerprint() {
          BC:EB:0B:23",
     );
 
-    assert!(
-        parse_attribute(
-            "fingerprint:sha-1 CX:34:D1:62:16:95:7B:B7:EB:74:E1:39:27:97:EB:0B:23:73:AC:BC"
-        ).is_err()
-    );
-    assert!(
-        parse_attribute(
-            "fingerprint:sha-1 CDA:34:D1:62:16:95:7B:B7:EB:74:E1:39:27:97:EB:0B:23:73:AC:BC"
-        ).is_err()
-    );
-    assert!(
-        parse_attribute(
-            "fingerprint:sha-1 CD:34:D1:62:16:95:7B:B7:EB:74:E1:39:27:97:EB:0B:23:73:AC:"
-        ).is_err()
-    );
-    assert!(
-        parse_attribute(
-            "fingerprint:sha-1 CD:34:D1:62:16:95:7B:B7:EB:74:E1:39:27:97:EB:0B:23:73:AC"
-        ).is_err()
-    );
-    assert!(
-        parse_attribute(
-            "fingerprint:sha-1 CX:34:D1:62:16:95:7B:B7:EB:74:E1:39:27:97:EB:0B:23:73:AC:BC"
-        ).is_err()
-    );
+    assert!(parse_attribute(
+        "fingerprint:sha-1 CX:34:D1:62:16:95:7B:B7:EB:74:E1:39:27:97:EB:0B:23:73:AC:BC"
+    )
+    .is_err());
+    assert!(parse_attribute(
+        "fingerprint:sha-1 CDA:34:D1:62:16:95:7B:B7:EB:74:E1:39:27:97:EB:0B:23:73:AC:BC"
+    )
+    .is_err());
+    assert!(parse_attribute(
+        "fingerprint:sha-1 CD:34:D1:62:16:95:7B:B7:EB:74:E1:39:27:97:EB:0B:23:73:AC:"
+    )
+    .is_err());
+    assert!(parse_attribute(
+        "fingerprint:sha-1 CD:34:D1:62:16:95:7B:B7:EB:74:E1:39:27:97:EB:0B:23:73:AC"
+    )
+    .is_err());
+    assert!(parse_attribute(
+        "fingerprint:sha-1 CX:34:D1:62:16:95:7B:B7:EB:74:E1:39:27:97:EB:0B:23:73:AC:BC"
+    )
+    .is_err());
 
-    assert!(
-        parse_attribute(
-            "fingerprint:sha-1 0xCD:34:D1:62:16:95:7B:B7:EB:74:E2:39:27:97:EB:0B:23:73:AC:BC"
-        ).is_err()
-    );
-    assert!(
-        parse_attribute(
-            "fingerprint:sha-1 CD:0x34:D1:62:16:95:7B:B7:EB:74:E2:39:27:97:EB:0B:23:73:AC:BC"
-        ).is_err()
-    );
-    assert!(
-        parse_attribute(
-            "fingerprint:sha-1 CD::D1:62:16:95:7B:B7:EB:74:E2:39:27:97:EB:0B:23:73:AC:BC"
-        ).is_err()
-    );
-    assert!(
-        parse_attribute(
-            "fingerprint:sha-1 CD:0000A:D1:62:16:95:7B:B7:EB:74:E2:39:27:97:EB:0B:23:73:AC:BC"
-        ).is_err()
-    );
-    assert!(
-        parse_attribute(
-            "fingerprint:sha-1 CD:B:D1:62:16:95:7B:B7:EB:74:E2:39:27:97:EB:0B:23:73:AC:BC"
-        ).is_err()
-    );
+    assert!(parse_attribute(
+        "fingerprint:sha-1 0xCD:34:D1:62:16:95:7B:B7:EB:74:E2:39:27:97:EB:0B:23:73:AC:BC"
+    )
+    .is_err());
+    assert!(parse_attribute(
+        "fingerprint:sha-1 CD:0x34:D1:62:16:95:7B:B7:EB:74:E2:39:27:97:EB:0B:23:73:AC:BC"
+    )
+    .is_err());
+    assert!(parse_attribute(
+        "fingerprint:sha-1 CD::D1:62:16:95:7B:B7:EB:74:E2:39:27:97:EB:0B:23:73:AC:BC"
+    )
+    .is_err());
+    assert!(parse_attribute(
+        "fingerprint:sha-1 CD:0000A:D1:62:16:95:7B:B7:EB:74:E2:39:27:97:EB:0B:23:73:AC:BC"
+    )
+    .is_err());
+    assert!(parse_attribute(
+        "fingerprint:sha-1 CD:B:D1:62:16:95:7B:B7:EB:74:E2:39:27:97:EB:0B:23:73:AC:BC"
+    )
+    .is_err());
 }
 
 #[test]
