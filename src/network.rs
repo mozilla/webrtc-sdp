@@ -52,7 +52,7 @@ pub fn parse_addrtype(value: &str) -> Result<SdpAddrType, SdpParserInternalError
         _ => {
             return Err(SdpParserInternalError::Generic(
                 "address type needs to be IP4 or IP6".to_string(),
-            ))
+            ));
         }
     })
 }

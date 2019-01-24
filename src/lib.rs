@@ -310,7 +310,7 @@ fn parse_origin(value: &str) -> Result<SdpType, SdpParserInternalError> {
         None => {
             return Err(SdpParserInternalError::Generic(
                 "Origin type is missing username token".to_string(),
-            ))
+            ));
         }
         Some(x) => x,
     };
@@ -318,7 +318,7 @@ fn parse_origin(value: &str) -> Result<SdpType, SdpParserInternalError> {
         None => {
             return Err(SdpParserInternalError::Generic(
                 "Origin type is missing session ID token".to_string(),
-            ))
+            ));
         }
         Some(x) => x.parse::<u64>()?,
     };
@@ -326,7 +326,7 @@ fn parse_origin(value: &str) -> Result<SdpType, SdpParserInternalError> {
         None => {
             return Err(SdpParserInternalError::Generic(
                 "Origin type is missing session version token".to_string(),
-            ))
+            ));
         }
         Some(x) => x.parse::<u64>()?,
     };
@@ -334,7 +334,7 @@ fn parse_origin(value: &str) -> Result<SdpType, SdpParserInternalError> {
         None => {
             return Err(SdpParserInternalError::Generic(
                 "Origin type is missing session version token".to_string(),
-            ))
+            ));
         }
         Some(x) => parse_nettype(x)?,
     };
@@ -342,7 +342,7 @@ fn parse_origin(value: &str) -> Result<SdpType, SdpParserInternalError> {
         None => {
             return Err(SdpParserInternalError::Generic(
                 "Origin type is missing address type token".to_string(),
-            ))
+            ));
         }
         Some(x) => parse_addrtype(x)?,
     };
@@ -350,7 +350,7 @@ fn parse_origin(value: &str) -> Result<SdpType, SdpParserInternalError> {
         None => {
             return Err(SdpParserInternalError::Generic(
                 "Origin type is missing IP address token".to_string(),
-            ))
+            ));
         }
         Some(x) => parse_unicast_addr(x)?,
     };
@@ -553,7 +553,7 @@ fn parse_sdp_line(line: &str, line_number: usize) -> Result<SdpLine, SdpParserEr
                 error: SdpParserInternalError::Generic("missing type".to_string()),
                 line: line.to_string(),
                 line_number: line_number,
-            })
+            });
         }
         Some(t) => {
             let trimmed = t.trim();
@@ -580,7 +580,7 @@ fn parse_sdp_line(line: &str, line_number: usize) -> Result<SdpLine, SdpParserEr
                 error: SdpParserInternalError::Generic("missing value".to_string()),
                 line: line.to_string(),
                 line_number: line_number,
-            })
+            });
         }
         Some(v) => {
             let trimmed = v.trim();
@@ -613,25 +613,26 @@ fn parse_sdp_line(line: &str, line_number: usize) -> Result<SdpLine, SdpParserEr
         _ => Err(SdpParserInternalError::Generic(
             "unknown sdp type".to_string(),
         )),
-    }.map(|sdp_type| SdpLine {
+    }
+    .map(|sdp_type| SdpLine {
         line_number,
         sdp_type,
     })
-        .map_err(|e| match e {
-            SdpParserInternalError::Generic(..)
-            | SdpParserInternalError::Integer(..)
-            | SdpParserInternalError::Float(..)
-            | SdpParserInternalError::Address(..) => SdpParserError::Line {
-                error: e,
-                line: line.to_string(),
-                line_number: line_number,
-            },
-            SdpParserInternalError::Unsupported(..) => SdpParserError::Unsupported {
-                error: e,
-                line: line.to_string(),
-                line_number: line_number,
-            },
-        })
+    .map_err(|e| match e {
+        SdpParserInternalError::Generic(..)
+        | SdpParserInternalError::Integer(..)
+        | SdpParserInternalError::Float(..)
+        | SdpParserInternalError::Address(..) => SdpParserError::Line {
+            error: e,
+            line: line.to_string(),
+            line_number: line_number,
+        },
+        SdpParserInternalError::Unsupported(..) => SdpParserError::Unsupported {
+            error: e,
+            line: line.to_string(),
+            line_number: line_number,
+        },
+    })
 }
 
 #[test]
@@ -886,11 +887,9 @@ fn test_sanity_check_sdp_session_extmap() {
     }
     let ret = sdp_session.add_attribute(&extmap);
     assert!(ret.is_ok());
-    assert!(
-        sdp_session
-            .get_attribute(SdpAttributeType::Extmap)
-            .is_some()
-    );
+    assert!(sdp_session
+        .get_attribute(SdpAttributeType::Extmap)
+        .is_some());
 
     assert!(sanity_check_sdp_session(&sdp_session).is_ok());
 
@@ -905,11 +904,9 @@ fn test_sanity_check_sdp_session_extmap() {
     }
     let mut second_media = create_dummy_media_section();
     assert!(second_media.add_attribute(&mextmap).is_ok());
-    assert!(
-        second_media
-            .get_attribute(SdpAttributeType::Extmap)
-            .is_some()
-    );
+    assert!(second_media
+        .get_attribute(SdpAttributeType::Extmap)
+        .is_some());
 
     sdp_session.extend_media(vec![second_media]);
     assert!(sdp_session.media.len() == 2);
@@ -947,7 +944,7 @@ fn parse_sdp_vector(lines: &[SdpLine]) -> Result<SdpSession, SdpParserError> {
             return Err(SdpParserError::Sequence {
                 message: "first line needs to be version number".to_string(),
                 line_number: lines[0].line_number,
-            })
+            });
         }
     };
     let origin: SdpOrigin = match lines[1].sdp_type {
@@ -956,7 +953,7 @@ fn parse_sdp_vector(lines: &[SdpLine]) -> Result<SdpSession, SdpParserError> {
             return Err(SdpParserError::Sequence {
                 message: "second line needs to be origin".to_string(),
                 line_number: lines[1].line_number,
-            })
+            });
         }
     };
     let session: String = match lines[2].sdp_type {
@@ -965,18 +962,20 @@ fn parse_sdp_vector(lines: &[SdpLine]) -> Result<SdpSession, SdpParserError> {
             return Err(SdpParserError::Sequence {
                 message: "third line needs to be session".to_string(),
                 line_number: lines[2].line_number,
-            })
+            });
         }
     };
     let mut sdp_session = SdpSession::new(version, origin, session);
     for (index, line) in lines.iter().enumerate().skip(3) {
         match line.sdp_type {
-            SdpType::Attribute(ref a) => sdp_session.add_attribute(a).map_err(
-                |e: SdpParserInternalError| SdpParserError::Sequence {
-                    message: format!("{}", e),
-                    line_number: line.line_number,
-                },
-            )?,
+            SdpType::Attribute(ref a) => {
+                sdp_session
+                    .add_attribute(a)
+                    .map_err(|e: SdpParserInternalError| SdpParserError::Sequence {
+                        message: format!("{}", e),
+                        line_number: line.line_number,
+                    })?
+            }
             SdpType::Bandwidth(ref b) => sdp_session.add_bandwidth(b),
             SdpType::Timing(ref t) => sdp_session.set_timing(t),
             SdpType::Connection(ref c) => sdp_session.set_connection(c),
@@ -985,7 +984,7 @@ fn parse_sdp_vector(lines: &[SdpLine]) -> Result<SdpSession, SdpParserError> {
                 return Err(SdpParserError::Sequence {
                     message: "version, origin or session at wrong level".to_string(),
                     line_number: line.line_number,
-                })
+                });
             }
             // the line parsers throw unsupported errors for these already
             SdpType::Email(_)
@@ -1098,117 +1097,109 @@ fn test_parse_sdp_to_short_string() {
 
 #[test]
 fn test_parse_sdp_line_error() {
-    assert!(
-        parse_sdp(
-            "v=0\r\n
+    assert!(parse_sdp(
+        "v=0\r\n
 o=- 0 0 IN IP4 0.0.0.0\r\n
 s=-\r\n
 t=0 foobar\r\n
 m=audio 0 UDP/TLS/RTP/SAVPF 0\r\n",
-            true
-        ).is_err()
-    );
+        true
+    )
+    .is_err());
 }
 
 #[test]
 fn test_parse_sdp_unsupported_error() {
-    assert!(
-        parse_sdp(
-            "v=0\r\n
+    assert!(parse_sdp(
+        "v=0\r\n
 o=- 0 0 IN IP4 0.0.0.0\r\n
 s=-\r\n
 t=0 0\r\n
 m=foobar 0 UDP/TLS/RTP/SAVPF 0\r\n",
-            true
-        ).is_err()
-    );
+        true
+    )
+    .is_err());
 }
 
 #[test]
 fn test_parse_sdp_unsupported_warning() {
-    assert!(
-        parse_sdp(
-            "v=0\r\n
+    assert!(parse_sdp(
+        "v=0\r\n
 o=- 0 0 IN IP4 0.0.0.0\r\n
 s=-\r\n
 c=IN IP4 198.51.100.7\r\n
 t=0 0\r\n
 m=audio 0 UDP/TLS/RTP/SAVPF 0\r\n
 a=unsupported\r\n",
-            false
-        ).is_ok()
-    );
+        false
+    )
+    .is_ok());
 }
 
 #[test]
 fn test_parse_sdp_sequence_error() {
-    assert!(
-        parse_sdp(
-            "v=0\r\n
+    assert!(parse_sdp(
+        "v=0\r\n
 o=- 0 0 IN IP4 0.0.0.0\r\n
 t=0 0\r\n
 s=-\r\n
 m=audio 0 UDP/TLS/RTP/SAVPF 0\r\n",
-            true
-        ).is_err()
-    );
+        true
+    )
+    .is_err());
 }
 
 #[test]
 fn test_parse_sdp_integer_error() {
-    assert!(
-        parse_sdp(
-            "v=0\r\n
+    assert!(parse_sdp(
+        "v=0\r\n
 o=- 0 0 IN IP4 0.0.0.0\r\n
 s=-\r\n
 t=0 0\r\n
 m=audio 0 UDP/TLS/RTP/SAVPF 0\r\n
 a=rtcp:34er21\r\n",
-            true
-        ).is_err()
-    );
+        true
+    )
+    .is_err());
 }
 
 #[test]
 fn test_parse_sdp_ipaddr_error() {
-    assert!(
-        parse_sdp(
-            "v=0\r\n
+    assert!(parse_sdp(
+        "v=0\r\n
 o=- 0 0 IN IP4 0.a.b.0\r\n
 s=-\r\n
 t=0 0\r\n
 m=audio 0 UDP/TLS/RTP/SAVPF 0\r\n",
-            true
-        ).is_err()
-    );
+        true
+    )
+    .is_err());
 }
 
 #[test]
 fn test_parse_sdp_invalid_session_attribute() {
-    assert!(
-        parse_sdp(
-            "v=0\r\n
+    assert!(parse_sdp(
+        "v=0\r\n
 o=- 0 0 IN IP4 0.a.b.0\r\n
 s=-\r\n
 t=0 0\r\n
 a=bundle-only\r\n
 m=audio 0 UDP/TLS/RTP/SAVPF 0\r\n",
-            true
-        ).is_err()
-    );
+        true
+    )
+    .is_err());
 }
 
 #[test]
 fn test_parse_sdp_invalid_media_attribute() {
-    assert!(
-        parse_sdp(
-            "v=0\r\n
+    assert!(parse_sdp(
+        "v=0\r\n
 o=- 0 0 IN IP4 0.a.b.0\r\n
 s=-\r\n
 t=0 0\r\n
 m=audio 0 UDP/TLS/RTP/SAVPF 0\r\n
 a=ice-lite\r\n",
-            true
-        ).is_err()
-    );
+        true
+    )
+    .is_err());
 }

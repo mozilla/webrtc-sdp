@@ -41,7 +41,8 @@ impl ToString for SdpMediaValue {
             SdpMediaValue::Audio => "audio",
             SdpMediaValue::Video => "video",
             SdpMediaValue::Application => "application",
-        }.to_string()
+        }
+        .to_string()
     }
 }
 
@@ -77,7 +78,8 @@ impl ToString for SdpProtocolValue {
             SdpProtocolValue::UdpDtlsSctp => "UDP/DTLS/SCTP",
             SdpProtocolValue::TcpDtlsSctp => "TCP/DTLS/SCTP",
             SdpProtocolValue::TcpTlsRtpSavpf => "TCP/TLS/RTP/SAVPF",
-        }.to_string()
+        }
+        .to_string()
     }
 }
 
@@ -296,7 +298,7 @@ fn parse_media_token(value: &str) -> Result<SdpMediaValue, SdpParserInternalErro
             return Err(SdpParserInternalError::Unsupported(format!(
                 "unsupported media value: {}",
                 value
-            )))
+            )));
         }
     })
 }
@@ -336,7 +338,7 @@ fn parse_protocol_token(value: &str) -> Result<SdpProtocolValue, SdpParserIntern
             return Err(SdpParserInternalError::Unsupported(format!(
                 "unsupported protocol value: {}",
                 value
-            )))
+            )));
         }
     })
 }
@@ -397,7 +399,7 @@ pub fn parse_media(value: &str) -> Result<SdpType, SdpParserInternalError> {
         None => {
             return Err(SdpParserInternalError::Generic(
                 "missing port token".to_string(),
-            ))
+            ));
         }
         Some(p) => p.parse::<u32>()?,
     };
@@ -521,18 +523,20 @@ pub fn parse_media_vector(lines: &[SdpLine]) -> Result<Vec<SdpMedia>, SdpParserE
             return Err(SdpParserError::Sequence {
                 message: "first line in media section needs to be a media line".to_string(),
                 line_number: lines[0].line_number,
-            })
+            });
         }
     };
 
     for line in lines.iter().skip(1) {
         match line.sdp_type {
-            SdpType::Connection(ref c) => sdp_media.set_connection(c).map_err(
-                |e: SdpParserInternalError| SdpParserError::Sequence {
-                    message: format!("{}", e),
-                    line_number: line.line_number,
-                },
-            )?,
+            SdpType::Connection(ref c) => {
+                sdp_media
+                    .set_connection(c)
+                    .map_err(|e: SdpParserInternalError| SdpParserError::Sequence {
+                        message: format!("{}", e),
+                        line_number: line.line_number,
+                    })?
+            }
             SdpType::Bandwidth(ref b) => sdp_media.add_bandwidth(b),
             SdpType::Attribute(ref a) => {
                 match a {
@@ -552,7 +556,8 @@ pub fn parse_media_vector(lines: &[SdpLine]) -> Result<Vec<SdpMedia>, SdpParserE
                         }))
                     }
                     _ => sdp_media.add_attribute(a),
-                }.map_err(|e: SdpParserInternalError| SdpParserError::Sequence {
+                }
+                .map_err(|e: SdpParserInternalError| SdpParserError::Sequence {
                     message: format!("{}", e),
                     line_number: line.line_number,
                 })?
@@ -574,7 +579,7 @@ pub fn parse_media_vector(lines: &[SdpLine]) -> Result<Vec<SdpMedia>, SdpParserE
                 return Err(SdpParserError::Sequence {
                     message: "invalid type in media section".to_string(),
                     line_number: line.line_number,
-                })
+                });
             }
 
             // the line parsers throw unsupported errors for these already
