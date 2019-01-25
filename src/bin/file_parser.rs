@@ -3,7 +3,7 @@ use std::error::Error;
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::Path;
-extern crate rsdparsa;
+extern crate webrtc_sdp;
 
 fn main() {
     let filename = match env::args().nth(1) {
@@ -27,5 +27,5 @@ fn main() {
         Ok(s) => s,
     };
 
-    rsdparsa::parse_sdp(&s, true).is_ok();
+    webrtc_sdp::parse_sdp(&s, true).is_ok();
 }
