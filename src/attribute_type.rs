@@ -1631,7 +1631,7 @@ fn parse_extmap(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> 
         id,
         direction,
         url: tokens[1].to_string(),
-        extension_attributes: extension_attributes,
+        extension_attributes,
     }))
 }
 
@@ -1875,7 +1875,7 @@ fn parse_fmtp(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
 
     Ok(SdpAttribute::Fmtp(SdpAttributeFmtp {
         payload_type: payload_token.parse::<u8>()?,
-        parameters: parameters,
+        parameters,
     }))
 }
 
@@ -2316,9 +2316,9 @@ fn parse_rid(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
     Ok(SdpAttribute::Rid(SdpAttributeRid {
         id: tokens[0].to_string(),
         direction: parse_single_direction(tokens[1])?,
-        formats: formats,
-        params: params,
-        depends: depends,
+        formats,
+        params,
+        depends,
     }))
 }
 
@@ -2562,11 +2562,8 @@ fn parse_rtcp_fb(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError>
 
     Ok(SdpAttribute::Rtcpfb(SdpAttributeRtcpFb {
         payload_type: parse_payload_type(tokens[0])?,
-
-        feedback_type: feedback_type,
-
-        parameter: parameter,
-
+        feedback_type,
+        parameter,
         extra: match tokens.get(3) {
             Some(x) => x.to_string(),
             None => "".to_string(),

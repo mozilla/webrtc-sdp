@@ -543,7 +543,7 @@ fn parse_sdp_line(line: &str, line_number: usize) -> Result<SdpLine, SdpParserEr
         return Err(SdpParserError::Line {
             error: SdpParserInternalError::Generic("missing = character in line".to_string()),
             line: line.to_string(),
-            line_number: line_number,
+            line_number,
         });
     }
     let mut splitted_line = line.splitn(2, '=');
@@ -552,7 +552,7 @@ fn parse_sdp_line(line: &str, line_number: usize) -> Result<SdpLine, SdpParserEr
             return Err(SdpParserError::Line {
                 error: SdpParserInternalError::Generic("missing type".to_string()),
                 line: line.to_string(),
-                line_number: line_number,
+                line_number,
             });
         }
         Some(t) => {
@@ -561,14 +561,14 @@ fn parse_sdp_line(line: &str, line_number: usize) -> Result<SdpLine, SdpParserEr
                 return Err(SdpParserError::Line {
                     error: SdpParserInternalError::Generic("type too long".to_string()),
                     line: line.to_string(),
-                    line_number: line_number,
+                    line_number,
                 });
             }
             if trimmed.is_empty() {
                 return Err(SdpParserError::Line {
                     error: SdpParserInternalError::Generic("type is empty".to_string()),
                     line: line.to_string(),
-                    line_number: line_number,
+                    line_number,
                 });
             }
             trimmed
@@ -579,7 +579,7 @@ fn parse_sdp_line(line: &str, line_number: usize) -> Result<SdpLine, SdpParserEr
             return Err(SdpParserError::Line {
                 error: SdpParserInternalError::Generic("missing value".to_string()),
                 line: line.to_string(),
-                line_number: line_number,
+                line_number,
             });
         }
         Some(v) => {
@@ -588,7 +588,7 @@ fn parse_sdp_line(line: &str, line_number: usize) -> Result<SdpLine, SdpParserEr
                 return Err(SdpParserError::Line {
                     error: SdpParserInternalError::Generic("value is empty".to_string()),
                     line: line.to_string(),
-                    line_number: line_number,
+                    line_number,
                 });
             }
             trimmed
@@ -625,12 +625,12 @@ fn parse_sdp_line(line: &str, line_number: usize) -> Result<SdpLine, SdpParserEr
         | SdpParserInternalError::Address(..) => SdpParserError::Line {
             error: e,
             line: line.to_string(),
-            line_number: line_number,
+            line_number,
         },
         SdpParserInternalError::Unsupported(..) => SdpParserError::Unsupported {
             error: e,
             line: line.to_string(),
-            line_number: line_number,
+            line_number,
         },
     })
 }
