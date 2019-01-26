@@ -552,7 +552,7 @@ impl ToString for SdpAttributeFmtpParameters {
                     self.level_asymmetry_allowed,
                     false
                 ),
-                maybe_print_param("profile-level-id=", self.profile_level_id, 0x420010),
+                maybe_print_param("profile-level-id=", self.profile_level_id, 0x0042_0010),
                 maybe_print_param("max-fs=", self.max_fs, 0),
                 maybe_print_param("max-cpb=", self.max_cpb, 0),
                 maybe_print_param("max-dpb=", self.max_dpb, 0),
@@ -1580,7 +1580,7 @@ fn parse_dtls_message(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalE
     Ok(SdpAttribute::DtlsMessage(match tokens[0] {
         "client" => SdpAttributeDtlsMessage::Client(tokens[1].to_string()),
         "server" => SdpAttributeDtlsMessage::Server(tokens[1].to_string()),
-        e @ _ => {
+        e => {
             return Err(SdpParserInternalError::Generic(
                 format!("dtls-message has unknown role token '{}'", e).to_string(),
             ));
@@ -1646,7 +1646,7 @@ fn parse_fingerprint(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalEr
     let fingerprint_token = tokens[1].to_string();
     let parse_tokens = |expected_len| -> Result<Vec<u8>, SdpParserInternalError> {
         let bytes = fingerprint_token
-            .split(":")
+            .split(':')
             .map(|byte_token| {
                 if byte_token.len() != 2 {
                     return Err(SdpParserInternalError::Generic(
@@ -1712,7 +1712,7 @@ fn parse_fmtp(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
     let mut parameters = SdpAttributeFmtpParameters {
         packetization_mode: 0,
         level_asymmetry_allowed: false,
-        profile_level_id: 0x420010,
+        profile_level_id: 0x0042_0010,
         max_fs: 0,
         max_cpb: 0,
         max_dpb: 0,
@@ -1729,11 +1729,11 @@ fn parse_fmtp(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
         unknown_tokens: Vec::new(),
     };
 
-    if parameter_token.contains("=") {
-        let parameter_tokens: Vec<&str> = parameter_token.split(";").collect();
+    if parameter_token.contains('=') {
+        let parameter_tokens: Vec<&str> = parameter_token.split(';').collect();
 
         for parameter_token in parameter_tokens.iter() {
-            let name_value_pair: Vec<&str> = parameter_token.splitn(2, "=").collect();
+            let name_value_pair: Vec<&str> = parameter_token.splitn(2, '=').collect();
 
             if name_value_pair.len() != 2 {
                 return Err(SdpParserInternalError::Generic(
@@ -1808,7 +1808,7 @@ fn parse_fmtp(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
         }
     } else {
         if parameter_token.contains("/") {
-            let encodings: Vec<&str> = parameter_token.split("/").collect();
+            let encodings: Vec<&str> = parameter_token.split('/').collect();
 
             for encoding in encodings {
                 match encoding.parse::<u8>()? {
@@ -1822,7 +1822,7 @@ fn parse_fmtp(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
             }
         } else {
             // This is the case for the 'telephone-event' codec
-            let dtmf_tones: Vec<&str> = parameter_token.split(",").collect();
+            let dtmf_tones: Vec<&str> = parameter_token.split(',').collect();
             let mut dtmf_tone_is_ok = true;
 
             // This closure verifies the output of some_number_as_string.parse::<u8>().ok() like calls
@@ -1838,7 +1838,7 @@ fn parse_fmtp(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
 
             // This loop does some sanity checking on the passed dtmf tones
             for dtmf_tone in dtmf_tones {
-                let dtmf_tone_range: Vec<&str> = dtmf_tone.splitn(2, "-").collect();
+                let dtmf_tone_range: Vec<&str> = dtmf_tone.splitn(2, '-').collect();
 
                 dtmf_tone_is_ok = match dtmf_tone_range.len() {
                     // In this case the dtmf tone is a range
@@ -1926,10 +1926,10 @@ fn parse_imageattr_tokens(to_parse: &str, separator: char) -> Vec<String> {
     let mut current_tokens = Vec::new();
 
     for token in to_parse.split(separator) {
-        if token.contains("[") {
+        if token.contains('[') {
             open_braces_counter += 1;
         }
-        if token.contains("]") {
+        if token.contains(']') {
             open_braces_counter -= 1;
         }
 
@@ -1945,7 +1945,7 @@ fn parse_imageattr_tokens(to_parse: &str, separator: char) -> Vec<String> {
 }
 
 fn parse_imagettr_braced_token(to_parse: &str) -> Option<&str> {
-    if !to_parse.ends_with("]") {
+    if !to_parse.ends_with(']') {
         return None;
     }
 
@@ -1955,15 +1955,15 @@ fn parse_imagettr_braced_token(to_parse: &str) -> Option<&str> {
 fn parse_image_attr_xyrange(
     to_parse: &str,
 ) -> Result<SdpAttributeImageAttrXYRange, SdpParserInternalError> {
-    if to_parse.starts_with("[") {
+    if to_parse.starts_with('[') {
         let value_tokens =
             parse_imagettr_braced_token(to_parse).ok_or(SdpParserInternalError::Generic(
                 "imageattr's xyrange has no closing tag ']'".to_string(),
             ))?;
 
-        if to_parse.contains(":") {
+        if to_parse.contains(':') {
             // Range values
-            let range_tokens: Vec<&str> = value_tokens.split(":").collect();
+            let range_tokens: Vec<&str> = value_tokens.split(':').collect();
 
             if range_tokens.len() == 3 {
                 Ok(SdpAttributeImageAttrXYRange::Range(
@@ -1985,7 +1985,7 @@ fn parse_image_attr_xyrange(
         } else {
             // Discrete values
             let values = value_tokens
-                .split(",")
+                .split(',')
                 .map(|x| x.parse::<u32>())
                 .collect::<Result<Vec<u32>, _>>()?;
 
@@ -2034,7 +2034,7 @@ fn parse_image_attr_set(
     let mut q = None;
 
     let parse_ps_range = |resolution_range: &str| -> Result<(f32, f32), SdpParserInternalError> {
-        let minmax_pair: Vec<&str> = resolution_range.split("-").collect();
+        let minmax_pair: Vec<&str> = resolution_range.split('-').collect();
 
         if minmax_pair.len() != 2 {
             return Err(SdpParserInternalError::Generic(
@@ -2057,21 +2057,21 @@ fn parse_image_attr_set(
     while let Some(current_token) = tokens.next() {
         if current_token.starts_with("sar=") {
             let value_token = &current_token[4..];
-            if value_token.starts_with("[") {
+            if value_token.starts_with('[') {
                 let sar_values = parse_imagettr_braced_token(value_token).ok_or(
                     SdpParserInternalError::Generic(
                         "imageattr's sar value is missing closing tag ']'".to_string(),
                     ),
                 )?;
 
-                if value_token.contains("-") {
+                if value_token.contains('-') {
                     // Range
                     let range = parse_ps_range(sar_values)?;
                     sar = Some(SdpAttributeImageAttrSRange::Range(range.0, range.1))
                 } else if value_token.contains(",") {
                     // Discrete values
                     let values = sar_values
-                        .split(",")
+                        .split(',')
                         .map(|x| x.parse::<f32>())
                         .collect::<Result<Vec<f32>, _>>()?;
 
@@ -2102,7 +2102,7 @@ fn parse_image_attr_set(
             }
         } else if current_token.starts_with("par=") {
             let braced_value_token = &current_token[4..];
-            if !braced_value_token.starts_with("[") {
+            if !braced_value_token.starts_with('[') {
                 return Err(SdpParserInternalError::Generic(
                     "imageattr's par value must start with '['".to_string(),
                 ));
@@ -2151,7 +2151,7 @@ where
         x => {
             let mut sets = vec![parse_set(x)?];
             while let Some(set_str) = tokens.clone().peek() {
-                if set_str.starts_with("[") {
+                if set_str.starts_with('[') {
                     sets.push(parse_set(&tokens.next().unwrap())?);
                 } else {
                     break;
@@ -2199,7 +2199,7 @@ fn parse_image_attr(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalErr
         second_set_list = parse_image_attr_set_list(&mut tokens)?;
     }
 
-    if let Some(_) = tokens.next() {
+    if tokens.next().is_some() {
         return Err(SdpParserInternalError::Generic(
             "imageattr must not contain any token after the second set list".to_string(),
         ));
@@ -2238,7 +2238,7 @@ fn parse_msid(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
 
 fn parse_msid_semantic(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
     let tokens: Vec<_> = to_parse.split_whitespace().collect();
-    if tokens.len() < 1 {
+    if tokens.is_empty() {
         return Err(SdpParserInternalError::Generic(
             "Msid-semantic attribute is missing msid-semantic token".to_string(),
         ));
@@ -2252,7 +2252,7 @@ fn parse_msid_semantic(to_parse: &str) -> Result<SdpAttribute, SdpParserInternal
 }
 
 fn parse_rid(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
-    let tokens: Vec<&str> = to_parse.splitn(3, " ").collect();
+    let tokens: Vec<&str> = to_parse.splitn(3, ' ').collect();
 
     if tokens.len() < 2 {
         return Err(SdpParserInternalError::Generic(
@@ -2274,13 +2274,13 @@ fn parse_rid(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
     let mut depends: Vec<String> = Vec::new();
 
     if let Some(param_token) = tokens.get(2) {
-        let mut parameters = param_token.split(";").peekable();
+        let mut parameters = param_token.split(';').peekable();
 
         // The 'pt' parameter must be the first parameter if present, so it
         // cannot be checked along with the other parameters below
         if let Some(maybe_fmt_parameter) = parameters.clone().peek() {
             if maybe_fmt_parameter.starts_with("pt=") {
-                let fmt_list = maybe_fmt_parameter[3..].split(",");
+                let fmt_list = maybe_fmt_parameter[3..].split(',');
                 for fmt in fmt_list {
                     formats.push(fmt.trim().parse::<u16>()?);
                 }
@@ -2291,7 +2291,7 @@ fn parse_rid(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
 
         for param in parameters {
             // TODO: Bug 1225877. Add support for params without '='
-            let param_value_pair: Vec<&str> = param.splitn(2, "=").collect();
+            let param_value_pair: Vec<&str> = param.splitn(2, '=').collect();
             if param_value_pair.len() != 2 {
                 return Err(SdpParserInternalError::Generic(
                     "A rid parameter needs to be of form 'param=value'".to_string(),
@@ -2306,7 +2306,7 @@ fn parse_rid(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
                 "max-br" => params.max_br = param_value_pair[1].parse::<u32>()?,
                 "max-pps" => params.max_pps = param_value_pair[1].parse::<u32>()?,
                 "depends" => {
-                    depends.extend(param_value_pair[1].split(",").map(|x| x.to_string()));
+                    depends.extend(param_value_pair[1].split(',').map(|x| x.to_string()));
                 }
                 _ => params.unknown.push(param.to_string()),
             }
@@ -2464,7 +2464,7 @@ fn parse_rtcp_fb(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError>
 
     // Parse this in advance to use it later in the parameter switch
     let feedback_type = match tokens.get(1) {
-        Some(x) => match x.as_ref() {
+        Some(x) => match *x {
             "ack" => SdpAttributeRtcpFbType::Ack,
             "ccm" => SdpAttributeRtcpFbType::Ccm,
             "nack" => SdpAttributeRtcpFbType::Nack,
@@ -2485,9 +2485,9 @@ fn parse_rtcp_fb(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError>
     };
 
     // Parse this in advance to make the initilization block below better readable
-    let parameter = match &feedback_type {
-        &SdpAttributeRtcpFbType::Ack => match tokens.get(2) {
-            Some(x) => match x.as_ref() {
+    let parameter = match feedback_type {
+        SdpAttributeRtcpFbType::Ack => match tokens.get(2) {
+            Some(x) => match *x {
                 "rpsi" | "app" => x.to_string(),
                 _ => {
                     return Err(SdpParserInternalError::Unsupported(
@@ -2497,12 +2497,12 @@ fn parse_rtcp_fb(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError>
             },
             None => {
                 return Err(SdpParserInternalError::Unsupported(
-                    format!("The rtcpfb ack feeback type needs a parameter:").to_string(),
+                    "The rtcpfb ack feeback type needs a parameter:".to_string(),
                 ));
             }
         },
-        &SdpAttributeRtcpFbType::Ccm => match tokens.get(2) {
-            Some(x) => match x.as_ref() {
+        SdpAttributeRtcpFbType::Ccm => match tokens.get(2) {
+            Some(x) => match *x {
                 "fir" | "tmmbr" | "tstr" | "vbcm" => x.to_string(),
                 _ => {
                     return Err(SdpParserInternalError::Unsupported(
@@ -2512,8 +2512,8 @@ fn parse_rtcp_fb(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError>
             },
             None => "".to_string(),
         },
-        &SdpAttributeRtcpFbType::Nack => match tokens.get(2) {
-            Some(x) => match x.as_ref() {
+        SdpAttributeRtcpFbType::Nack => match tokens.get(2) {
+            Some(x) => match *x {
                 "sli" | "pli" | "rpsi" | "app" => x.to_string(),
                 _ => {
                     return Err(SdpParserInternalError::Unsupported(
@@ -2523,7 +2523,7 @@ fn parse_rtcp_fb(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError>
             },
             None => "".to_string(),
         },
-        &SdpAttributeRtcpFbType::TrrInt => match tokens.get(2) {
+        SdpAttributeRtcpFbType::TrrInt => match tokens.get(2) {
             Some(x) => match x {
                 _ if x.parse::<u32>().is_ok() => x.to_string(),
                 _ => {
@@ -2534,11 +2534,11 @@ fn parse_rtcp_fb(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError>
             },
             None => {
                 return Err(SdpParserInternalError::Generic(
-                    format!("The rtcpfb trr-int feedback type needs a parameter").to_string(),
+                    "The rtcpfb trr-int feedback type needs a parameter".to_string(),
                 ));
             }
         },
-        &SdpAttributeRtcpFbType::Remb => match tokens.get(2) {
+        SdpAttributeRtcpFbType::Remb => match tokens.get(2) {
             Some(x) => match x {
                 _ => {
                     return Err(SdpParserInternalError::Unsupported(
@@ -2548,7 +2548,7 @@ fn parse_rtcp_fb(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError>
             },
             None => "".to_string(),
         },
-        &SdpAttributeRtcpFbType::TransCC => match tokens.get(2) {
+        SdpAttributeRtcpFbType::TransCC => match tokens.get(2) {
             Some(x) => match x {
                 _ => {
                     return Err(SdpParserInternalError::Unsupported(
@@ -2615,14 +2615,14 @@ fn parse_simulcast_version_list(
             .map(SdpAttributeSimulcastVersion::new)
             .collect()
     };
-    if to_parse.contains("=") {
-        let mut descriptor_versionlist_pair = to_parse.splitn(2, "=");
+    if to_parse.contains('=') {
+        let mut descriptor_versionlist_pair = to_parse.splitn(2, '=');
         match descriptor_versionlist_pair.next().unwrap() {
             // TODO Bug 1470568
             "rid" => Ok(make_version_list(
                 descriptor_versionlist_pair.next().unwrap(),
             )),
-            descriptor @ _ => {
+            descriptor => {
                 return Err(SdpParserInternalError::Generic(
                     format!(
                         "Simulcast attribute has unknown list descriptor '{:?}'",
