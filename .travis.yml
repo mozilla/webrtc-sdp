@@ -52,7 +52,7 @@ script:
   - cargo build --verbose --all --features="$FEATURES"
   - |
     if [[ "$TRAVIS_RUST_VERSION" == "beta" ]]; then
-      cargo clippy --all-targets --all-features -- -D warnings;
+      cargo clippy --all-targets --all-features -- -D warnings -A clippy::filter_next;
     fi
   - cargo test --all-targets --all-features --verbose --all
 
