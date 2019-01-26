@@ -19,7 +19,6 @@ default = []
 serialize = ["serde", "serde_derive"]
 
 [dependencies]
-clippy = {version = "*", optional = true}
 log = {version = "0.4.6"}
 serde = {version = "1.0" , optional = true}
 serde_derive = {version = "1.0" , optional = true}
