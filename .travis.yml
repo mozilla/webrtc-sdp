@@ -54,7 +54,13 @@ script:
     if [[ "$TRAVIS_RUST_VERSION" == "beta" ]]; then
       cargo clippy --all-targets --all-features -- -D warnings -A clippy::filter_next;
     fi
-  - cargo test --all-targets --all-features --verbose --all
+  - |
+    if [[ "$TRAVIS_RUST_VERSION" == "1.17.0" ]]; then
+      cargo test --all-features --verbose --all
+    else
+      cargo test --all-targets --all-features --verbose --all
+    fi
+
 
 after_success:
   - |
