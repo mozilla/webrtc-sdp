@@ -1,4 +1,4 @@
-# webrtc_sdp
+# webrtc-sdp
 
 [![Build Status](https://travis-ci.org/nils-ohlmeier/rsdparsa.svg?branch=master)](https://travis-ci.org/nils-ohlmeier/rsdparsa)
 [![Codecov coverage status](https://codecov.io/gh/nils-ohlmeier/rsdparsa/branch/master/graph/badge.svg)](https://codecov.io/gh/nils-ohlmeier/rsdparsa)
