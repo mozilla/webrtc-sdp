@@ -37,9 +37,6 @@ before_script:
   - |
     if [[ "$TRAVIS_RUST_VERSION" == "stable" ]]; then
       rustup component add rustfmt-preview
-    fi
-  - |
-    if [[ "$TRAVIS_RUST_VERSION" == "beta" ]]; then
       rustup component add clippy
     fi
 
