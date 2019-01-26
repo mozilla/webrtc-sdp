@@ -139,13 +139,13 @@ impl Serialize for SdpParserError {
     {
         let mut state = serializer.serialize_struct(
             "error",
-            match self {
-                &SdpParserError::Sequence { .. } => 3,
+            match *self {
+                SdpParserError::Sequence { .. } => 3,
                 _ => 4,
             },
         )?;
-        match self {
-            &SdpParserError::Line {
+        match *self {
+            SdpParserError::Line {
                 ref error,
                 ref line,
                 ..
@@ -154,7 +154,7 @@ impl Serialize for SdpParserError {
                 state.serialize_field("message", &format!("{}", error))?;
                 state.serialize_field("line", &line)?
             }
-            &SdpParserError::Unsupported {
+            SdpParserError::Unsupported {
                 ref error,
                 ref line,
                 ..
@@ -163,17 +163,17 @@ impl Serialize for SdpParserError {
                 state.serialize_field("message", &format!("{}", error))?;
                 state.serialize_field("line", &line)?
             }
-            &SdpParserError::Sequence { ref message, .. } => {
+            SdpParserError::Sequence { ref message, .. } => {
                 state.serialize_field("type", "Sequence")?;
                 state.serialize_field("message", &message)?;
             }
         };
         state.serialize_field(
             "line_number",
-            &match self {
-                &SdpParserError::Line { line_number, .. } => line_number,
-                &SdpParserError::Unsupported { line_number, .. } => line_number,
-                &SdpParserError::Sequence { line_number, .. } => line_number,
+            &match *self {
+                SdpParserError::Line { line_number, .. } => line_number,
+                SdpParserError::Unsupported { line_number, .. } => line_number,
+                SdpParserError::Sequence { line_number, .. } => line_number,
             },
         )?;
         state.end()

@@ -203,7 +203,8 @@ impl SdpSession {
                 SdpAttributeType::from(a).to_string()
             )));
         };
-        Ok(self.attribute.push(a.clone()))
+        self.attribute.push(a.clone());
+        Ok(())
     }
 
     pub fn extend_media(&mut self, v: Vec<SdpMedia>) {
@@ -543,7 +544,7 @@ fn parse_sdp_line(line: &str, line_number: usize) -> Result<SdpLine, SdpParserEr
         return Err(SdpParserError::Line {
             error: SdpParserInternalError::Generic("missing = character in line".to_string()),
             line: line.to_string(),
-            line_number: line_number,
+            line_number,
         });
     }
     let mut splitted_line = line.splitn(2, '=');
@@ -552,7 +553,7 @@ fn parse_sdp_line(line: &str, line_number: usize) -> Result<SdpLine, SdpParserEr
             return Err(SdpParserError::Line {
                 error: SdpParserInternalError::Generic("missing type".to_string()),
                 line: line.to_string(),
-                line_number: line_number,
+                line_number,
             });
         }
         Some(t) => {
@@ -561,14 +562,14 @@ fn parse_sdp_line(line: &str, line_number: usize) -> Result<SdpLine, SdpParserEr
                 return Err(SdpParserError::Line {
                     error: SdpParserInternalError::Generic("type too long".to_string()),
                     line: line.to_string(),
-                    line_number: line_number,
+                    line_number,
                 });
             }
             if trimmed.is_empty() {
                 return Err(SdpParserError::Line {
                     error: SdpParserInternalError::Generic("type is empty".to_string()),
                     line: line.to_string(),
-                    line_number: line_number,
+                    line_number,
                 });
             }
             trimmed
@@ -579,7 +580,7 @@ fn parse_sdp_line(line: &str, line_number: usize) -> Result<SdpLine, SdpParserEr
             return Err(SdpParserError::Line {
                 error: SdpParserInternalError::Generic("missing value".to_string()),
                 line: line.to_string(),
-                line_number: line_number,
+                line_number,
             });
         }
         Some(v) => {
@@ -588,7 +589,7 @@ fn parse_sdp_line(line: &str, line_number: usize) -> Result<SdpLine, SdpParserEr
                 return Err(SdpParserError::Line {
                     error: SdpParserInternalError::Generic("value is empty".to_string()),
                     line: line.to_string(),
-                    line_number: line_number,
+                    line_number,
                 });
             }
             trimmed
@@ -625,12 +626,12 @@ fn parse_sdp_line(line: &str, line_number: usize) -> Result<SdpLine, SdpParserEr
         | SdpParserInternalError::Address(..) => SdpParserError::Line {
             error: e,
             line: line.to_string(),
-            line_number: line_number,
+            line_number,
         },
         SdpParserInternalError::Unsupported(..) => SdpParserError::Unsupported {
             error: e,
             line: line.to_string(),
-            line_number: line_number,
+            line_number,
         },
     })
 }
@@ -690,7 +691,7 @@ fn sanity_check_sdp_session(session: &SdpSession) -> Result<(), SdpParserError> 
         line_number: 0,
     };
 
-    if !session.timing.is_some() {
+    if session.timing.is_none() {
         return Err(SdpParserError::Sequence {
             message: "Missing timing type".to_string(),
             line_number: 0,
@@ -734,7 +735,7 @@ fn sanity_check_sdp_session(session: &SdpSession) -> Result<(), SdpParserError> 
             if let Some(&SdpAttribute::Simulcast(ref x)) =
                 msection.get_attribute(SdpAttributeType::Simulcast)
             {
-                if x.receive.len() > 0 {
+                if !x.receive.is_empty() {
                     return Err(SdpParserError::Sequence {
                         message: "Simulcast can't define receive parameters for sendonly"
                             .to_string(),
@@ -747,7 +748,7 @@ fn sanity_check_sdp_session(session: &SdpSession) -> Result<(), SdpParserError> 
             if let Some(&SdpAttribute::Simulcast(ref x)) =
                 msection.get_attribute(SdpAttributeType::Simulcast)
             {
-                if x.send.len() > 0 {
+                if !x.send.is_empty() {
                     return Err(SdpParserError::Sequence {
                         message: "Simulcast can't define send parameters for recvonly".to_string(),
                         line_number: 0,
@@ -759,8 +760,8 @@ fn sanity_check_sdp_session(session: &SdpSession) -> Result<(), SdpParserError> 
         let rids: Vec<&SdpAttributeRid> = msection
             .get_attributes()
             .iter()
-            .filter_map(|attr| match attr {
-                &SdpAttribute::Rid(ref rid) => Some(rid),
+            .filter_map(|attr| match *attr {
+                SdpAttribute::Rid(ref rid) => Some(rid),
                 _ => None,
             })
             .collect();
@@ -780,13 +781,13 @@ fn sanity_check_sdp_session(session: &SdpSession) -> Result<(), SdpParserError> 
             .collect();
 
         for rid_format in rids.iter().flat_map(|rid| &rid.formats) {
-            match msection.get_formats() {
-                &SdpFormatList::Integers(ref int_fmt) => {
-                    if !int_fmt.contains(&(*rid_format as u32)) {
+            match *msection.get_formats() {
+                SdpFormatList::Integers(ref int_fmt) => {
+                    if !int_fmt.contains(&(u32::from(*rid_format))) {
                         return Err(make_error("Rid pts must be declared in the media section"));
                     }
                 }
-                &SdpFormatList::Strings(ref str_fmt) => {
+                SdpFormatList::Strings(ref str_fmt) => {
                     if !str_fmt.contains(&rid_format.to_string()) {
                         return Err(make_error("Rid pts must be declared in the media section"));
                     }
@@ -1066,7 +1067,7 @@ pub fn parse_sdp(sdp: &str, fail_on_warning: bool) -> Result<SdpSession, SdpPars
         };
     }
 
-    if fail_on_warning && (warnings.len() > 0) {
+    if fail_on_warning && (!warnings.is_empty()) {
         return Err(warnings[0].clone());
     }
 

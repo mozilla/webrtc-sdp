@@ -163,7 +163,8 @@ impl SdpMedia {
                 SdpAttributeType::from(attr).to_string()
             )));
         }
-        Ok(self.attribute.push(attr.clone()))
+        self.attribute.push(attr.clone());
+        Ok(())
     }
 
     pub fn get_attribute(&self, t: SdpAttributeType) -> Option<&SdpAttribute> {
@@ -189,11 +190,11 @@ impl SdpMedia {
         }
 
         self.attribute.retain({
-            |x| match x {
-                &SdpAttribute::Rtpmap(_)
-                | &SdpAttribute::Fmtp(_)
-                | &SdpAttribute::Rtcpfb(_)
-                | &SdpAttribute::Sctpmap(_) => false,
+            |x| match *x {
+                SdpAttribute::Rtpmap(_)
+                | SdpAttribute::Fmtp(_)
+                | SdpAttribute::Rtcpfb(_)
+                | SdpAttribute::Sctpmap(_) => false,
                 _ => true,
             }
         });
@@ -201,7 +202,7 @@ impl SdpMedia {
 
     pub fn add_codec(&mut self, rtpmap: SdpAttributeRtpmap) -> Result<(), SdpParserInternalError> {
         match self.media.formats {
-            SdpFormatList::Integers(ref mut x) => x.push(rtpmap.payload_type as u32),
+            SdpFormatList::Integers(ref mut x) => x.push(u32::from(rtpmap.payload_type)),
             SdpFormatList::Strings(ref mut x) => x.push(rtpmap.payload_type.to_string()),
         }
 
@@ -226,7 +227,8 @@ impl SdpMedia {
                 "connection type already exists at this media level".to_string(),
             ));
         }
-        Ok(self.connection = Some(c.clone()))
+        self.connection = Some(c.clone());
+        Ok(())
     }
 
     pub fn add_datachannel(
@@ -241,20 +243,20 @@ impl SdpMedia {
             SdpProtocolValue::UdpDtlsSctp | SdpProtocolValue::TcpDtlsSctp => {
                 // new data channel format according to draft 21
                 self.media.formats = SdpFormatList::Strings(vec![name]);
-                self.set_attribute(&SdpAttribute::SctpPort(port as u64))?;
+                self.set_attribute(&SdpAttribute::SctpPort(u64::from(port)))?;
             }
             _ => {
                 // old data channels format according to draft 05
-                self.media.formats = SdpFormatList::Integers(vec![port as u32]);
+                self.media.formats = SdpFormatList::Integers(vec![u32::from(port)]);
                 self.set_attribute(&SdpAttribute::Sctpmap(SdpAttributeSctpmap {
                     port,
-                    channels: streams as u32,
+                    channels: u32::from(streams),
                 }))?;
             }
         }
 
         if msg_size > 0 {
-            self.set_attribute(&SdpAttribute::MaxMessageSize(msg_size as u64))?;
+            self.set_attribute(&SdpAttribute::MaxMessageSize(u64::from(msg_size)))?;
         }
 
         Ok(())
@@ -277,7 +279,6 @@ impl ToString for SdpMedia {
 }
 
 #[cfg(test)]
-#[cfg_attr(feature = "serialize", derive(Serialize))]
 pub fn create_dummy_media_section() -> SdpMedia {
     let media_line = SdpMediaLine {
         media: SdpMediaValue::Audio,
@@ -344,7 +345,7 @@ fn parse_protocol_token(value: &str) -> Result<SdpProtocolValue, SdpParserIntern
 }
 
 #[test]
-fn test_parse_protocol_token() {
+fn test_parse_protocol_rtp_token() {
     let rtps = parse_protocol_token("rtp/avp");
     assert!(rtps.is_ok());
     assert_eq!(rtps.unwrap(), SdpProtocolValue::RtpAvp);
@@ -372,6 +373,13 @@ fn test_parse_protocol_token() {
     let tcps = parse_protocol_token("TCP/tls/rtp/savpf");
     assert!(tcps.is_ok());
     assert_eq!(tcps.unwrap(), SdpProtocolValue::TcpTlsRtpSavpf);
+
+    assert!(parse_protocol_token("").is_err());
+    assert!(parse_protocol_token("foobar").is_err());
+}
+
+#[test]
+fn test_parse_protocol_sctp_token() {
     let dtls = parse_protocol_token("dtLs/ScTP");
     assert!(dtls.is_ok());
     assert_eq!(dtls.unwrap(), SdpProtocolValue::DtlsSctp);
@@ -381,9 +389,6 @@ fn test_parse_protocol_token() {
     let tsctp = parse_protocol_token("tcp/dtls/SCTP");
     assert!(tsctp.is_ok());
     assert_eq!(tsctp.unwrap(), SdpProtocolValue::TcpDtlsSctp);
-
-    assert!(parse_protocol_token("").is_err());
-    assert!(parse_protocol_token("foobar").is_err());
 }
 
 pub fn parse_media(value: &str) -> Result<SdpType, SdpParserInternalError> {
@@ -539,12 +544,12 @@ pub fn parse_media_vector(lines: &[SdpLine]) -> Result<Vec<SdpMedia>, SdpParserE
             }
             SdpType::Bandwidth(ref b) => sdp_media.add_bandwidth(b),
             SdpType::Attribute(ref a) => {
-                match a {
-                    &SdpAttribute::DtlsMessage(_) => {
+                match *a {
+                    SdpAttribute::DtlsMessage(_) => {
                         // Ignore this attribute on media level
                         Ok(())
                     }
-                    &SdpAttribute::Rtpmap(ref rtpmap) => {
+                    SdpAttribute::Rtpmap(ref rtpmap) => {
                         sdp_media.add_attribute(&SdpAttribute::Rtpmap(SdpAttributeRtpmap {
                             payload_type: rtpmap.payload_type,
                             codec_name: rtpmap.codec_name.clone(),
