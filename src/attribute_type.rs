@@ -63,11 +63,8 @@ pub fn maybe_print_bool_param(name: &str, param: bool, default_value: bool) -> S
     if param != default_value {
         name.to_owned()
             + "="
-            + &(match param {
-                true => "1",
-                false => "0",
-            }
-            .to_string())
+            + &(if param { "1" } else { "0" })
+            .to_string()
     } else {
         "".to_string()
     }
@@ -321,10 +318,8 @@ impl SdpAttributeSimulcastId {
 
 impl ToString for SdpAttributeSimulcastId {
     fn to_string(&self) -> String {
-        match self.paused {
-            true => format!("~{}", self.id),
-            false => self.id.clone(),
-        }
+        if self.paused { format!("~{}", self.id) }
+        else { self.id.clone() }
     }
 }
 
@@ -452,14 +447,14 @@ impl ToString for SdpAttributeRtcpFb {
             "{pt} {feeback}{parameter_and_extra}",
             pt = self.payload_type.to_string(),
             feeback = self.feedback_type.to_string(),
-            parameter_and_extra = match self.parameter.is_empty() {
-                true => "".to_string(),
-                false => format!(
+            parameter_and_extra = if self.parameter.is_empty() {
+                "".to_string() }
+            else {
+                format!(
                     " {parameter}{extra}",
                     parameter = self.parameter,
                     extra = maybe_print_param(" ", self.extra.clone(), "".to_string()),
-                ),
-            }
+                )}
         )
     }
 }
@@ -662,9 +657,10 @@ pub enum SdpAttributeImageAttrXYRange {
 impl ToString for SdpAttributeImageAttrXYRange {
     fn to_string(&self) -> String {
         match *self {
-            SdpAttributeImageAttrXYRange::Range(ref min, ref max, ref step_opt) => match step_opt {
-                &Some(step) => format!("[{}:{}:{}]", min, step, max),
-                &None => format!("[{}:{}]", min, max),
+            SdpAttributeImageAttrXYRange::Range(ref min, ref max, ref step_opt) =>
+                match *step_opt {
+                    Some(step) => format!("[{}:{}:{}]", min, step, max),
+                    None => format!("[{}:{}]", min, max),
             },
             SdpAttributeImageAttrXYRange::DiscreteValues(ref values) => {
                 imageattr_discrete_value_list_to_string(values.to_vec())
@@ -977,8 +973,6 @@ pub enum SdpAttributeSetup {
 
 impl ToString for SdpAttributeSetup {
     fn to_string(&self) -> String {
-        format!(
-            "{}",
             match *self {
                 SdpAttributeSetup::Active => "active",
                 SdpAttributeSetup::Actpass => "actpass",
@@ -986,7 +980,6 @@ impl ToString for SdpAttributeSetup {
                 SdpAttributeSetup::Passive => "passive",
             }
             .to_string()
-        )
     }
 }
 
@@ -1440,7 +1433,7 @@ fn parse_single_direction(to_parse: &str) -> Result<SdpSingleDirection, SdpParse
     match to_parse {
         "send" => Ok(SdpSingleDirection::Send),
         "recv" => Ok(SdpSingleDirection::Recv),
-        x @ _ => Err(SdpParserInternalError::Generic(
+        x => Err(SdpParserInternalError::Generic(
             format!("Unknown direction description found: '{:}'", x).to_string(),
         )),
     }
@@ -1569,7 +1562,7 @@ fn parse_candidate(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalErro
 }
 
 fn parse_dtls_message(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
-    let tokens: Vec<&str> = to_parse.split(" ").collect();
+    let tokens: Vec<&str> = to_parse.split(' ').collect();
 
     if tokens.len() != 2 {
         return Err(SdpParserInternalError::Generic(
@@ -1697,7 +1690,7 @@ fn parse_fingerprint(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalEr
 }
 
 fn parse_fmtp(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
-    let tokens: Vec<&str> = to_parse.splitn(2, " ").collect();
+    let tokens: Vec<&str> = to_parse.splitn(2, ' ').collect();
 
     if tokens.len() != 2 {
         return Err(SdpParserInternalError::Unsupported(
@@ -1749,10 +1742,10 @@ fn parse_fmtp(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
                         0 => Ok(false),
                         1 => Ok(true),
                         _ => {
-                            return Err(SdpParserInternalError::Generic(
+                            Err(SdpParserInternalError::Generic(
                                 format!("The fmtp parameter '{:}' must be 0 or 1", param_name)
                                     .to_string(),
-                            ));
+                            ))
                         }
                     }
                 };
@@ -1764,7 +1757,7 @@ fn parse_fmtp(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
                 // H264
                 "PROFILE-LEVEL-ID" => {
                     parameters.profile_level_id = match u32::from_str_radix(parameter_val, 16)? {
-                        x @ 0...0xffffff => x,
+                        x @ 0...0x00ff_ffff => x,
                         _ => return Err(SdpParserInternalError::Generic(
                             "The fmtp parameter 'profile-level-id' must be in range [0,0xffffff]"
                                 .to_string(),
@@ -1806,71 +1799,68 @@ fn parse_fmtp(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
                 _ => parameters.unknown_tokens.push(parameter_token.to_string()),
             }
         }
-    } else {
-        if parameter_token.contains("/") {
-            let encodings: Vec<&str> = parameter_token.split('/').collect();
+    } else if parameter_token.contains('/') {
+        let encodings: Vec<&str> = parameter_token.split('/').collect();
 
-            for encoding in encodings {
-                match encoding.parse::<u8>()? {
-                    x @ 0...128 => parameters.encodings.push(x),
-                    _ => {
-                        return Err(SdpParserInternalError::Generic(
-                            "Red codec must be in range [0,128]".to_string(),
-                        ));
-                    }
+        for encoding in encodings {
+            match encoding.parse::<u8>()? {
+                x @ 0...128 => parameters.encodings.push(x),
+                _ => {
+                    return Err(SdpParserInternalError::Generic(
+                        "Red codec must be in range [0,128]".to_string(),
+                    ));
                 }
-            }
-        } else {
-            // This is the case for the 'telephone-event' codec
-            let dtmf_tones: Vec<&str> = parameter_token.split(',').collect();
-            let mut dtmf_tone_is_ok = true;
-
-            // This closure verifies the output of some_number_as_string.parse::<u8>().ok() like calls
-            let validate_digits = |digit_option: Option<u8>| -> Option<u8> {
-                match digit_option {
-                    Some(x) => match x {
-                        0...100 => Some(x),
-                        _ => None,
-                    },
-                    None => None,
-                }
-            };
-
-            // This loop does some sanity checking on the passed dtmf tones
-            for dtmf_tone in dtmf_tones {
-                let dtmf_tone_range: Vec<&str> = dtmf_tone.splitn(2, '-').collect();
-
-                dtmf_tone_is_ok = match dtmf_tone_range.len() {
-                    // In this case the dtmf tone is a range
-                    2 => {
-                        match validate_digits(dtmf_tone_range[0].parse::<u8>().ok()) {
-                            Some(l) => match validate_digits(dtmf_tone_range[1].parse::<u8>().ok())
-                            {
-                                Some(u) => {
-                                    // Check that the first part of the range is smaller than the second part
-                                    l < u
-                                }
-                                None => false,
-                            },
-                            None => false,
-                        }
-                    }
-                    // In this case the dtmf tone is a single tone
-                    1 => validate_digits(dtmf_tone.parse::<u8>().ok()).is_some(),
-                    _ => false,
-                };
-
-                if !dtmf_tone_is_ok {
-                    break;
-                }
-            }
-
-            // Set the parsed dtmf tones or in case the parsing was insuccessfull, set it to the default "0-15"
-            parameters.dtmf_tones = match dtmf_tone_is_ok {
-                true => parameter_token.to_string(),
-                false => "0-15".to_string(),
             }
         }
+    } else {
+        // This is the case for the 'telephone-event' codec
+        let dtmf_tones: Vec<&str> = parameter_token.split(',').collect();
+        let mut dtmf_tone_is_ok = true;
+
+        // This closure verifies the output of some_number_as_string.parse::<u8>().ok() like calls
+        let validate_digits = |digit_option: Option<u8>| -> Option<u8> {
+            match digit_option {
+                Some(x) => match x {
+                    0...100 => Some(x),
+                    _ => None,
+                },
+                None => None,
+            }
+        };
+
+        // This loop does some sanity checking on the passed dtmf tones
+        for dtmf_tone in dtmf_tones {
+            let dtmf_tone_range: Vec<&str> = dtmf_tone.splitn(2, '-').collect();
+
+            dtmf_tone_is_ok = match dtmf_tone_range.len() {
+                // In this case the dtmf tone is a range
+                2 => {
+                    match validate_digits(dtmf_tone_range[0].parse::<u8>().ok()) {
+                        Some(l) => match validate_digits(dtmf_tone_range[1].parse::<u8>().ok())
+                        {
+                            Some(u) => {
+                                // Check that the first part of the range is smaller than the second part
+                                l < u
+                            }
+                            None => false,
+                        },
+                        None => false,
+                    }
+                }
+                // In this case the dtmf tone is a single tone
+                1 => validate_digits(dtmf_tone.parse::<u8>().ok()).is_some(),
+                _ => false,
+            };
+
+            if !dtmf_tone_is_ok {
+                break;
+            }
+        }
+
+        // Set the parsed dtmf tones or in case the parsing was insuccessfull, set it to the default "0-15"
+        parameters.dtmf_tones = if dtmf_tone_is_ok {
+            parameter_token.to_string() }
+        else { "0-15".to_string() };
     }
 
     Ok(SdpAttribute::Fmtp(SdpAttributeFmtp {
@@ -1895,7 +1885,7 @@ fn parse_group(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
             "FEC" => SdpAttributeGroupSemantic::ForwardErrorCorrection,
             "DDP" => SdpAttributeGroupSemantic::DecodingDependency,
             "BUNDLE" => SdpAttributeGroupSemantic::Bundle,
-            unknown @ _ => {
+            unknown => {
                 return Err(SdpParserInternalError::Unsupported(format!(
                     "Unknown group semantic '{:?}' found",
                     unknown
@@ -1957,7 +1947,8 @@ fn parse_image_attr_xyrange(
 ) -> Result<SdpAttributeImageAttrXYRange, SdpParserInternalError> {
     if to_parse.starts_with('[') {
         let value_tokens =
-            parse_imagettr_braced_token(to_parse).ok_or(SdpParserInternalError::Generic(
+            parse_imagettr_braced_token(to_parse)
+            .ok_or_else(|| SdpParserInternalError::Generic(
                 "imageattr's xyrange has no closing tag ']'".to_string(),
             ))?;
 
@@ -1978,9 +1969,9 @@ fn parse_image_attr_xyrange(
                     None,
                 ))
             } else {
-                return Err(SdpParserInternalError::Generic(
+                Err(SdpParserInternalError::Generic(
                     "imageattr's xyrange must contain 2 or 3 fields".to_string(),
-                ));
+                ))
             }
         } else {
             // Discrete values
@@ -2009,7 +2000,7 @@ fn parse_image_attr_set(
 ) -> Result<SdpAttributeImageAttrSet, SdpParserInternalError> {
     let mut tokens = parse_imageattr_tokens(to_parse, ',').into_iter();
 
-    let x_token = tokens.next().ok_or(SdpParserInternalError::Generic(
+    let x_token = tokens.next().ok_or_else(|| SdpParserInternalError::Generic(
         "imageattr set is missing the 'x=' token".to_string(),
     ))?;
     if !x_token.starts_with("x=") {
@@ -2019,7 +2010,7 @@ fn parse_image_attr_set(
     }
     let x = parse_image_attr_xyrange(&x_token[2..])?;
 
-    let y_token = tokens.next().ok_or(SdpParserInternalError::Generic(
+    let y_token = tokens.next().ok_or_else(|| SdpParserInternalError::Generic(
         "imageattr set is missing the 'y=' token".to_string(),
     ))?;
     if !y_token.starts_with("y=") {
@@ -2054,12 +2045,12 @@ fn parse_image_attr_set(
         Ok((min, max))
     };
 
-    while let Some(current_token) = tokens.next() {
+    for current_token in tokens {
         if current_token.starts_with("sar=") {
             let value_token = &current_token[4..];
             if value_token.starts_with('[') {
-                let sar_values = parse_imagettr_braced_token(value_token).ok_or(
-                    SdpParserInternalError::Generic(
+                let sar_values = parse_imagettr_braced_token(value_token)
+                    .ok_or_else(|| SdpParserInternalError::Generic(
                         "imageattr's sar value is missing closing tag ']'".to_string(),
                     ),
                 )?;
@@ -2068,7 +2059,7 @@ fn parse_image_attr_set(
                     // Range
                     let range = parse_ps_range(sar_values)?;
                     sar = Some(SdpAttributeImageAttrSRange::Range(range.0, range.1))
-                } else if value_token.contains(",") {
+                } else if value_token.contains(',') {
                     // Discrete values
                     let values = sar_values
                         .split(',')
@@ -2108,8 +2099,8 @@ fn parse_image_attr_set(
                 ));
             }
 
-            let par_values = parse_imagettr_braced_token(braced_value_token).ok_or(
-                SdpParserInternalError::Generic(
+            let par_values = parse_imagettr_braced_token(braced_value_token)
+                .ok_or_else(|| SdpParserInternalError::Generic(
                     "imageattr's par value must be enclosed with ']'".to_string(),
                 ),
             )?;
@@ -2134,7 +2125,8 @@ where
 {
     let parse_set = |set_token: &str| -> Result<SdpAttributeImageAttrSet, SdpParserInternalError> {
         Ok(parse_image_attr_set(
-            parse_imagettr_braced_token(set_token).ok_or(SdpParserInternalError::Generic(
+            parse_imagettr_braced_token(set_token)
+            .ok_or_else(|| SdpParserInternalError::Generic(
                 "imageattr sets must be enclosed by ']'".to_string(),
             ))?,
         )?)
@@ -2142,7 +2134,7 @@ where
 
     match tokens
         .next()
-        .ok_or(SdpParserInternalError::Generic(
+        .ok_or_else(|| SdpParserInternalError::Generic(
             "imageattr must have a parameter set after a direction token".to_string(),
         ))?
         .as_str()
@@ -2169,7 +2161,7 @@ fn parse_image_attr(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalErr
     let pt = parse_payload_type(
         tokens
             .next()
-            .ok_or(SdpParserInternalError::Generic(
+            .ok_or_else(|| SdpParserInternalError::Generic(
                 "imageattr requires a payload token".to_string(),
             ))?
             .as_str(),
@@ -2177,9 +2169,9 @@ fn parse_image_attr(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalErr
     let first_direction = parse_single_direction(
         tokens
             .next()
-            .ok_or(SdpParserInternalError::Generic(
-                "imageattr's second token must be a direction token".to_string(),
-            ))?
+            .ok_or_else(|| SdpParserInternalError::Generic(
+                    "imageattr's second token must be a direction token"
+                    .to_string(),))?
             .as_str(),
     )?;
 
@@ -2403,10 +2395,7 @@ fn parse_rtpmap(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> 
         Some(x) => x.parse::<u32>()?,
     };
     let mut rtpmap = SdpAttributeRtpmap::new(payload_type, name, frequency);
-    match parameters.next() {
-        Some(x) => rtpmap.set_channels(x.parse::<u32>()?),
-        None => (),
-    };
+    if let Some(x) = parameters.next() {rtpmap.set_channels(x.parse::<u32>()?)};
     Ok(SdpAttribute::Rtpmap(rtpmap))
 }
 
@@ -2623,13 +2612,13 @@ fn parse_simulcast_version_list(
                 descriptor_versionlist_pair.next().unwrap(),
             )),
             descriptor => {
-                return Err(SdpParserInternalError::Generic(
+                Err(SdpParserInternalError::Generic(
                     format!(
                         "Simulcast attribute has unknown list descriptor '{:?}'",
                         descriptor
                     )
                     .to_string(),
-                ));
+                ))
             }
         }
     } else {
