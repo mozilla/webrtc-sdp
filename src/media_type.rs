@@ -279,7 +279,6 @@ impl ToString for SdpMedia {
 }
 
 #[cfg(test)]
-#[cfg_attr(feature = "serialize", derive(Serialize))]
 pub fn create_dummy_media_section() -> SdpMedia {
     let media_line = SdpMediaLine {
         media: SdpMediaValue::Audio,
@@ -346,7 +345,7 @@ fn parse_protocol_token(value: &str) -> Result<SdpProtocolValue, SdpParserIntern
 }
 
 #[test]
-fn test_parse_protocol_token() {
+fn test_parse_protocol_rtp_token() {
     let rtps = parse_protocol_token("rtp/avp");
     assert!(rtps.is_ok());
     assert_eq!(rtps.unwrap(), SdpProtocolValue::RtpAvp);
@@ -374,6 +373,13 @@ fn test_parse_protocol_token() {
     let tcps = parse_protocol_token("TCP/tls/rtp/savpf");
     assert!(tcps.is_ok());
     assert_eq!(tcps.unwrap(), SdpProtocolValue::TcpTlsRtpSavpf);
+
+    assert!(parse_protocol_token("").is_err());
+    assert!(parse_protocol_token("foobar").is_err());
+}
+
+#[test]
+fn test_parse_protocol_sctp_token() {
     let dtls = parse_protocol_token("dtLs/ScTP");
     assert!(dtls.is_ok());
     assert_eq!(dtls.unwrap(), SdpProtocolValue::DtlsSctp);
@@ -383,9 +389,6 @@ fn test_parse_protocol_token() {
     let tsctp = parse_protocol_token("tcp/dtls/SCTP");
     assert!(tsctp.is_ok());
     assert_eq!(tsctp.unwrap(), SdpProtocolValue::TcpDtlsSctp);
-
-    assert!(parse_protocol_token("").is_err());
-    assert!(parse_protocol_token("foobar").is_err());
 }
 
 pub fn parse_media(value: &str) -> Result<SdpType, SdpParserInternalError> {

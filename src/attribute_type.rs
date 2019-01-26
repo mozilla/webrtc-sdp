@@ -2746,7 +2746,7 @@ macro_rules! make_check_parse_and_serialize {
 }
 
 #[test]
-fn test_parse_attribute_candidate() {
+fn test_parse_attribute_candidate_and_serialize() {
     let check_parse = make_check_parse!(SdpAttributeCandidate, SdpAttribute::Candidate);
     let check_parse_and_serialize =
         make_check_parse_and_serialize!(check_parse, SdpAttribute::Candidate);
@@ -2786,7 +2786,7 @@ fn test_parse_attribute_candidate() {
     assert_eq!(candidate.foundation, "1".to_string());
     assert_eq!(candidate.component, 1);
     assert_eq!(candidate.transport, SdpAttributeCandidateTransport::Tcp);
-    assert_eq!(candidate.priority, 1685987071);
+    assert_eq!(candidate.priority, 1_685_987_071);
     assert_eq!(
         candidate.address,
         IpAddr::from_str("24.23.204.141").unwrap()
@@ -2805,7 +2805,10 @@ fn test_parse_attribute_candidate() {
     assert_eq!(candidate.generation, Some(1));
     assert_eq!(candidate.ufrag, Some("+DGd".to_string()));
     assert_eq!(candidate.networkcost, Some(1));
+}
 
+#[test]
+fn test_parse_attribute_candidate_errors() {
     assert!(parse_attribute("candidate:0 1 UDP 2122252543 172.16.156.106 49760 typ").is_err());
     assert!(
         parse_attribute("candidate:0 foo UDP 2122252543 172.16.156.106 49760 typ host").is_err()
@@ -3120,7 +3123,22 @@ fn test_parse_attribute_imageattr() {
     check_parse_and_serialize("imageattr:97 send [x=[480:16:800],y=[320:16:640],par=[1.2-1.3],q=0.6] [x=[176:8:208],y=[144:8:176],par=[1.2-1.3]] recv *");
     assert!(parse_attribute("imageattr:97 recv [x=800,y=640,sar=1.1] send [x=330,y=250]").is_ok());
 
-    let mut imageattr = check_parse(
+    check_parse_and_serialize("imageattr:99 send [x=320,y=240]");
+    assert!(parse_attribute("imageattr:100 recv [x=320,y=240]").is_ok());
+    assert!(parse_attribute("imageattr:97 recv [x=800,y=640,sar=1.1,foo=[123,456],q=0.5] send [x=330,y=250,bar=foo,sar=[20-40]]").is_ok());
+    assert!(parse_attribute("imageattr:97 recv [x=800,y=640,sar=1.1,foo=abc xyz,q=0.5] send [x=330,y=250,bar=foo,sar=[20-40]]").is_ok());
+
+    assert!(parse_attribute("imageattr:").is_err());
+    assert!(parse_attribute("imageattr:100").is_err());
+    assert!(parse_attribute("imageattr:120 send * recv * send *").is_err());
+    assert!(parse_attribute("imageattr:97 send [x=800,y=640,sar=1.1] send [x=330,y=250]").is_err());
+}
+
+#[test]
+fn test_parse_attribute_imageattr_recv_and_verify() {
+    let check_parse = make_check_parse!(SdpAttributeImageAttr, SdpAttribute::ImageAttr);
+
+    let imageattr = check_parse(
         "imageattr:* recv [x=800,y=[50,80,30],sar=1.1] send [x=330,y=250,sar=[1.1,1.3,1.9],q=0.1]",
     );
     assert_eq!(imageattr.pt, SdpAttributePayloadType::Wildcard);
@@ -3174,8 +3192,15 @@ fn test_parse_attribute_imageattr() {
             unreachable!();
         }
     }
+}
 
-    imageattr = check_parse("imageattr:97 send [x=[480:16:800],y=[100,200,300],par=[1.2-1.3],q=0.6] [x=1080,y=[144:176],sar=[0.5-0.7]] recv *");
+#[test]
+fn test_parse_attribute_imageattr_send_and_verify() {
+    let check_parse = make_check_parse!(SdpAttributeImageAttr, SdpAttribute::ImageAttr);
+
+    let imageattr = check_parse(
+        "imageattr:97 send [x=[480:16:800],y=[100,200,300],par=[1.2-1.3],q=0.6] [x=1080,y=[144:176],sar=[0.5-0.7]] recv *"
+        );
     assert_eq!(imageattr.pt, SdpAttributePayloadType::PayloadType(97));
     match imageattr.send {
         SdpAttributeImageAttrSetList::Sets(sets) => {
@@ -3218,16 +3243,6 @@ fn test_parse_attribute_imageattr() {
         }
     }
     assert_eq!(imageattr.recv, SdpAttributeImageAttrSetList::Wildcard);
-
-    check_parse_and_serialize("imageattr:99 send [x=320,y=240]");
-    assert!(parse_attribute("imageattr:100 recv [x=320,y=240]").is_ok());
-    assert!(parse_attribute("imageattr:97 recv [x=800,y=640,sar=1.1,foo=[123,456],q=0.5] send [x=330,y=250,bar=foo,sar=[20-40]]").is_ok());
-    assert!(parse_attribute("imageattr:97 recv [x=800,y=640,sar=1.1,foo=abc xyz,q=0.5] send [x=330,y=250,bar=foo,sar=[20-40]]").is_ok());
-
-    assert!(parse_attribute("imageattr:").is_err());
-    assert!(parse_attribute("imageattr:100").is_err());
-    assert!(parse_attribute("imageattr:120 send * recv * send *").is_err());
-    assert!(parse_attribute("imageattr:97 send [x=800,y=640,sar=1.1] send [x=330,y=250]").is_err());
 }
 
 #[test]
@@ -3316,45 +3331,16 @@ fn test_parse_attribute_rid() {
     let check_parse = make_check_parse!(SdpAttributeRid, SdpAttribute::Rid);
     let check_parse_and_serialize = make_check_parse_and_serialize!(check_parse, SdpAttribute::Rid);
 
-    check_parse_and_serialize("rid:foo send");
-    let mut rid = check_parse("rid:foo send");
-    assert_eq!(rid.id, "foo");
-    assert_eq!(rid.direction, SdpSingleDirection::Send);
-
-    check_parse_and_serialize("rid:110 send pt=9");
-    rid = check_parse("rid:110 send pt=9");
-    assert_eq!(rid.id, "110");
-    assert_eq!(rid.direction, SdpSingleDirection::Send);
-    assert_eq!(rid.formats, vec![9]);
-
     check_parse_and_serialize("rid:foo send pt=10");
     check_parse_and_serialize("rid:110 send pt=9,10");
     check_parse_and_serialize("rid:110 send pt=9,10;max-fs=10");
     check_parse_and_serialize("rid:110 send pt=9,10;max-width=10;depends=1,2,3");
-
-    check_parse_and_serialize("rid:110 send pt=9,10;max-fs=10;UNKNOWN=100;depends=1,2,3");
-    rid = check_parse("rid:110 send pt=9,10;max-fs=10;UNKNOWN=100;depends=1,2,3");
-    assert_eq!(rid.id, "110");
-    assert_eq!(rid.direction, SdpSingleDirection::Send);
-    assert_eq!(rid.formats, vec![9, 10]);
-    assert_eq!(rid.params.max_fs, 10);
-    assert_eq!(rid.params.unknown, vec!["UNKNOWN=100"]);
-    assert_eq!(rid.depends, vec!["1", "2", "3"]);
 
     assert!(
         parse_attribute("rid:110 send pt=9, 10;max-fs=10;UNKNOWN=100; depends=1, 2, 3").is_ok()
     );
     assert!(parse_attribute("rid:110 send max-fs=10").is_ok());
     assert!(parse_attribute("rid:110 recv max-width=1920;max-height=1080").is_ok());
-
-    check_parse_and_serialize("rid:110 recv max-fps=42;max-fs=10;max-br=3;max-pps=1000");
-    rid = check_parse("rid:110 recv max-fps=42;max-fs=10;max-br=3;max-pps=1000");
-    assert_eq!(rid.id, "110");
-    assert_eq!(rid.direction, SdpSingleDirection::Recv);
-    assert_eq!(rid.params.max_fps, 42);
-    assert_eq!(rid.params.max_fs, 10);
-    assert_eq!(rid.params.max_br, 3);
-    assert_eq!(rid.params.max_pps, 1000);
 
     check_parse_and_serialize("rid:110 recv max-mbps=420;max-cpb=3;max-dpb=3");
     check_parse_and_serialize("rid:110 recv scale-down-by=1.35;depends=1,2,3");
@@ -3366,6 +3352,41 @@ fn test_parse_attribute_rid() {
     assert!(parse_attribute("rid:120 send pt=;max-width=10").is_err());
     assert!(parse_attribute("rid:120 send pt=9;max-width=").is_err());
     assert!(parse_attribute("rid:120 send pt=9;max-width=;max-width=10").is_err());
+}
+
+#[test]
+fn test_parse_attribute_rid_and_verify() {
+    let check_parse = make_check_parse!(SdpAttributeRid, SdpAttribute::Rid);
+    let check_parse_and_serialize = make_check_parse_and_serialize!(check_parse, SdpAttribute::Rid);
+
+    check_parse_and_serialize("rid:foo send");
+    let mut rid = check_parse("rid:foo send");
+    assert_eq!(rid.id, "foo");
+    assert_eq!(rid.direction, SdpSingleDirection::Send);
+
+    check_parse_and_serialize("rid:110 send pt=9");
+    rid = check_parse("rid:110 send pt=9");
+    assert_eq!(rid.id, "110");
+    assert_eq!(rid.direction, SdpSingleDirection::Send);
+    assert_eq!(rid.formats, vec![9]);
+
+    check_parse_and_serialize("rid:110 send pt=9,10;max-fs=10;UNKNOWN=100;depends=1,2,3");
+    rid = check_parse("rid:110 send pt=9,10;max-fs=10;UNKNOWN=100;depends=1,2,3");
+    assert_eq!(rid.id, "110");
+    assert_eq!(rid.direction, SdpSingleDirection::Send);
+    assert_eq!(rid.formats, vec![9, 10]);
+    assert_eq!(rid.params.max_fs, 10);
+    assert_eq!(rid.params.unknown, vec!["UNKNOWN=100"]);
+    assert_eq!(rid.depends, vec!["1", "2", "3"]);
+
+    check_parse_and_serialize("rid:110 recv max-fps=42;max-fs=10;max-br=3;max-pps=1000");
+    rid = check_parse("rid:110 recv max-fps=42;max-fs=10;max-br=3;max-pps=1000");
+    assert_eq!(rid.id, "110");
+    assert_eq!(rid.direction, SdpSingleDirection::Recv);
+    assert_eq!(rid.params.max_fps, 42);
+    assert_eq!(rid.params.max_fs, 10);
+    assert_eq!(rid.params.max_br, 3);
+    assert_eq!(rid.params.max_pps, 1000);
 }
 
 #[test]
