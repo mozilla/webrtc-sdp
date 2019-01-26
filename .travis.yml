@@ -51,7 +51,7 @@ script:
     fi
   - cargo build --verbose --all --features="$FEATURES"
   - |
-    if [[ "$TRAVIS_RUST_VERSION" == "beta" ]]; then
+    if [[ "$TRAVIS_RUST_VERSION" == "stable" ]]; then
       cargo clippy --all-targets --all-features -- -D warnings -A clippy::filter_next;
     fi
   - |
