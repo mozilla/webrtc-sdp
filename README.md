@@ -13,7 +13,7 @@ A SDP parser written in Rust specifically aimed to handle WebRTC SDP offers and 
 * serde module
 * serde-derive module
 
-The required modules will automatically by cargo when building for the first time.
+Cargo installs the missing modules automatically when building webrtc-sdp for the first time.
 
 ## The webrtc-sdp API
 
