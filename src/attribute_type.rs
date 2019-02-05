@@ -1572,6 +1572,11 @@ fn parse_candidate(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalErro
                 }
             };
         }
+        if tokens.len() > index {
+            return Err(SdpParserInternalError::Unsupported(
+                "Ice candidate extension name without value".to_string(),
+            ));
+        }
     }
     Ok(SdpAttribute::Candidate(cand))
 }
@@ -2848,7 +2853,6 @@ fn test_parse_attribute_candidate_errors() {
         parse_attribute("candidate:0 1 UDP 2122252543 172.16.156.106 49760 type host").is_err()
     );
     assert!(parse_attribute("candidate:0 1 UDP 2122252543 172.16.156.106 49760 typ fost").is_err());
-    /* FIXME this should fail without the extra 'foobar' at the end
     assert!(parse_attribute(
         "candidate:0 1 TCP 2122252543 172.16.156.106 49760 typ host unsupported"
     )
@@ -2857,7 +2861,6 @@ fn test_parse_attribute_candidate_errors() {
         "candidate:0 1 TCP 2122252543 172.16.156.106 49760 typ host network-cost"
     )
     .is_err());
-     */
     assert!(parse_attribute("candidate:1 1 UDP 1685987071 24.23.204.141 54609 typ srflx raddr 192.168.1.4 rport 61665 generation B").is_err());
     assert!(parse_attribute(
         "candidate:0 1 TCP 2122252543 172.16.156.106 49760 typ host network-cost C"
