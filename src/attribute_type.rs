@@ -178,6 +178,7 @@ pub struct SdpAttributeCandidate {
     pub generation: Option<u32>,
     pub ufrag: Option<String>,
     pub networkcost: Option<u32>,
+    pub unknown_extensions: Vec<(String, String)>,
 }
 
 impl SdpAttributeCandidate {
@@ -204,6 +205,7 @@ impl SdpAttributeCandidate {
             generation: None,
             ufrag: None,
             networkcost: None,
+            unknown_extensions: Vec::new(),
         }
     }
 
@@ -230,6 +232,10 @@ impl SdpAttributeCandidate {
     fn set_network_cost(&mut self, n: u32) {
         self.networkcost = Some(n)
     }
+
+    fn add_unknown_extension(&mut self, name: String, value: String) {
+        self.unknown_extensions.push((name, value));
+    }
 }
 
 impl ToString for SdpAttributeCandidate {
@@ -237,7 +243,8 @@ impl ToString for SdpAttributeCandidate {
         format!(
             "{foundation} {component_id} {transport} {priority} \
              {connection_address} {port} typ {cand_type}\
-             {rel_addr}{rel_port}{tcp_type}{generation}{ufrag}{network_cost}",
+             {rel_addr}{rel_port}{tcp_type}{generation}{ufrag}{network_cost}\
+             {unknown_extensions}",
             foundation = self.foundation,
             component_id = self.component.to_string(),
             transport = self.transport.to_string(),
@@ -250,7 +257,12 @@ impl ToString for SdpAttributeCandidate {
             tcp_type = option_to_string!(" tcptype {}", self.tcp_type),
             generation = option_to_string!(" generation {}", self.generation),
             ufrag = option_to_string!(" ufrag {}", self.ufrag),
-            network_cost = option_to_string!(" network-cost {}", self.networkcost)
+            network_cost = option_to_string!(" network-cost {}", self.networkcost),
+            unknown_extensions = self
+                .unknown_extensions
+                .iter()
+                .map(|&(ref name, ref value)| format!(" {} {}", name, value))
+                .collect::<String>()
         )
     }
 }
@@ -1553,9 +1565,10 @@ fn parse_candidate(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalErro
                     index += 2;
                 }
                 _ => {
-                    return Err(SdpParserInternalError::Unsupported(
-                        "Uknown candidate extension name".to_string(),
-                    ));
+                    let name = tokens[index].to_string();
+                    let value = tokens[index + 1].to_string();
+                    cand.add_unknown_extension(name, value);
+                    index += 2;
                 }
             };
         }
@@ -2787,8 +2800,12 @@ fn test_parse_attribute_candidate_and_serialize() {
     check_parse_and_serialize("candidate:1 1 TCP 1685987071 24.23.204.141 54609 typ srflx raddr 192.168.1.4 rport 61665 tcptype passive generation 1");
     check_parse_and_serialize("candidate:1 1 TCP 1685987071 24.23.204.141 54609 typ srflx raddr 192.168.1.4 rport 61665 tcptype passive generation 1 ufrag +DGd");
     check_parse_and_serialize("candidate:1 1 TCP 1685987071 24.23.204.141 54609 typ srflx raddr 192.168.1.4 rport 61665 tcptype passive generation 1 ufrag +DGd network-cost 1");
+    check_parse_and_serialize(
+        "candidate:0 1 TCP 2122252543 172.16.156.106 49760 typ host unsupported foo",
+    );
+    check_parse_and_serialize("candidate:0 1 TCP 2122252543 172.16.156.106 49760 typ host unsupported foo more_unsupported bar");
 
-    let candidate = check_parse("candidate:1 1 TCP 1685987071 24.23.204.141 54609 typ srflx raddr 192.168.1.4 rport 61665 tcptype passive generation 1 ufrag +DGd network-cost 1");
+    let candidate = check_parse("candidate:1 1 TCP 1685987071 24.23.204.141 54609 typ srflx raddr 192.168.1.4 rport 61665 tcptype passive generation 1 ufrag +DGd network-cost 1 unsupported foo");
     assert_eq!(candidate.foundation, "1".to_string());
     assert_eq!(candidate.component, 1);
     assert_eq!(candidate.transport, SdpAttributeCandidateTransport::Tcp);
@@ -2811,6 +2828,10 @@ fn test_parse_attribute_candidate_and_serialize() {
     assert_eq!(candidate.generation, Some(1));
     assert_eq!(candidate.ufrag, Some("+DGd".to_string()));
     assert_eq!(candidate.networkcost, Some(1));
+    assert_eq!(
+        candidate.unknown_extensions,
+        vec![("unsupported".to_string(), "foo".to_string())]
+    )
 }
 
 #[test]
@@ -2827,11 +2848,16 @@ fn test_parse_attribute_candidate_errors() {
         parse_attribute("candidate:0 1 UDP 2122252543 172.16.156.106 49760 type host").is_err()
     );
     assert!(parse_attribute("candidate:0 1 UDP 2122252543 172.16.156.106 49760 typ fost").is_err());
-    // FIXME this should fail without the extra 'foobar' at the end
+    /* FIXME this should fail without the extra 'foobar' at the end
     assert!(parse_attribute(
-        "candidate:0 1 TCP 2122252543 172.16.156.106 49760 typ host unsupported foobar"
+        "candidate:0 1 TCP 2122252543 172.16.156.106 49760 typ host unsupported"
     )
     .is_err());
+    assert!(parse_attribute(
+        "candidate:0 1 TCP 2122252543 172.16.156.106 49760 typ host network-cost"
+    )
+    .is_err());
+     */
     assert!(parse_attribute("candidate:1 1 UDP 1685987071 24.23.204.141 54609 typ srflx raddr 192.168.1.4 rport 61665 generation B").is_err());
     assert!(parse_attribute(
         "candidate:0 1 TCP 2122252543 172.16.156.106 49760 typ host network-cost C"
