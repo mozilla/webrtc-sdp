@@ -184,16 +184,16 @@ impl SdpSession {
         &self.connection
     }
 
-    pub fn set_connection(&mut self, c: &SdpConnection) {
-        self.connection = Some(c.clone())
+    pub fn set_connection(&mut self, c: SdpConnection) {
+        self.connection = Some(c)
     }
 
-    pub fn add_bandwidth(&mut self, b: &SdpBandwidth) {
-        self.bandwidth.push(b.clone())
+    pub fn add_bandwidth(&mut self, b: SdpBandwidth) {
+        self.bandwidth.push(b)
     }
 
-    pub fn set_timing(&mut self, t: &SdpTiming) {
-        self.timing = Some(t.clone())
+    pub fn set_timing(&mut self, t: SdpTiming) {
+        self.timing = Some(t)
     }
 
     pub fn add_attribute(&mut self, a: &SdpAttribute) -> Result<(), SdpParserInternalError> {
@@ -929,10 +929,10 @@ fn test_sanity_check_sdp_session_simulcast() {
 }
 
 // TODO add unit tests
-fn parse_sdp_vector(lines: &[SdpLine]) -> Result<SdpSession, SdpParserError> {
-    if lines.len() < 5 {
+fn parse_sdp_vector(lines: &mut Vec<SdpLine>) -> Result<SdpSession, SdpParserError> {
+    if lines.len() < 4 {
         return Err(SdpParserError::Sequence {
-            message: "SDP neeeds at least 5 lines".to_string(),
+            message: "SDP neeeds at least 4 lines".to_string(),
             line_number: 0,
         });
     }
@@ -1033,7 +1033,7 @@ pub fn parse_sdp(sdp: &str, fail_on_warning: bool) -> Result<SdpSession, SdpPars
             }
             Err(e) => {
                 match e {
-                    // FIXME is this really a good way to accomplish this?
+                    // TODO is this really a good way to accomplish this?
                     SdpParserError::Line {
                         error,
                         line,
@@ -1075,7 +1075,7 @@ pub fn parse_sdp(sdp: &str, fail_on_warning: bool) -> Result<SdpSession, SdpPars
         return Err(e);
     };
 
-    let mut session = parse_sdp_vector(&sdp_lines)?;
+    let mut session = parse_sdp_vector(&mut sdp_lines)?;
     session.warnings = warnings;
 
     for warning in &session.warnings {
@@ -1093,6 +1093,29 @@ fn test_parse_sdp_zero_length_string_fails() {
 #[test]
 fn test_parse_sdp_to_short_string() {
     assert!(parse_sdp("fooooobarrrr", true).is_err());
+}
+
+#[test]
+fn test_parse_sdp_minimal_sdp_successfully() {
+    assert!(parse_sdp(
+        "v=0\r\n
+o=- 0 0 IN IP4 0.0.0.0\r\n
+s=-\r\n
+t=0 0\r\n",
+        true
+    )
+    .is_ok());
+}
+
+#[test]
+fn test_parse_sdp_too_short() {
+    assert!(parse_sdp(
+        "v=0\r\n
+o=- 0 0 IN IP4 0.0.0.0\r\n
+s=-\r\n",
+        true
+    )
+    .is_err());
 }
 
 #[test]
