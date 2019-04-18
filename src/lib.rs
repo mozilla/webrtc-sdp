@@ -211,6 +211,47 @@ impl SdpSession {
         self.media.extend(v)
     }
 
+    pub fn parse_session_vector(&mut self, lines: &mut Vec<SdpLine>) -> Result<(), SdpParserError> {
+        while lines.len() > 0 {
+            let line = lines.remove(0);
+            match line.sdp_type {
+                SdpType::Attribute(ref a) => {
+                    self
+                        .add_attribute(a)
+                        .map_err(|e: SdpParserInternalError| SdpParserError::Sequence {
+                            message: format!("{}", e),
+                            line_number: line.line_number,
+                        })?
+                }
+                SdpType::Bandwidth(b) => self.add_bandwidth(b),
+                SdpType::Timing(t) => self.set_timing(t),
+                SdpType::Connection(c) => self.set_connection(c),
+
+                SdpType::Origin(_) | SdpType::Session(_) | SdpType::Version(_) => {
+                    return Err(SdpParserError::Sequence {
+                        message: "version, origin or session at wrong level".to_string(),
+                        line_number: line.line_number,
+                    });
+                }
+                SdpType::Media(_) => {
+                    return Err(SdpParserError::Sequence {
+                        message: "media line not allowed in session parser".to_string(),
+                        line_number: line.line_number,
+                    });
+                }
+                // the line parsers throw unsupported errors for these already
+                SdpType::Email(_)
+                | SdpType::Information(_)
+                | SdpType::Key(_)
+                | SdpType::Phone(_)
+                | SdpType::Repeat(_)
+                | SdpType::Uri(_)
+                | SdpType::Zone(_) => (),
+            }
+        }
+        Ok(())
+    }
+
     pub fn get_attribute(&self, t: SdpAttributeType) -> Option<&SdpAttribute> {
         self.attribute
             .iter()
@@ -697,13 +738,6 @@ fn sanity_check_sdp_session(session: &SdpSession) -> Result<(), SdpParserError> 
         });
     }
 
-    if session.media.is_empty() {
-        return Err(SdpParserError::Sequence {
-            message: "Missing media section".to_string(),
-            line_number: 0,
-        });
-    }
-
     if session.get_connection().is_none() {
         for msection in &session.media {
             if msection.get_connection().is_none() {
@@ -851,7 +885,7 @@ fn test_sanity_check_sdp_session_timing() {
     assert!(sanity_check_sdp_session(&sdp_session).is_err());
 
     let t = SdpTiming { start: 0, stop: 0 };
-    sdp_session.set_timing(&t);
+    sdp_session.set_timing(t);
 
     assert!(sanity_check_sdp_session(&sdp_session).is_ok());
 }
@@ -860,9 +894,9 @@ fn test_sanity_check_sdp_session_timing() {
 fn test_sanity_check_sdp_session_media() {
     let mut sdp_session = create_dummy_sdp_session();
     let t = SdpTiming { start: 0, stop: 0 };
-    sdp_session.set_timing(&t);
+    sdp_session.set_timing(t);
 
-    assert!(sanity_check_sdp_session(&sdp_session).is_err());
+    assert!(sanity_check_sdp_session(&sdp_session).is_ok());
 
     sdp_session.extend_media(vec![create_dummy_media_section()]);
 
@@ -873,7 +907,7 @@ fn test_sanity_check_sdp_session_media() {
 fn test_sanity_check_sdp_session_extmap() {
     let mut sdp_session = create_dummy_sdp_session();
     let t = SdpTiming { start: 0, stop: 0 };
-    sdp_session.set_timing(&t);
+    sdp_session.set_timing(t);
     sdp_session.extend_media(vec![create_dummy_media_section()]);
 
     let attribute =
@@ -922,7 +956,7 @@ fn test_sanity_check_sdp_session_extmap() {
 fn test_sanity_check_sdp_session_simulcast() {
     let mut sdp_session = create_dummy_sdp_session();
     let t = SdpTiming { start: 0, stop: 0 };
-    sdp_session.set_timing(&t);
+    sdp_session.set_timing(t);
     sdp_session.extend_media(vec![create_dummy_media_section()]);
 
     assert!(sanity_check_sdp_session(&sdp_session).is_ok());
@@ -937,68 +971,49 @@ fn parse_sdp_vector(lines: &mut Vec<SdpLine>) -> Result<SdpSession, SdpParserErr
         });
     }
 
-    // TODO are these mataches really the only way to verify the types?
-    let version: u64 = match lines[0].sdp_type {
+    let version = match lines.remove(0).sdp_type {
         SdpType::Version(v) => v,
         _ => {
             return Err(SdpParserError::Sequence {
                 message: "first line needs to be version number".to_string(),
-                line_number: lines[0].line_number,
+                line_number: 0,
             });
         }
     };
-    let origin: SdpOrigin = match lines[1].sdp_type {
-        SdpType::Origin(ref v) => v.clone(),
+    let origin = match lines.remove(0).sdp_type {
+        SdpType::Origin(v) => v,
         _ => {
             return Err(SdpParserError::Sequence {
                 message: "second line needs to be origin".to_string(),
-                line_number: lines[1].line_number,
+                line_number: 1,
             });
         }
     };
-    let session: String = match lines[2].sdp_type {
-        SdpType::Session(ref v) => v.clone(),
+    let session = match lines.remove(0).sdp_type {
+        SdpType::Session(v) => v,
         _ => {
             return Err(SdpParserError::Sequence {
                 message: "third line needs to be session".to_string(),
-                line_number: lines[2].line_number,
+                line_number: 2,
             });
         }
     };
     let mut sdp_session = SdpSession::new(version, origin, session);
-    for (index, line) in lines.iter().enumerate().skip(3) {
-        match line.sdp_type {
-            SdpType::Attribute(ref a) => {
-                sdp_session
-                    .add_attribute(a)
-                    .map_err(|e: SdpParserInternalError| SdpParserError::Sequence {
-                        message: format!("{}", e),
-                        line_number: line.line_number,
-                    })?
-            }
-            SdpType::Bandwidth(ref b) => sdp_session.add_bandwidth(b),
-            SdpType::Timing(ref t) => sdp_session.set_timing(t),
-            SdpType::Connection(ref c) => sdp_session.set_connection(c),
-            SdpType::Media(_) => sdp_session.extend_media(parse_media_vector(&lines[index..])?),
-            SdpType::Origin(_) | SdpType::Session(_) | SdpType::Version(_) => {
-                return Err(SdpParserError::Sequence {
-                    message: "version, origin or session at wrong level".to_string(),
-                    line_number: line.line_number,
-                });
-            }
-            // the line parsers throw unsupported errors for these already
-            SdpType::Email(_)
-            | SdpType::Information(_)
-            | SdpType::Key(_)
-            | SdpType::Phone(_)
-            | SdpType::Repeat(_)
-            | SdpType::Uri(_)
-            | SdpType::Zone(_) => (),
-        };
-        if !sdp_session.media.is_empty() {
-            break;
-        };
-    }
+
+    let _media_pos = lines.iter().position(|ref l| match l.sdp_type {
+        SdpType::Media(_) => true,
+        _ => false}
+        );
+
+    match _media_pos {
+        Some(p) => {
+            let mut media: Vec<_> = lines.drain(p..).collect();
+            sdp_session.parse_session_vector(lines)?;
+            sdp_session.extend_media(parse_media_vector(&mut media)?);
+        },
+        None => {sdp_session.parse_session_vector(lines)?}
+    };
+
     sanity_check_sdp_session(&sdp_session)?;
     Ok(sdp_session)
 }
@@ -1011,7 +1026,7 @@ pub fn parse_sdp(sdp: &str, fail_on_warning: bool) -> Result<SdpSession, SdpPars
             line_number: 0,
         });
     }
-    if sdp.len() < 62 {
+    if sdp.len() < 40 {
         return Err(SdpParserError::Line {
             error: SdpParserInternalError::Generic("string to short to be valid SDP".to_string()),
             line: sdp.to_string(),
