@@ -74,7 +74,6 @@ impl ToString for SdpConnection {
     }
 }
 
-#[derive(Clone)]
 #[cfg_attr(feature = "serialize", derive(Serialize))]
 pub struct SdpOrigin {
     pub username: String,
@@ -95,7 +94,6 @@ impl ToString for SdpOrigin {
     }
 }
 
-#[derive(Clone)]
 #[cfg_attr(feature = "serialize", derive(Serialize))]
 pub struct SdpTiming {
     pub start: u64,
