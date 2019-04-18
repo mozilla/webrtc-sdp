@@ -32,7 +32,6 @@ use unsupported_types::{
     parse_email, parse_information, parse_key, parse_phone, parse_repeat, parse_uri, parse_zone,
 };
 
-#[derive(Clone)]
 #[cfg_attr(feature = "serialize", derive(Serialize))]
 pub enum SdpBandwidth {
     As(u32),
@@ -273,9 +272,9 @@ impl SdpSession {
             formats: SdpFormatList::Integers(Vec::new()),
         });
 
-        media.add_attribute(&direction)?;
+        media.add_attribute(direction)?;
 
-        media.set_connection(&SdpConnection {
+        media.set_connection(SdpConnection {
             addr: IpAddr::from_str(addr.as_str())?,
             ttl: None,
             amount: None,
@@ -936,7 +935,7 @@ fn test_sanity_check_sdp_session_extmap() {
         panic!("SdpType is not Attribute");
     }
     let mut second_media = create_dummy_media_section();
-    assert!(second_media.add_attribute(&mextmap).is_ok());
+    assert!(second_media.add_attribute(mextmap).is_ok());
     assert!(second_media
         .get_attribute(SdpAttributeType::Extmap)
         .is_some());
