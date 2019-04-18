@@ -196,14 +196,14 @@ impl SdpSession {
         self.timing = Some(t)
     }
 
-    pub fn add_attribute(&mut self, a: &SdpAttribute) -> Result<(), SdpParserInternalError> {
+    pub fn add_attribute(&mut self, a: SdpAttribute) -> Result<(), SdpParserInternalError> {
         if !a.allowed_at_session_level() {
             return Err(SdpParserInternalError::Generic(format!(
                 "{} not allowed at session level",
-                SdpAttributeType::from(a).to_string()
+                a.to_string()
             )));
         };
-        self.attribute.push(a.clone());
+        self.attribute.push(a);
         Ok(())
     }
 
@@ -215,12 +215,13 @@ impl SdpSession {
         while lines.len() > 0 {
             let line = lines.remove(0);
             match line.sdp_type {
-                SdpType::Attribute(ref a) => {
+                SdpType::Attribute(a) => {
+                    let _line_number = line.line_number;
                     self
                         .add_attribute(a)
                         .map_err(|e: SdpParserInternalError| SdpParserError::Sequence {
                             message: format!("{}", e),
-                            line_number: line.line_number,
+                            line_number: _line_number,
                         })?
                 }
                 SdpType::Bandwidth(b) => self.add_bandwidth(b),
@@ -919,7 +920,7 @@ fn test_sanity_check_sdp_session_extmap() {
     } else {
         panic!("SdpType is not Attribute");
     }
-    let ret = sdp_session.add_attribute(&extmap);
+    let ret = sdp_session.add_attribute(extmap);
     assert!(ret.is_ok());
     assert!(sdp_session
         .get_attribute(SdpAttributeType::Extmap)
