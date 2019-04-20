@@ -1,7 +1,7 @@
 use std::iter;
-use std::string;
 use std::net::IpAddr;
 use std::str::FromStr;
+use std::string;
 
 use error::SdpParserInternalError;
 use network::{parse_addrtype, parse_nettype, parse_unicast_addr};
@@ -2264,10 +2264,7 @@ fn parse_msid_semantic(to_parse: &str) -> Result<SdpAttribute, SdpParserInternal
     // TODO: Should msids be checked to ensure they are non empty?
     let semantic = SdpAttributeMsidSemantic {
         semantic: tokens[0].to_string(),
-        msids: tokens[1..]
-            .iter()
-            .map(ToString::to_string)
-            .collect(),
+        msids: tokens[1..].iter().map(ToString::to_string).collect(),
     };
     Ok(SdpAttribute::MsidSemantic(semantic))
 }
@@ -2327,11 +2324,7 @@ fn parse_rid(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
                 "max-br" => params.max_br = param_value_pair[1].parse::<u32>()?,
                 "max-pps" => params.max_pps = param_value_pair[1].parse::<u32>()?,
                 "depends" => {
-                    depends.extend(
-                        param_value_pair[1]
-                            .split(',')
-                            .map(ToString::to_string),
-                    );
+                    depends.extend(param_value_pair[1].split(',').map(ToString::to_string));
                 }
                 _ => params.unknown.push(param.to_string()),
             }
