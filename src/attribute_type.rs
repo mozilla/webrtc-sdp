@@ -25,7 +25,7 @@ macro_rules! maybe_vector_to_string {
             _ => format!(
                 $fmt_str,
                 $vec.iter()
-                    .map(|x| x.to_string())
+                    .map(std::string::ToString::to_string)
                     .collect::<Vec<String>>()
                     .join($sep)
             ),
@@ -357,7 +357,7 @@ impl ToString for SdpAttributeSimulcastVersion {
     fn to_string(&self) -> String {
         self.ids
             .iter()
-            .map(|id| id.to_string())
+            .map(std::string::ToString::to_string)
             .collect::<Vec<String>>()
             .join(",")
     }
@@ -372,14 +372,12 @@ pub struct SdpAttributeSimulcast {
 
 impl ToString for SdpAttributeSimulcast {
     fn to_string(&self) -> String {
-        format!(
-            "{versions}",
-            versions = non_empty_string_vec![
-                maybe_vector_to_string!("send {}", self.send, ";"),
-                maybe_vector_to_string!("recv {}", self.receive, ";")
-            ]
-            .join(" ")
-        )
+        non_empty_string_vec![
+            maybe_vector_to_string!("send {}", self.send, ";"),
+            maybe_vector_to_string!("recv {}", self.receive, ";")
+        ]
+        .join(" ")
+        .to_string()
     }
 }
 
@@ -653,7 +651,7 @@ where
             "[{}]",
             values
                 .iter()
-                .map(|x| x.to_string())
+                .map(std::string::ToString::to_string)
                 .collect::<Vec<String>>()
                 .join(",")
         ),
@@ -749,7 +747,7 @@ impl ToString for SdpAttributeImageAttrSetList {
         match *self {
             SdpAttributeImageAttrSetList::Sets(ref sets) => sets
                 .iter()
-                .map(|set| set.to_string())
+                .map(std::string::ToString::to_string)
                 .collect::<Vec<String>>()
                 .join(" "),
             SdpAttributeImageAttrSetList::Wildcard => "*".to_string(),
@@ -1914,7 +1912,7 @@ fn parse_group(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
     };
     Ok(SdpAttribute::Group(SdpAttributeGroup {
         semantics,
-        tags: tokens.map(|x| x.to_string()).collect(),
+        tags: tokens.map(std::string::ToString::to_string).collect(),
     }))
 }
 
@@ -1925,7 +1923,10 @@ fn parse_ice_options(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalEr
         ));
     }
     Ok(SdpAttribute::IceOptions(
-        to_parse.split_whitespace().map(|x| x.to_string()).collect(),
+        to_parse
+            .split_whitespace()
+            .map(std::string::ToString::to_string)
+            .collect(),
     ))
 }
 
@@ -1996,7 +1997,7 @@ fn parse_image_attr_xyrange(
             // Discrete values
             let values = value_tokens
                 .split(',')
-                .map(|x| x.parse::<u32>())
+                .map(str::parse::<u32>)
                 .collect::<Result<Vec<u32>, _>>()?;
 
             if values.len() < 2 {
@@ -2082,7 +2083,7 @@ fn parse_image_attr_set(
                     // Discrete values
                     let values = sar_values
                         .split(',')
-                        .map(|x| x.parse::<f32>())
+                        .map(str::parse::<f32>)
                         .collect::<Result<Vec<f32>, _>>()?;
 
                     if values.len() < 2 {
@@ -2262,7 +2263,10 @@ fn parse_msid_semantic(to_parse: &str) -> Result<SdpAttribute, SdpParserInternal
     // TODO: Should msids be checked to ensure they are non empty?
     let semantic = SdpAttributeMsidSemantic {
         semantic: tokens[0].to_string(),
-        msids: tokens[1..].iter().map(|x| x.to_string()).collect(),
+        msids: tokens[1..]
+            .iter()
+            .map(std::string::ToString::to_string)
+            .collect(),
     };
     Ok(SdpAttribute::MsidSemantic(semantic))
 }
@@ -2322,7 +2326,11 @@ fn parse_rid(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
                 "max-br" => params.max_br = param_value_pair[1].parse::<u32>()?,
                 "max-pps" => params.max_pps = param_value_pair[1].parse::<u32>()?,
                 "depends" => {
-                    depends.extend(param_value_pair[1].split(',').map(|x| x.to_string()));
+                    depends.extend(
+                        param_value_pair[1]
+                            .split(',')
+                            .map(std::string::ToString::to_string),
+                    );
                 }
                 _ => params.unknown.push(param.to_string()),
             }
