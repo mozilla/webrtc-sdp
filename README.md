@@ -48,7 +48,7 @@ rustup component add clippy
 
 Check with clippy for warnings in the code:
 ```
-cargo clippy --all-targets --all-features -- -A clippy::filter_next
+cargo clippy --all-targets --all-features
 ```
 
 And format all of the code according to Rust code style convention:

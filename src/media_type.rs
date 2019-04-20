@@ -170,8 +170,7 @@ impl SdpMedia {
     pub fn get_attribute(&self, t: SdpAttributeType) -> Option<&SdpAttribute> {
         self.attribute
             .iter()
-            .filter(|a| SdpAttributeType::from(*a) == t)
-            .next()
+            .find(|a| SdpAttributeType::from(*a) == t)
     }
 
     pub fn remove_attribute(&mut self, t: SdpAttributeType) {

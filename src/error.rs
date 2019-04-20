@@ -61,6 +61,7 @@ impl error::Error for SdpParserInternalError {
 }
 
 #[test]
+#[allow(deprecated)] // see issue #102
 fn test_sdp_parser_internal_error_generic() {
     let generic = SdpParserInternalError::Generic("generic message".to_string());
     assert_eq!(
@@ -72,6 +73,7 @@ fn test_sdp_parser_internal_error_generic() {
 }
 
 #[test]
+#[allow(deprecated)] // see issue #102
 fn test_sdp_parser_internal_error_unsupported() {
     let unsupported =
         SdpParserInternalError::Unsupported("unsupported internal message".to_string());
@@ -84,6 +86,7 @@ fn test_sdp_parser_internal_error_unsupported() {
 }
 
 #[test]
+#[allow(deprecated)] // see issue #102
 fn test_sdp_parser_internal_error_integer() {
     let v = "12a";
     let integer = v.parse::<u64>();
@@ -98,6 +101,7 @@ fn test_sdp_parser_internal_error_integer() {
 }
 
 #[test]
+#[allow(deprecated)] // see issue #102
 fn test_sdp_parser_internal_error_address() {
     let v = "127.0.0.a";
     use std::net::IpAddr;
@@ -251,6 +255,7 @@ impl From<ParseFloatError> for SdpParserInternalError {
 }
 
 #[test]
+#[allow(deprecated)] // see issue #102
 fn test_sdp_parser_error_line() {
     let line1 = SdpParserError::Line {
         error: SdpParserInternalError::Generic("test message".to_string()),
@@ -266,6 +271,7 @@ fn test_sdp_parser_error_line() {
 }
 
 #[test]
+#[allow(deprecated)] // see issue #102
 fn test_sdp_parser_error_unsupported() {
     let unsupported1 = SdpParserError::Unsupported {
         error: SdpParserInternalError::Generic("unsupported value".to_string()),
@@ -281,6 +287,7 @@ fn test_sdp_parser_error_unsupported() {
 }
 
 #[test]
+#[allow(deprecated)] // see issue #102
 fn test_sdp_parser_error_sequence() {
     let sequence1 = SdpParserError::Sequence {
         message: "sequence message".to_string(),
