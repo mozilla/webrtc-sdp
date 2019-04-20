@@ -1,7 +1,6 @@
 use std::iter;
 use std::net::IpAddr;
 use std::str::FromStr;
-use std::string;
 
 use error::SdpParserInternalError;
 use network::{parse_addrtype, parse_nettype, parse_unicast_addr};
