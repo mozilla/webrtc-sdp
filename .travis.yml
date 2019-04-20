@@ -49,7 +49,7 @@ script:
   - cargo build --verbose --all --features="$FEATURES"
   - |
     if [[ "$TRAVIS_RUST_VERSION" == "stable" ]]; then
-      cargo clippy --all-targets --all-features -- -D warnings -A clippy::filter_next;
+      cargo clippy --all-targets --all-features -- -D warnings;
     fi
   - |
     if [[ "$TRAVIS_RUST_VERSION" == "1.17.0" ]]; then
