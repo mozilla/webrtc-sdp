@@ -1,4 +1,5 @@
 use std::iter;
+use std::string;
 use std::net::IpAddr;
 use std::str::FromStr;
 
@@ -25,7 +26,7 @@ macro_rules! maybe_vector_to_string {
             _ => format!(
                 $fmt_str,
                 $vec.iter()
-                    .map(std::string::ToString::to_string)
+                    .map(ToString::to_string)
                     .collect::<Vec<String>>()
                     .join($sep)
             ),
@@ -357,7 +358,7 @@ impl ToString for SdpAttributeSimulcastVersion {
     fn to_string(&self) -> String {
         self.ids
             .iter()
-            .map(std::string::ToString::to_string)
+            .map(ToString::to_string)
             .collect::<Vec<String>>()
             .join(",")
     }
@@ -651,7 +652,7 @@ where
             "[{}]",
             values
                 .iter()
-                .map(std::string::ToString::to_string)
+                .map(ToString::to_string)
                 .collect::<Vec<String>>()
                 .join(",")
         ),
@@ -747,7 +748,7 @@ impl ToString for SdpAttributeImageAttrSetList {
         match *self {
             SdpAttributeImageAttrSetList::Sets(ref sets) => sets
                 .iter()
-                .map(std::string::ToString::to_string)
+                .map(ToString::to_string)
                 .collect::<Vec<String>>()
                 .join(" "),
             SdpAttributeImageAttrSetList::Wildcard => "*".to_string(),
@@ -1912,7 +1913,7 @@ fn parse_group(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
     };
     Ok(SdpAttribute::Group(SdpAttributeGroup {
         semantics,
-        tags: tokens.map(std::string::ToString::to_string).collect(),
+        tags: tokens.map(ToString::to_string).collect(),
     }))
 }
 
@@ -1925,7 +1926,7 @@ fn parse_ice_options(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalEr
     Ok(SdpAttribute::IceOptions(
         to_parse
             .split_whitespace()
-            .map(std::string::ToString::to_string)
+            .map(ToString::to_string)
             .collect(),
     ))
 }
@@ -2265,7 +2266,7 @@ fn parse_msid_semantic(to_parse: &str) -> Result<SdpAttribute, SdpParserInternal
         semantic: tokens[0].to_string(),
         msids: tokens[1..]
             .iter()
-            .map(std::string::ToString::to_string)
+            .map(ToString::to_string)
             .collect(),
     };
     Ok(SdpAttribute::MsidSemantic(semantic))
@@ -2329,7 +2330,7 @@ fn parse_rid(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
                     depends.extend(
                         param_value_pair[1]
                             .split(',')
-                            .map(std::string::ToString::to_string),
+                            .map(ToString::to_string),
                     );
                 }
                 _ => params.unknown.push(param.to_string()),
