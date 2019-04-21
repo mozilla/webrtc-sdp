@@ -531,7 +531,7 @@ pub fn parse_media_vector(lines: &mut Vec<SdpLine>) -> Result<Vec<SdpMedia>, Sdp
         }
     };
 
-    while lines.len() > 0 {
+    while !lines.is_empty() {
         let line = lines.remove(0);
         let _line_number = line.line_number;
         match line.sdp_type {

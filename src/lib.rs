@@ -209,17 +209,17 @@ impl SdpSession {
     }
 
     pub fn parse_session_vector(&mut self, lines: &mut Vec<SdpLine>) -> Result<(), SdpParserError> {
-        while lines.len() > 0 {
+        while !lines.is_empty() {
             let line = lines.remove(0);
             match line.sdp_type {
                 SdpType::Attribute(a) => {
                     let _line_number = line.line_number;
-                    self
-                        .add_attribute(a)
-                        .map_err(|e: SdpParserInternalError| SdpParserError::Sequence {
+                    self.add_attribute(a).map_err(|e: SdpParserInternalError| {
+                        SdpParserError::Sequence {
                             message: format!("{}", e),
                             line_number: _line_number,
-                        })?
+                        }
+                    })?
                 }
                 SdpType::Bandwidth(b) => self.add_bandwidth(b),
                 SdpType::Timing(t) => self.set_timing(t),
@@ -1000,16 +1000,16 @@ fn parse_sdp_vector(lines: &mut Vec<SdpLine>) -> Result<SdpSession, SdpParserErr
 
     let _media_pos = lines.iter().position(|ref l| match l.sdp_type {
         SdpType::Media(_) => true,
-        _ => false}
-        );
+        _ => false,
+    });
 
     match _media_pos {
         Some(p) => {
             let mut media: Vec<_> = lines.drain(p..).collect();
             sdp_session.parse_session_vector(lines)?;
             sdp_session.extend_media(parse_media_vector(&mut media)?);
-        },
-        None => {sdp_session.parse_session_vector(lines)?}
+        }
+        None => sdp_session.parse_session_vector(lines)?,
     };
 
     sanity_check_sdp_session(&sdp_session)?;
