@@ -16,7 +16,6 @@ pub mod attribute_type;
 pub mod error;
 pub mod media_type;
 pub mod network;
-pub mod unsupported_types;
 
 use attribute_type::{
     addr_to_string, parse_attribute, SdpAttribute, SdpAttributeRid, SdpAttributeSimulcastVersion,
@@ -28,9 +27,6 @@ use media_type::{
     SdpProtocolValue,
 };
 use network::{parse_addrtype, parse_nettype, parse_unicast_addr};
-use unsupported_types::{
-    parse_email, parse_information, parse_key, parse_phone, parse_repeat, parse_uri, parse_zone,
-};
 
 #[derive(Clone)]
 #[cfg_attr(feature = "serialize", derive(Serialize))]
@@ -110,21 +106,16 @@ impl ToString for SdpTiming {
 
 #[cfg_attr(feature = "serialize", derive(Serialize))]
 pub enum SdpType {
+    // Note: Email, Information, Key, Phone, Repeat, Uri and Zone are left out
+    //       on purposes as we don't want to support them.
     Attribute(SdpAttribute),
     Bandwidth(SdpBandwidth),
     Connection(SdpConnection),
-    Email(String),
-    Information(String),
-    Key(String),
     Media(SdpMediaLine),
-    Phone(String),
     Origin(SdpOrigin),
-    Repeat(String),
     Session(String),
     Timing(SdpTiming),
-    Uri(String),
     Version(u64),
-    Zone(String),
 }
 
 #[cfg_attr(feature = "serialize", derive(Serialize))]
@@ -598,18 +589,39 @@ fn parse_sdp_line(line: &str, line_number: usize) -> Result<SdpLine, SdpParserEr
         "a" => parse_attribute(line_value),
         "b" => parse_bandwidth(line_value),
         "c" => parse_connection(line_value),
-        "e" => parse_email(line_value),
-        "i" => parse_information(line_value),
-        "k" => parse_key(line_value),
+        "e" => Err(SdpParserInternalError::Generic(format!(
+            "unsupported type email: {}",
+            line_value
+        ))),
+        "i" => Err(SdpParserInternalError::Generic(format!(
+            "unsupported type information: {}",
+            line_value
+        ))),
+        "k" => Err(SdpParserInternalError::Generic(format!(
+            "unsupported insecure key exchange: {}",
+            line_value
+        ))),
         "m" => parse_media(line_value),
         "o" => parse_origin(line_value),
-        "p" => parse_phone(line_value),
-        "r" => parse_repeat(line_value),
+        "p" => Err(SdpParserInternalError::Generic(format!(
+            "unsupported type phone: {}",
+            line_value
+        ))),
+        "r" => Err(SdpParserInternalError::Generic(format!(
+            "unsupported type repeat: {}",
+            line_value
+        ))),
         "s" => parse_session(line_value),
         "t" => parse_timing(line_value),
-        "u" => parse_uri(line_value),
+        "u" => Err(SdpParserInternalError::Generic(format!(
+            "unsupported type uri: {}",
+            line_value
+        ))),
         "v" => parse_version(line_value),
-        "z" => parse_zone(line_value),
+        "z" => Err(SdpParserInternalError::Generic(format!(
+            "unsupported type zone: {}",
+            line_value
+        ))),
         _ => Err(SdpParserInternalError::Generic(
             "unknown sdp type".to_string(),
         )),
@@ -644,6 +656,17 @@ fn test_parse_sdp_line_works() {
 #[test]
 fn test_parse_sdp_line_empty_line() {
     assert!(parse_sdp_line("", 0).is_err());
+}
+
+#[test]
+fn test_parse_sdp_line_unsupported_types() {
+    assert!(parse_sdp_line("e=foobar", 0).is_err());
+    assert!(parse_sdp_line("i=foobar", 0).is_err());
+    assert!(parse_sdp_line("k=foobar", 0).is_err());
+    assert!(parse_sdp_line("p=foobar", 0).is_err());
+    assert!(parse_sdp_line("r=foobar", 0).is_err());
+    assert!(parse_sdp_line("u=foobar", 0).is_err());
+    assert!(parse_sdp_line("z=foobar", 0).is_err());
 }
 
 #[test]
@@ -986,14 +1009,6 @@ fn parse_sdp_vector(lines: &[SdpLine]) -> Result<SdpSession, SdpParserError> {
                     line_number: line.line_number,
                 });
             }
-            // the line parsers throw unsupported errors for these already
-            SdpType::Email(_)
-            | SdpType::Information(_)
-            | SdpType::Key(_)
-            | SdpType::Phone(_)
-            | SdpType::Repeat(_)
-            | SdpType::Uri(_)
-            | SdpType::Zone(_) => (),
         };
         if !sdp_session.media.is_empty() {
             break;

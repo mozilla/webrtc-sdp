@@ -571,23 +571,12 @@ pub fn parse_media_vector(lines: &[SdpLine]) -> Result<Vec<SdpMedia>, SdpParserE
                 sdp_media = SdpMedia::new(v.clone());
             }
 
-            SdpType::Email(_)
-            | SdpType::Phone(_)
-            | SdpType::Origin(_)
-            | SdpType::Repeat(_)
-            | SdpType::Session(_)
-            | SdpType::Timing(_)
-            | SdpType::Uri(_)
-            | SdpType::Version(_)
-            | SdpType::Zone(_) => {
+            SdpType::Origin(_) | SdpType::Session(_) | SdpType::Timing(_) | SdpType::Version(_) => {
                 return Err(SdpParserError::Sequence {
                     message: "invalid type in media section".to_string(),
                     line_number: line.line_number,
                 });
             }
-
-            // the line parsers throw unsupported errors for these already
-            SdpType::Information(_) | SdpType::Key(_) => (),
         };
     }
 
