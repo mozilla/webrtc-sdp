@@ -228,14 +228,6 @@ impl SdpSession {
                         line_number: line.line_number,
                     });
                 }
-                // the line parsers throw unsupported errors for these already
-                SdpType::Email(_)
-                | SdpType::Information(_)
-                | SdpType::Key(_)
-                | SdpType::Phone(_)
-                | SdpType::Repeat(_)
-                | SdpType::Uri(_)
-                | SdpType::Zone(_) => (),
             }
         }
         Ok(())
