@@ -1026,7 +1026,7 @@ pub fn parse_sdp(sdp: &str, fail_on_warning: bool) -> Result<SdpSession, SdpPars
     }
     if sdp.len() < 40 {
         return Err(SdpParserError::Line {
-            error: SdpParserInternalError::Generic("string to short to be valid SDP".to_string()),
+            error: SdpParserInternalError::Generic("string too short to be valid SDP".to_string()),
             line: sdp.to_string(),
             line_number: 0,
         });
@@ -1080,7 +1080,7 @@ pub fn parse_sdp(sdp: &str, fail_on_warning: bool) -> Result<SdpSession, SdpPars
     }
 
     if fail_on_warning && (!warnings.is_empty()) {
-        return Err(warnings[0].clone());
+        return Err(warnings.remove(0));
     }
 
     // We just return the last of the errors here

@@ -7,7 +7,7 @@ use std::net::AddrParseError;
 use std::num::ParseFloatError;
 use std::num::ParseIntError;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum SdpParserInternalError {
     Generic(String),
     Unsupported(String),
@@ -117,7 +117,7 @@ fn test_sdp_parser_internal_error_address() {
     assert!(!addr_err.cause().is_none());
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum SdpParserError {
     Line {
         error: SdpParserInternalError,
