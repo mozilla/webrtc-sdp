@@ -74,7 +74,7 @@ after_success:
         rm -rf kcov-34 &&
         kcov --version &&
         (cd target/debug/ && ls -al) &&
-        for file in target/debug/rsdparsa-*[^\.d]; do echo "$file"; mkdir -p "target/cov/$(basename $file)"; kcov --verify --exclude-pattern=/.cargo,/usr/lib "target/cov/$(basename $file)" "$file"; done &&
+        for file in target/debug/webrtc_sdp-*[^\.d]; do echo "$file"; mkdir -p "target/cov/$(basename $file)"; kcov --verify --exclude-pattern=/.cargo,/usr/lib "target/cov/$(basename $file)" "$file"; done &&
         for file in target/debug/unit_tests-*[^\.d]; do echo "$file"; mkdir -p "target/cov/$(basename $file)"; kcov --verify --exclude-pattern=/.cargo,/usr/lib "target/cov/$(basename $file)" "$file"; done &&
         bash <(curl -s https://codecov.io/bash) &&
         echo "Uploaded code coverage"
