@@ -32,7 +32,7 @@ addons:
 
 # Add tarpaulin
 before_cache: |
-  if [[ "$TRAVIS_RUST_VERSION" == nightly ]]; then
+  if [[ "$TRAVIS_OS_NAME" == "linux" && "$TRAVIS_RUST_VERSION" == "nightly" && "$FEATURES" == "serialize" ]]; then
     RUSTFLAGS="--cfg procmacro2_semver_exempt" cargo install cargo-tarpaulin -f
   fi
 
@@ -57,11 +57,17 @@ script:
     if [[ "$TRAVIS_RUST_VERSION" == "stable" ]]; then
       cargo clippy --all-targets --all-features -- -D warnings;
     fi
-  - cargo test --all-features --verbose --all
-
-after_success: |
+  - |
     if [[ "$TRAVIS_OS_NAME" == "linux" && "$TRAVIS_RUST_VERSION" == "nightly" && "$FEATURES" == "serialize" ]]; then
-      # Uncomment the following two lines create and upload a report for codecov.io
       cargo tarpaulin --out Xml &&
       bash <(curl -s https://codecov.io/bash)
+    else
+      cargo test --all-features --verbose --all
     fi
+
+#after_success: |
+#if [[ "$TRAVIS_OS_NAME" == "linux" && "$TRAVIS_RUST_VERSION" == "nightly" && "$FEATURES" == "serialize" ]]; then
+# Uncomment the following two lines create and upload a report for codecov.io
+#cargo tarpaulin --out Xml &&
+#bash <(curl -s https://codecov.io/bash)
+#fi
