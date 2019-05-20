@@ -59,7 +59,7 @@ script:
     fi
   - |
     if [[ "$TRAVIS_OS_NAME" == "linux" && "$TRAVIS_RUST_VERSION" == "nightly" && "$FEATURES" == "serialize" ]]; then
-      cargo tarpaulin --exclude-files file_parser.rs --out Xml &&
+      cargo tarpaulin --out Xml &&
       bash <(curl -s https://codecov.io/bash)
     else
       cargo test --all-features --verbose --all
