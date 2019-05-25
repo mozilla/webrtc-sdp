@@ -102,6 +102,21 @@ fn test_sdp_parser_internal_error_integer() {
 
 #[test]
 #[allow(deprecated)] // see issue #102
+fn test_sdp_parser_internal_error_float() {
+    let v = "12.2a";
+    let float = v.parse::<f32>();
+    assert!(float.is_err());
+    let int_err = SdpParserInternalError::Float(float.err().unwrap());
+    assert_eq!(
+        format!("{}", int_err),
+        "Float parsing error: invalid float literal"
+    );
+    assert_eq!(int_err.description(), "invalid float literal");
+    assert!(!int_err.cause().is_none());
+}
+
+#[test]
+#[allow(deprecated)] // see issue #102
 fn test_sdp_parser_internal_error_address() {
     let v = "127.0.0.a";
     use std::net::IpAddr;
