@@ -1,4 +1,3 @@
-use std::fmt;
 use std::net::IpAddr;
 use std::str::FromStr;
 
@@ -13,16 +12,6 @@ pub enum SdpAddrType {
 impl SdpAddrType {
     pub fn same_protocol(self, addr: &IpAddr) -> bool {
         (addr.is_ipv6() && self == SdpAddrType::IP6) || (addr.is_ipv4() && self == SdpAddrType::IP4)
-    }
-}
-
-impl fmt::Display for SdpAddrType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let printable = match *self {
-            SdpAddrType::IP4 => "Ip4",
-            SdpAddrType::IP6 => "Ip6",
-        };
-        write!(f, "{}", printable)
     }
 }
 
