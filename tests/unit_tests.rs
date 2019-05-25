@@ -71,7 +71,8 @@ fn parse_minimal_sdp_with_most_session_types() {
                    b=AS:1\r\n\
                    b=CT:123\r\n\
                    b=TIAS:12345\r\n\
-                   c=IN IP4 0.0.0.0\r\n\
+                   b=UNKNOWN:9\r\n\
+                   c=IN IP6 ::1/1/1\r\n\
                    a=ice-options:trickle\r\n\
                    m=audio 0 UDP/TLS/RTP/SAVPF 0\r\n";
     let sdp_res = webrtc_sdp::parse_sdp(sdp_str, false);

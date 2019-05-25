@@ -355,7 +355,7 @@ fn parse_origin(value: &str) -> Result<SdpType, SdpParserInternalError> {
     match tokens.next() {
         None => {
             return Err(SdpParserInternalError::Generic(
-                "Origin type is missing session version token".to_string(),
+                "Origin type is missing network type token".to_string(),
             ));
         }
         Some(x) => parse_nettype(x)?,
@@ -398,9 +398,23 @@ fn test_origin_works() {
 }
 
 #[test]
-fn test_origin_wrong_amount_of_tokens() {
-    assert!(parse_origin("a b c d e").is_err());
-    assert!(parse_origin("a b c d e f g").is_err());
+fn test_origin_missing_username() {
+    assert!(parse_origin("").is_err());
+}
+
+#[test]
+fn test_origin_missing_session_id() {
+    assert!(parse_origin("mozilla ").is_err());
+}
+
+#[test]
+fn test_origin_missing_session_version() {
+    assert!(parse_origin("mozilla 506705521068071134 ").is_err());
+}
+
+#[test]
+fn test_origin_missing_nettype() {
+    assert!(parse_origin("mozilla 506705521068071134 0 ").is_err());
 }
 
 #[test]
@@ -409,12 +423,22 @@ fn test_origin_unsupported_nettype() {
 }
 
 #[test]
+fn test_origin_missing_addtype() {
+    assert!(parse_origin("mozilla 506705521068071134 0 IN ").is_err());
+}
+
+#[test]
+fn test_origin_missing_ip_addr() {
+    assert!(parse_origin("mozilla 506705521068071134 0 IN IP4 ").is_err());
+}
+
+#[test]
 fn test_origin_unsupported_addrtpe() {
     assert!(parse_origin("mozilla 506705521068071134 0 IN IP1 0.0.0.0").is_err());
 }
 
 #[test]
-fn test_origin_broken_ip_addr() {
+fn test_origin_invalid_ip_addr() {
     assert!(parse_origin("mozilla 506705521068071134 0 IN IP4 1.1.1.256").is_err());
     assert!(parse_origin("mozilla 506705521068071134 0 IN IP6 ::g").is_err());
 }
@@ -459,6 +483,8 @@ fn parse_connection(value: &str) -> Result<SdpType, SdpParserInternalError> {
 fn connection_works() {
     assert!(parse_connection("IN IP4 127.0.0.1").is_ok());
     assert!(parse_connection("IN IP4 127.0.0.1/10/10").is_ok());
+    assert!(parse_connection("IN IP6 ::1").is_ok());
+    assert!(parse_connection("IN IP6 ::1/1/1").is_ok());
 }
 
 #[test]
@@ -687,6 +713,11 @@ fn test_parse_sdp_line_works() {
 #[test]
 fn test_parse_sdp_line_empty_line() {
     assert!(parse_sdp_line("", 0).is_err());
+}
+
+#[test]
+fn test_parse_sdp_line_missing_type() {
+    assert!(parse_sdp_line("=sendrecv", 0).is_err());
 }
 
 #[test]
