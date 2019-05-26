@@ -10,7 +10,7 @@ fn check_parse_and_serialize(sdp_str: &str) {
 #[test]
 fn parse_minimal_sdp() {
     let sdp_str = "v=0\r\n\
-                   o=- 0 0 IN IP4 0.0.0.0\r\n\
+                   o=- 1 1 IN IP4 0.0.0.0\r\n\
                    s=-\r\n\
                    t=0 0\r\n\
                    c=IN IP4 0.0.0.0\r\n\
@@ -20,9 +20,14 @@ fn parse_minimal_sdp() {
     let sdp_opt = sdp_res.ok();
     assert!(sdp_opt.is_some());
     let sdp = sdp_opt.unwrap();
-    assert_eq!(sdp.version, 0);
-    assert_eq!(sdp.session, "-");
-    assert!(sdp.connection.is_some());
+    assert_eq!(sdp.get_version(), 0);
+    let o = sdp.get_origin();
+    assert_eq!(o.username, "-");
+    assert_eq!(o.session_id, 1);
+    assert_eq!(o.session_version, 1);
+    assert_eq!(sdp.get_session(), "-");
+    assert!(sdp.timing.is_some());
+    assert!(sdp.get_connection().is_some());
     assert_eq!(sdp.attribute.len(), 0);
     assert_eq!(sdp.media.len(), 1);
 
