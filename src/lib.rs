@@ -765,58 +765,45 @@ fn test_parse_sdp_line_invalid_a_line() {
 }
 
 fn sanity_check_sdp_session(session: &SdpSession) -> Result<(), SdpParserError> {
-    let make_error = |x: &str| SdpParserError::Sequence {
+    let make_seq_error = |x: &str| SdpParserError::Sequence {
         message: x.to_string(),
         line_number: 0,
     };
 
     if session.timing.is_none() {
-        return Err(SdpParserError::Sequence {
-            message: "Missing timing type".to_string(),
-            line_number: 0,
-        });
+        return Err(make_seq_error("Missing timing type at session level"));
+    }
+
+    let mut mconnections = 0;
+    for msection in &session.media {
+        if msection.get_connection().is_some() {
+            mconnections += 1;
+        }
     }
 
     if session.get_connection().is_none() {
-        if session.media.len() == 0 {
-            return Err(SdpParserError::Sequence {
-                message: "Missing connection in SDP"
-                    .to_string(),
-                line_number: 0,
-            });
+        if session.media.is_empty() {
+            return Err(make_seq_error("Missing connection type at session level"));
         }
-        for msection in &session.media {
-            if msection.get_connection().is_none() {
-                return Err(SdpParserError::Sequence {
-                    message: "Each media section must define a connection
-                              if it is not defined on session level"
-                        .to_string(),
-                    line_number: 0,
-                });
-            }
+        if mconnections != session.media.len() {
+            return Err(make_seq_error(
+                "Without connection type at session level all media section
+                 must have connection types",
+            ));
         }
-    }
-    else {
-        for msection in &session.media {
-            if msection.get_connection().is_some() {
-                return Err(SdpParserError::Sequence {
-                    message: "Session Xor media section can define a
-                              connection but not both"
-                        .to_string(),
-                    line_number: 0,
-                });
-            }
-        }
+    } else if mconnections > 0 {
+        return Err(make_seq_error(
+            "Session xor media sections can define connection types, but not both",
+        ));
     }
 
     // Check that extmaps are not defined on session and media level
     if session.get_attribute(SdpAttributeType::Extmap).is_some() {
         for msection in &session.media {
             if msection.get_attribute(SdpAttributeType::Extmap).is_some() {
-                return Err(SdpParserError::Sequence {
-                    message: "Extmap can't be define at session and media level".to_string(),
-                    line_number: 0,
-                });
+                return Err(make_seq_error(
+                    "Extmap can't be define at session and media level",
+                ));
             }
         }
     }
@@ -827,11 +814,9 @@ fn sanity_check_sdp_session(session: &SdpSession) -> Result<(), SdpParserError> 
                 msection.get_attribute(SdpAttributeType::Simulcast)
             {
                 if !x.receive.is_empty() {
-                    return Err(SdpParserError::Sequence {
-                        message: "Simulcast can't define receive parameters for sendonly"
-                            .to_string(),
-                        line_number: 0,
-                    });
+                    return Err(make_seq_error(
+                        "Simulcast can't define receive parameters for sendonly",
+                    ));
                 }
             }
         }
@@ -840,10 +825,9 @@ fn sanity_check_sdp_session(session: &SdpSession) -> Result<(), SdpParserError> 
                 msection.get_attribute(SdpAttributeType::Simulcast)
             {
                 if !x.send.is_empty() {
-                    return Err(SdpParserError::Sequence {
-                        message: "Simulcast can't define send parameters for recvonly".to_string(),
-                        line_number: 0,
-                    });
+                    return Err(make_seq_error(
+                        "Simulcast can't define send parameters for recvonly",
+                    ));
                 }
             }
         }
@@ -875,12 +859,16 @@ fn sanity_check_sdp_session(session: &SdpSession) -> Result<(), SdpParserError> 
             match *msection.get_formats() {
                 SdpFormatList::Integers(ref int_fmt) => {
                     if !int_fmt.contains(&(u32::from(*rid_format))) {
-                        return Err(make_error("Rid pts must be declared in the media section"));
+                        return Err(make_seq_error(
+                            "Rid pts must be declared in the media section",
+                        ));
                     }
                 }
                 SdpFormatList::Strings(ref str_fmt) => {
                     if !str_fmt.contains(&rid_format.to_string()) {
-                        return Err(make_error("Rid pts must be declared in the media section"));
+                        return Err(make_seq_error(
+                            "Rid pts must be declared in the media section",
+                        ));
                     }
                 }
             }
@@ -895,7 +883,7 @@ fn sanity_check_sdp_session(session: &SdpSession) -> Result<(), SdpParserError> 
                  -> Result<(), SdpParserError> {
                     for simulcast_rid in simulcast_version_list.iter().flat_map(|x| &x.ids) {
                         if !rid_ids.contains(&simulcast_rid.id.as_str()) {
-                            return Err(make_error(
+                            return Err(make_seq_error(
                                 "Simulcast RIDs must be defined in any rid attribute",
                             ));
                         }
@@ -1128,7 +1116,8 @@ pub fn parse_sdp(sdp: &str, fail_on_warning: bool) -> Result<SdpSession, SdpPars
             line_number: 0,
         });
     }
-    if sdp.len() < 40 {
+    // see test_parse_sdp_minimal_sdp_successfully
+    if sdp.len() < 51 {
         return Err(SdpParserError::Line {
             error: SdpParserInternalError::Generic("string too short to be valid SDP".to_string()),
             line: sdp.to_string(),
