@@ -716,11 +716,6 @@ fn test_parse_sdp_line_empty_line() {
 }
 
 #[test]
-fn test_parse_sdp_line_missing_type() {
-    assert!(parse_sdp_line("=sendrecv", 0).is_err());
-}
-
-#[test]
 fn test_parse_sdp_line_unsupported_types() {
     assert!(parse_sdp_line("e=foobar", 0).is_err());
     assert!(parse_sdp_line("i=foobar", 0).is_err());
@@ -783,11 +778,30 @@ fn sanity_check_sdp_session(session: &SdpSession) -> Result<(), SdpParserError> 
     }
 
     if session.get_connection().is_none() {
+        if session.media.len() == 0 {
+            return Err(SdpParserError::Sequence {
+                message: "Missing connection in SDP"
+                    .to_string(),
+                line_number: 0,
+            });
+        }
         for msection in &session.media {
             if msection.get_connection().is_none() {
                 return Err(SdpParserError::Sequence {
                     message: "Each media section must define a connection
                               if it is not defined on session level"
+                        .to_string(),
+                    line_number: 0,
+                });
+            }
+        }
+    }
+    else {
+        for msection in &session.media {
+            if msection.get_connection().is_some() {
+                return Err(SdpParserError::Sequence {
+                    message: "Session Xor media section can define a
+                              connection but not both"
                         .to_string(),
                     line_number: 0,
                 });
@@ -945,6 +959,50 @@ fn test_sanity_check_sdp_session_media() {
     sdp_session.extend_media(vec![create_dummy_media_section()]);
 
     assert!(sanity_check_sdp_session(&sdp_session).is_ok());
+}
+
+#[test]
+fn test_sanity_check_sdp_connection() {
+    let origin = parse_origin("mozilla 506705521068071134 0 IN IP4 0.0.0.0");
+    assert!(origin.is_ok());
+    let mut sdp_session;
+    if let SdpType::Origin(o) = origin.unwrap() {
+        sdp_session = SdpSession::new(0, o, "-".to_string());
+    } else {
+        panic!("SdpType is not Origin");
+    }
+    let t = SdpTiming { start: 0, stop: 0 };
+    sdp_session.set_timing(t);
+
+    assert!(sanity_check_sdp_session(&sdp_session).is_err());
+
+    // the dummy media section doesn't contain a connection
+    sdp_session.extend_media(vec![create_dummy_media_section()]);
+
+    assert!(sanity_check_sdp_session(&sdp_session).is_err());
+
+    let connection = parse_connection("IN IP6 ::1");
+    assert!(connection.is_ok());
+    if let Ok(SdpType::Connection(c)) = connection {
+        sdp_session.connection = Some(c);
+    } else {
+        panic!("Sdp type is not Connection")
+    }
+
+    assert!(sanity_check_sdp_session(&sdp_session).is_ok());
+
+    let mut second_media = create_dummy_media_section();
+    let mconnection = parse_connection("IN IP4 0.0.0.0");
+    assert!(mconnection.is_ok());
+    if let Ok(SdpType::Connection(c)) = mconnection {
+        assert!(second_media.set_connection(c).is_ok());
+    } else {
+        panic!("Sdp type is not Connection")
+    }
+    sdp_session.extend_media(vec![second_media]);
+    assert!(sdp_session.media.len() == 2);
+
+    assert!(sanity_check_sdp_session(&sdp_session).is_err());
 }
 
 #[test]
@@ -1158,8 +1216,9 @@ fn test_parse_sdp_to_short_string() {
 fn test_parse_sdp_minimal_sdp_successfully() {
     assert!(parse_sdp(
         "v=0\r\n
-o=- 0 0 IN IP4 0.0.0.0\r\n
+o=- 0 0 IN IP6 ::1\r\n
 s=-\r\n
+c=IN IP6 ::1\r\n
 t=0 0\r\n",
         true
     )
