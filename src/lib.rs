@@ -912,10 +912,10 @@ fn create_dummy_sdp_session() -> SdpSession {
         if let Ok(SdpType::Connection(c)) = connection {
             sdp_session.connection = Some(c);
         } else {
-            panic!("Sdp type is not Connection")
+            unreachable!();
         }
     } else {
-        panic!("SdpType is not Origin");
+        unreachable!();
     }
     sdp_session
 }
@@ -957,7 +957,7 @@ fn test_sanity_check_sdp_connection() {
     if let SdpType::Origin(o) = origin.unwrap() {
         sdp_session = SdpSession::new(0, o, "-".to_string());
     } else {
-        panic!("SdpType is not Origin");
+        unreachable!();
     }
     let t = SdpTiming { start: 0, stop: 0 };
     sdp_session.set_timing(t);
@@ -974,7 +974,7 @@ fn test_sanity_check_sdp_connection() {
     if let Ok(SdpType::Connection(c)) = connection {
         sdp_session.connection = Some(c);
     } else {
-        panic!("Sdp type is not Connection")
+        unreachable!();
     }
 
     assert!(sanity_check_sdp_session(&sdp_session).is_ok());
@@ -985,7 +985,7 @@ fn test_sanity_check_sdp_connection() {
     if let Ok(SdpType::Connection(c)) = mconnection {
         assert!(second_media.set_connection(c).is_ok());
     } else {
-        panic!("Sdp type is not Connection")
+        unreachable!();
     }
     sdp_session.extend_media(vec![second_media]);
     assert!(sdp_session.media.len() == 2);
@@ -1007,7 +1007,7 @@ fn test_sanity_check_sdp_session_extmap() {
     if let SdpType::Attribute(a) = attribute.unwrap() {
         extmap = a;
     } else {
-        panic!("SdpType is not Attribute");
+        unreachable!();
     }
     let ret = sdp_session.add_attribute(extmap);
     assert!(ret.is_ok());
@@ -1024,7 +1024,7 @@ fn test_sanity_check_sdp_session_extmap() {
     if let SdpType::Attribute(ma) = mattribute.unwrap() {
         mextmap = ma;
     } else {
-        panic!("SdpType is not Attribute");
+        unreachalbe!();
     }
     let mut second_media = create_dummy_media_section();
     assert!(second_media.add_attribute(mextmap).is_ok());
