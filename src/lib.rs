@@ -1024,7 +1024,7 @@ fn test_sanity_check_sdp_session_extmap() {
     if let SdpType::Attribute(ma) = mattribute.unwrap() {
         mextmap = ma;
     } else {
-        unreachalbe!();
+        unreachable!();
     }
     let mut second_media = create_dummy_media_section();
     assert!(second_media.add_attribute(mextmap).is_ok());
