@@ -290,30 +290,41 @@ pub fn create_dummy_media_section() -> SdpMedia {
 #[test]
 fn test_add_datachannel() {
     let mut msection = create_dummy_media_section();
-    assert!(msection.add_datachannel("foo".to_string(), 5000, 256, 0).is_ok());
+    assert!(msection
+        .add_datachannel("foo".to_string(), 5000, 256, 0)
+        .is_ok());
     assert_eq!(*msection.get_type(), SdpMediaValue::Application);
     assert!(msection.get_attribute(SdpAttributeType::SctpPort).is_none());
-    assert!(msection.get_attribute(SdpAttributeType::MaxMessageSize).is_none());
+    assert!(msection
+        .get_attribute(SdpAttributeType::MaxMessageSize)
+        .is_none());
     assert!(msection.get_attribute(SdpAttributeType::Sctpmap).is_some());
     match msection.get_attribute(SdpAttributeType::Sctpmap).unwrap() {
         SdpAttribute::Sctpmap(s) => {
             assert_eq!(s.port, 5000);
             assert_eq!(s.channels, 256);
-        },
+        }
         _ => {
             unreachable!();
         }
     }
 
     let mut msection = create_dummy_media_section();
-    assert!(msection.add_datachannel("foo".to_string(), 5000, 256, 1234).is_ok());
+    assert!(msection
+        .add_datachannel("foo".to_string(), 5000, 256, 1234)
+        .is_ok());
     assert_eq!(*msection.get_type(), SdpMediaValue::Application);
     assert!(msection.get_attribute(SdpAttributeType::SctpPort).is_none());
-    assert!(msection.get_attribute(SdpAttributeType::MaxMessageSize).is_some());
-    match msection.get_attribute(SdpAttributeType::MaxMessageSize).unwrap() {
+    assert!(msection
+        .get_attribute(SdpAttributeType::MaxMessageSize)
+        .is_some());
+    match msection
+        .get_attribute(SdpAttributeType::MaxMessageSize)
+        .unwrap()
+    {
         SdpAttribute::MaxMessageSize(m) => {
             assert_eq!(*m, 1234);
-        },
+        }
         _ => {
             unreachable!();
         }
@@ -321,23 +332,30 @@ fn test_add_datachannel() {
 
     let mut msection = create_dummy_media_section();
     msection.media.proto = SdpProtocolValue::UdpDtlsSctp;
-    assert!(msection.add_datachannel("foo".to_string(), 5000, 256, 5678).is_ok());
+    assert!(msection
+        .add_datachannel("foo".to_string(), 5000, 256, 5678)
+        .is_ok());
     assert_eq!(*msection.get_type(), SdpMediaValue::Application);
     assert!(msection.get_attribute(SdpAttributeType::Sctpmap).is_none());
     assert!(msection.get_attribute(SdpAttributeType::SctpPort).is_some());
     match msection.get_attribute(SdpAttributeType::SctpPort).unwrap() {
         SdpAttribute::SctpPort(s) => {
             assert_eq!(*s, 5000);
-        },
+        }
         _ => {
             unreachable!();
         }
     }
-    assert!(msection.get_attribute(SdpAttributeType::MaxMessageSize).is_some());
-    match msection.get_attribute(SdpAttributeType::MaxMessageSize).unwrap() {
+    assert!(msection
+        .get_attribute(SdpAttributeType::MaxMessageSize)
+        .is_some());
+    match msection
+        .get_attribute(SdpAttributeType::MaxMessageSize)
+        .unwrap()
+    {
         SdpAttribute::MaxMessageSize(m) => {
             assert_eq!(*m, 5678);
-        },
+        }
         _ => {
             unreachable!();
         }
