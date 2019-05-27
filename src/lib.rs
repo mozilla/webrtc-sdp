@@ -18,7 +18,7 @@ pub mod media_type;
 pub mod network;
 
 use attribute_type::{
-    addr_to_string, parse_attribute, SdpAttribute, SdpAttributeRid, SdpAttributeSimulcastVersion,
+    parse_attribute, SdpAttribute, SdpAttributeRid, SdpAttributeSimulcastVersion,
     SdpAttributeType, SdpSingleDirection,
 };
 use error::{SdpParserError, SdpParserInternalError};
@@ -26,7 +26,7 @@ use media_type::{
     parse_media, parse_media_vector, SdpFormatList, SdpMedia, SdpMediaLine, SdpMediaValue,
     SdpProtocolValue,
 };
-use network::{parse_addrtype, parse_nettype, parse_unicast_addr};
+use network::{parse_addrtype, parse_nettype, parse_unicast_addr, addr_to_string};
 
 #[cfg_attr(feature = "serialize", derive(Serialize))]
 pub enum SdpBandwidth {
@@ -58,11 +58,8 @@ pub struct SdpConnection {
 impl ToString for SdpConnection {
     fn to_string(&self) -> String {
         format!(
-            "IN {addr}{ttl}{amount}",
-            addr = match self.addr {
-                IpAddr::V4(ipv4) => format!("IP4 {}", ipv4.to_string()),
-                IpAddr::V6(ipv6) => format!("IP6 {}", ipv6.to_string()),
-            },
+            "{addr}{ttl}{amount}",
+            addr = addr_to_string(self.addr),
             ttl = option_to_string!("/{}", self.ttl),
             amount = option_to_string!("/{}", self.amount)
         )
@@ -394,7 +391,7 @@ fn parse_origin(value: &str) -> Result<SdpType, SdpParserInternalError> {
 #[test]
 fn test_origin_works() {
     assert!(parse_origin("mozilla 506705521068071134 0 IN IP4 0.0.0.0").is_ok());
-    assert!(parse_origin("mozilla 506705521068071134 0 IN IP6 ::1").is_ok());
+    assert!(parse_origin("mozilla 506705521068071134 0 IN IP6 2001:db8::1").is_ok());
 }
 
 #[test]

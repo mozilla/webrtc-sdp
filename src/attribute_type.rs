@@ -3,7 +3,7 @@ use std::net::IpAddr;
 use std::str::FromStr;
 
 use error::SdpParserInternalError;
-use network::{parse_addrtype, parse_nettype, parse_unicast_addr};
+use network::{parse_addrtype, parse_nettype, parse_unicast_addr, addr_to_string};
 use SdpType;
 
 // Serialization helper marcos and functions
@@ -64,13 +64,6 @@ pub fn maybe_print_bool_param(name: &str, param: bool, default_value: bool) -> S
         name.to_owned() + "=" + &(if param { "1" } else { "0" }).to_string()
     } else {
         "".to_string()
-    }
-}
-
-pub fn addr_to_string(addr: IpAddr) -> String {
-    match addr {
-        IpAddr::V4(ipv4) => format!("IN IP4 {}", ipv4.to_string()),
-        IpAddr::V6(ipv6) => format!("IN IP6 {}", ipv6.to_string()),
     }
 }
 
@@ -3493,6 +3486,7 @@ fn test_parse_attribute_rtcp() {
 
     check_parse_and_serialize("rtcp:5000");
     check_parse_and_serialize("rtcp:9 IN IP4 0.0.0.0");
+    check_parse_and_serialize("rtcp:9 IN IP6 2001:db8::1");
 
     assert!(parse_attribute("rtcp:").is_err());
     assert!(parse_attribute("rtcp:70000").is_err());
