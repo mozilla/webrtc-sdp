@@ -10,7 +10,7 @@ env:
   - FEATURES="serialize"
 rust:
   - nightly
-  - beta
+  # - beta
   - stable
 
 matrix:

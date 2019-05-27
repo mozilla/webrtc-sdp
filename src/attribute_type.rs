@@ -70,7 +70,7 @@ pub fn maybe_print_bool_param(name: &str, param: bool, default_value: bool) -> S
 pub fn addr_to_string(addr: IpAddr) -> String {
     match addr {
         IpAddr::V4(ipv4) => format!("IN IP4 {}", ipv4.to_string()),
-        IpAddr::V6(ipv6) => format!("IN IP4 {}", ipv6.to_string()),
+        IpAddr::V6(ipv6) => format!("IN IP6 {}", ipv6.to_string()),
     }
 }
 
@@ -2780,6 +2780,7 @@ fn test_parse_attribute_candidate_and_serialize() {
     check_parse_and_serialize("candidate:foo 1 UDP 2122252543 172.16.156.106 49760 typ host");
     check_parse_and_serialize("candidate:0 1 TCP 2122252543 172.16.156.106 49760 typ host");
     check_parse_and_serialize("candidate:0 1 TCP 2122252543 ::1 49760 typ host");
+    check_parse_and_serialize("candidate:0 1 TCP 2122252543 2001:db8:4860::4444 49760 typ host");
     check_parse_and_serialize("candidate:0 1 UDP 2122252543 172.16.156.106 49760 typ srflx");
     check_parse_and_serialize("candidate:0 1 UDP 2122252543 172.16.156.106 49760 typ prflx");
     check_parse_and_serialize("candidate:0 1 UDP 2122252543 172.16.156.106 49760 typ relay");

@@ -63,8 +63,8 @@ m=audio 0 UDP/TLS/RTP/SAVPF 0\r\n";
     let sdp_opt = sdp_res.ok();
     assert!(sdp_opt.is_some());
     let sdp = sdp_opt.unwrap();
-    assert_eq!(sdp.version, 0);
-    assert_eq!(sdp.session, "-");
+    assert_eq!(sdp.get_version(), 0);
+    assert_eq!(sdp.get_session(), "-");
 }
 
 #[test]
@@ -103,6 +103,7 @@ fn parse_minimal_sdp_with_most_media_types() {
                    b=CT:123\r\n\
                    b=TIAS:12345\r\n\
                    c=IN IP4 0.0.0.0\r\n\
+                   a=rtcp:9 IN IP6 2001:db8::8888\r\n\
                    a=sendrecv\r\n";
     let sdp_res = webrtc_sdp::parse_sdp(sdp_str, false);
     assert!(sdp_res.is_ok());
