@@ -18,15 +18,15 @@ pub mod media_type;
 pub mod network;
 
 use attribute_type::{
-    parse_attribute, SdpAttribute, SdpAttributeRid, SdpAttributeSimulcastVersion,
-    SdpAttributeType, SdpSingleDirection,
+    parse_attribute, SdpAttribute, SdpAttributeRid, SdpAttributeSimulcastVersion, SdpAttributeType,
+    SdpSingleDirection,
 };
 use error::{SdpParserError, SdpParserInternalError};
 use media_type::{
     parse_media, parse_media_vector, SdpFormatList, SdpMedia, SdpMediaLine, SdpMediaValue,
     SdpProtocolValue,
 };
-use network::{parse_addrtype, parse_nettype, parse_unicast_addr, addr_to_string};
+use network::{addr_to_string, parse_addrtype, parse_nettype, parse_unicast_addr};
 
 #[cfg_attr(feature = "serialize", derive(Serialize))]
 pub enum SdpBandwidth {

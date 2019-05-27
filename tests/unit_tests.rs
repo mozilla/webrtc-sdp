@@ -2,9 +2,10 @@ extern crate webrtc_sdp;
 
 #[cfg(test)]
 fn check_parse_and_serialize(sdp_str: &str) {
-    let sdp = webrtc_sdp::parse_sdp(sdp_str, true);
-    assert!(sdp.is_ok());
-    assert_eq!(sdp.unwrap().to_string(), sdp_str.to_string())
+    let parsed_sdp = webrtc_sdp::parse_sdp(sdp_str, true);
+    assert!(parsed_sdp.is_ok());
+    let serialized_sdp = parsed_sdp.unwrap().to_string();
+    assert_eq!(serialized_sdp, sdp_str)
 }
 
 #[test]
@@ -103,7 +104,6 @@ fn parse_minimal_sdp_with_most_media_types() {
                    b=CT:123\r\n\
                    b=TIAS:12345\r\n\
                    c=IN IP4 0.0.0.0\r\n\
-                   a=rtcp:9 IN IP6 2001:db8::8888\r\n\
                    a=sendrecv\r\n";
     let sdp_res = webrtc_sdp::parse_sdp(sdp_str, false);
     assert!(sdp_res.is_ok());
@@ -625,4 +625,25 @@ fn parse_firefox_simulcast_answer() {
     let sdp = sdp_opt.unwrap();
     assert_eq!(sdp.version, 0);
     assert_eq!(sdp.media.len(), 1);
+}
+
+#[test]
+fn parse_and_serialize_sdp_with_unusual_attributes() {
+    let sdp_str = "v=0\r\n\
+                   o=- 0 0 IN IP6 2001:db8::4444\r\n\
+                   s=-\r\n\
+                   t=0 0\r\n\
+                   m=video 0 UDP/TLS/RTP/SAVPF 0\r\n\
+                   b=UNSUPPORTED:12345\r\n\
+                   c=IN IP6 ::1\r\n\
+                   a=rtcp:9 IN IP6 2001:db8::8888\r\n\
+                   a=rtcp-fb:* nack\r\n\
+                   a=extmap:1/recvonly urn:ietf:params:rtp-hdrext:toffset\r\n\
+                   a=extmap:2/sendonly urn:ietf:params:rtp-hdrext:toffset\r\n\
+                   a=extmap:3/sendrecv urn:ietf:params:rtp-hdrext:toffset\r\n\
+                   a=imageattr:* send [x=330,y=250,sar=[1.1,1.3,1.9],q=0.1] recv [x=800,y=[50,80,30],sar=1.1]\r\n\
+                   a=imageattr:97 send [x=[480:16:800],y=[100,200,300],par=[1.2-1.3],q=0.6] [x=1080,y=[144:176],sar=[0.5-0.7]] recv *\r\n\
+                   a=sendrecv\r\n";
+
+    check_parse_and_serialize(sdp_str);
 }
