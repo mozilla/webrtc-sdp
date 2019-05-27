@@ -38,6 +38,7 @@ fn parse_minimal_sdp() {
         webrtc_sdp::media_type::SdpMediaValue::Audio
     );
     assert_eq!(msection.get_port(), 0);
+    assert_eq!(msection.get_port_count(), 0);
     assert_eq!(
         *msection.get_proto(),
         webrtc_sdp::media_type::SdpProtocolValue::UdpTlsRtpSavpf
@@ -175,6 +176,7 @@ a=ssrc:2655508255 cname:{735484ea-4f6c-f74a-bd66-7425f8476c2e}\r\n";
         webrtc_sdp::media_type::SdpMediaValue::Audio
     );
     assert_eq!(msection.get_port(), 9);
+    assert_eq!(msection.get_port_count(), 0);
     assert_eq!(
         *msection.get_proto(),
         webrtc_sdp::media_type::SdpProtocolValue::UdpTlsRtpSavpf
