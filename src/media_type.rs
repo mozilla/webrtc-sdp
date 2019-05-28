@@ -305,7 +305,7 @@ fn test_add_datachannel() {
             assert_eq!(s.channels, 256);
         }
         _ => {
-            unreachable!();
+            unreachable!()
         }
     }
 
@@ -326,7 +326,7 @@ fn test_add_datachannel() {
             assert_eq!(*m, 1234);
         }
         _ => {
-            unreachable!();
+            unreachable!()
         }
     }
 
@@ -343,7 +343,7 @@ fn test_add_datachannel() {
             assert_eq!(*s, 5000);
         }
         _ => {
-            unreachable!();
+            unreachable!()
         }
     }
     assert!(msection
@@ -357,7 +357,7 @@ fn test_add_datachannel() {
             assert_eq!(*m, 5678);
         }
         _ => {
-            unreachable!();
+            unreachable!()
         }
     }
 }
@@ -540,7 +540,7 @@ fn check_parse(media_line_str: &str) -> SdpMediaLine {
     if let Ok(SdpType::Media(media_line)) = parse_media(media_line_str) {
         media_line
     } else {
-        unreachable!();
+        unreachable!()
     }
 }
 
