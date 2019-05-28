@@ -97,6 +97,17 @@ impl ToString for SdpFormatList {
     }
 }
 
+// TODO is this useful outside of tests?
+#[cfg(test)]
+impl SdpFormatList {
+    fn len(&self) -> usize {
+        match *self {
+            SdpFormatList::Integers(ref x) => x.len(),
+            SdpFormatList::Strings(ref x) => x.len(),
+        }
+    }
+}
+
 #[cfg_attr(feature = "serialize", derive(Serialize))]
 pub struct SdpMedia {
     media: SdpMediaLine,
@@ -288,6 +299,16 @@ pub fn create_dummy_media_section() -> SdpMedia {
 }
 
 #[test]
+fn test_add_codec() {
+    let mut msection = create_dummy_media_section();
+    assert!(msection
+        .add_codec(SdpAttributeRtpmap::new(96, "foobar".to_string(), 1000))
+        .is_ok());
+    assert_eq!(msection.media.formats.len(), 1);
+    assert!(msection.get_attribute(SdpAttributeType::Rtpmap).is_some());
+}
+
+#[test]
 fn test_add_datachannel() {
     let mut msection = create_dummy_media_section();
     assert!(msection
@@ -304,9 +325,7 @@ fn test_add_datachannel() {
             assert_eq!(s.port, 5000);
             assert_eq!(s.channels, 256);
         }
-        _ => {
-            unreachable!()
-        }
+        _ => unreachable!(),
     }
 
     let mut msection = create_dummy_media_section();
@@ -325,9 +344,7 @@ fn test_add_datachannel() {
         SdpAttribute::MaxMessageSize(m) => {
             assert_eq!(*m, 1234);
         }
-        _ => {
-            unreachable!()
-        }
+        _ => unreachable!(),
     }
 
     let mut msection = create_dummy_media_section();
@@ -342,9 +359,7 @@ fn test_add_datachannel() {
         SdpAttribute::SctpPort(s) => {
             assert_eq!(*s, 5000);
         }
-        _ => {
-            unreachable!()
-        }
+        _ => unreachable!(),
     }
     assert!(msection
         .get_attribute(SdpAttributeType::MaxMessageSize)
@@ -356,9 +371,7 @@ fn test_add_datachannel() {
         SdpAttribute::MaxMessageSize(m) => {
             assert_eq!(*m, 5678);
         }
-        _ => {
-            unreachable!()
-        }
+        _ => unreachable!(),
     }
 }
 
