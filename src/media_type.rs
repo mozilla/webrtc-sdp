@@ -317,6 +317,20 @@ fn test_add_codec() {
 }
 
 #[test]
+fn test_remove_codecs() {
+    let mut msection = create_dummy_media_section();
+    assert!(msection
+        .add_codec(SdpAttributeRtpmap::new(96, "foobar".to_string(), 1000))
+        .is_ok());
+    assert_eq!(msection.get_formats().len(), 1);
+    assert!(msection.get_attribute(SdpAttributeType::Rtpmap).is_some());
+
+    msection.remove_codecs();
+    assert_eq!(msection.get_formats().len(), 0);
+    assert!(msection.get_attribute(SdpAttributeType::Rtpmap).is_none());
+}
+
+#[test]
 fn test_add_datachannel() {
     let mut msection = create_dummy_media_section();
     assert!(msection
