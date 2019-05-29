@@ -299,6 +299,14 @@ pub fn create_dummy_media_section() -> SdpMedia {
 }
 
 #[test]
+fn test_get_set_port() {
+    let mut msection = create_dummy_media_section();
+    assert_eq!(msection.get_port(), 9);
+    msection.set_port(2048);
+    assert_eq!(msection.get_port(), 2048);
+}
+
+#[test]
 fn test_add_codec() {
     let mut msection = create_dummy_media_section();
     assert!(msection
