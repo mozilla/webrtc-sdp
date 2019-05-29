@@ -304,7 +304,15 @@ fn test_add_codec() {
     assert!(msection
         .add_codec(SdpAttributeRtpmap::new(96, "foobar".to_string(), 1000))
         .is_ok());
-    assert_eq!(msection.media.formats.len(), 1);
+    assert_eq!(msection.get_formats().len(), 1);
+    assert!(msection.get_attribute(SdpAttributeType::Rtpmap).is_some());
+
+    let mut msection = create_dummy_media_section();
+    msection.media.formats = SdpFormatList::Strings(Vec::new());
+    assert!(msection
+        .add_codec(SdpAttributeRtpmap::new(96, "foobar".to_string(), 1000))
+        .is_ok());
+    assert_eq!(msection.get_formats().len(), 1);
     assert!(msection.get_attribute(SdpAttributeType::Rtpmap).is_some());
 }
 

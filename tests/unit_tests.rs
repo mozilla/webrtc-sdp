@@ -211,9 +211,12 @@ a=ssrc:2655508255 cname:{735484ea-4f6c-f74a-bd66-7425f8476c2e}\r\n";
     assert!(msection
         .get_attribute(webrtc_sdp::attribute_type::SdpAttributeType::RtcpMux)
         .is_some());
-    assert!(msection
-        .get_attribute(webrtc_sdp::attribute_type::SdpAttributeType::Rtpmap)
-        .is_some());
+    assert_eq!(
+        msection
+            .get_attributes_of_type(webrtc_sdp::attribute_type::SdpAttributeType::Rtpmap)
+            .len(),
+        4
+    );
     assert!(msection
         .get_attribute(webrtc_sdp::attribute_type::SdpAttributeType::Setup)
         .is_some());
@@ -286,9 +289,12 @@ a=ssrc:2709871439 cname:{735484ea-4f6c-f74a-bd66-7425f8476c2e}";
     assert!(!msection
         .get_attribute(webrtc_sdp::attribute_type::SdpAttributeType::Extmap)
         .is_some());
-    assert!(msection
-        .get_attribute(webrtc_sdp::attribute_type::SdpAttributeType::Fmtp)
-        .is_some());
+    assert_eq!(
+        msection
+            .get_attributes_of_type(webrtc_sdp::attribute_type::SdpAttributeType::Fmtp)
+            .len(),
+        3
+    );
     assert!(msection
         .get_attribute(webrtc_sdp::attribute_type::SdpAttributeType::IcePwd)
         .is_some());
@@ -304,15 +310,21 @@ a=ssrc:2709871439 cname:{735484ea-4f6c-f74a-bd66-7425f8476c2e}";
     assert!(!msection
         .get_attribute(webrtc_sdp::attribute_type::SdpAttributeType::Msid)
         .is_some());
-    assert!(msection
-        .get_attribute(webrtc_sdp::attribute_type::SdpAttributeType::Rtcpfb)
-        .is_some());
+    assert_eq!(
+        msection
+            .get_attributes_of_type(webrtc_sdp::attribute_type::SdpAttributeType::Rtcpfb)
+            .len(),
+        12
+    );
     assert!(msection
         .get_attribute(webrtc_sdp::attribute_type::SdpAttributeType::RtcpMux)
         .is_some());
-    assert!(msection
-        .get_attribute(webrtc_sdp::attribute_type::SdpAttributeType::Rtpmap)
-        .is_some());
+    assert_eq!(
+        msection
+            .get_attributes_of_type(webrtc_sdp::attribute_type::SdpAttributeType::Rtpmap)
+            .len(),
+        3
+    );
     assert!(msection
         .get_attribute(webrtc_sdp::attribute_type::SdpAttributeType::Setup)
         .is_some());
