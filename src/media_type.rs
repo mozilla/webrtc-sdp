@@ -386,6 +386,7 @@ fn test_remove_codecs() {
             channels: 2,
         }))
         .is_ok());
+    assert!(msection.add_attribute(SdpAttribute::BundleOnly).is_ok());
     assert!(msection.add_attribute(SdpAttribute::SctpPort(5000)).is_ok());
     assert!(msection.get_attribute(SdpAttributeType::Rtpmap).is_some());
     assert!(msection.get_attribute(SdpAttributeType::Rtcpfb).is_some());
