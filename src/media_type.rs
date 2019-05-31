@@ -380,10 +380,12 @@ fn test_remove_codecs() {
             }
         },))
         .is_ok());
-    assert!(msection.add_attribute(SdpAttribute::Sctpmap(SdpAttributeSctpmap {
-                    port: 5000,
-                    channels: 2,
-                })).is_ok());
+    assert!(msection
+        .add_attribute(SdpAttribute::Sctpmap(SdpAttributeSctpmap {
+            port: 5000,
+            channels: 2,
+        }))
+        .is_ok());
     assert!(msection.add_attribute(SdpAttribute::SctpPort(5000)).is_ok());
     assert!(msection.get_attribute(SdpAttributeType::Rtpmap).is_some());
     assert!(msection.get_attribute(SdpAttributeType::Rtcpfb).is_some());
