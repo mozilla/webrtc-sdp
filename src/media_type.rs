@@ -202,7 +202,8 @@ impl SdpMedia {
                 SdpAttribute::Rtpmap(_)
                 | SdpAttribute::Fmtp(_)
                 | SdpAttribute::Rtcpfb(_)
-                | SdpAttribute::Sctpmap(_) => false,
+                | SdpAttribute::Sctpmap(_)
+                | SdpAttribute::SctpPort(_) => false,
                 _ => true,
             }
         });
@@ -318,12 +319,17 @@ fn test_add_codec() {
     let mut msection = create_dummy_media_section();
     msection.media.formats = SdpFormatList::Strings(Vec::new());
     assert!(msection
-        .add_codec(SdpAttributeRtpmap::new(96, "foobar".to_string(), 1000))
+        .add_codec(SdpAttributeRtpmap::new(97, "boofar".to_string(), 1001))
         .is_ok());
     assert_eq!(msection.get_formats().len(), 1);
     assert!(msection.get_attribute(SdpAttributeType::Rtpmap).is_some());
 }
 
+#[cfg(test)]
+use attribute_type::{
+    SdpAttributeFmtp, SdpAttributeFmtpParameters, SdpAttributePayloadType, SdpAttributeRtcpFb,
+    SdpAttributeRtcpFbType,
+};
 #[test]
 fn test_remove_codecs() {
     let mut msection = create_dummy_media_section();
@@ -332,10 +338,65 @@ fn test_remove_codecs() {
         .is_ok());
     assert_eq!(msection.get_formats().len(), 1);
     assert!(msection.get_attribute(SdpAttributeType::Rtpmap).is_some());
-
     msection.remove_codecs();
     assert_eq!(msection.get_formats().len(), 0);
     assert!(msection.get_attribute(SdpAttributeType::Rtpmap).is_none());
+
+    let mut msection = create_dummy_media_section();
+    msection.media.formats = SdpFormatList::Strings(Vec::new());
+    assert!(msection
+        .add_codec(SdpAttributeRtpmap::new(97, "boofar".to_string(), 1001))
+        .is_ok());
+    assert_eq!(msection.get_formats().len(), 1);
+    assert!(msection
+        .add_attribute(SdpAttribute::Rtcpfb(SdpAttributeRtcpFb {
+            payload_type: SdpAttributePayloadType::Wildcard,
+            feedback_type: SdpAttributeRtcpFbType::Ack,
+            parameter: "".to_string(),
+            extra: "".to_string(),
+        },))
+        .is_ok());
+    assert!(msection
+        .add_attribute(SdpAttribute::Fmtp(SdpAttributeFmtp {
+            payload_type: 1,
+            parameters: SdpAttributeFmtpParameters {
+                packetization_mode: 0,
+                level_asymmetry_allowed: false,
+                profile_level_id: 0x0042_0010,
+                max_fs: 0,
+                max_cpb: 0,
+                max_dpb: 0,
+                max_br: 0,
+                max_mbps: 0,
+                usedtx: false,
+                stereo: false,
+                useinbandfec: false,
+                cbr: false,
+                max_fr: 0,
+                maxplaybackrate: 48000,
+                encodings: Vec::new(),
+                dtmf_tones: "".to_string(),
+                unknown_tokens: Vec::new()
+            }
+        },))
+        .is_ok());
+    assert!(msection.add_attribute(SdpAttribute::Sctpmap(SdpAttributeSctpmap {
+                    port: 5000,
+                    channels: 2,
+                })).is_ok());
+    assert!(msection.add_attribute(SdpAttribute::SctpPort(5000)).is_ok());
+    assert!(msection.get_attribute(SdpAttributeType::Rtpmap).is_some());
+    assert!(msection.get_attribute(SdpAttributeType::Rtcpfb).is_some());
+    assert!(msection.get_attribute(SdpAttributeType::Fmtp).is_some());
+    assert!(msection.get_attribute(SdpAttributeType::Sctpmap).is_some());
+    assert!(msection.get_attribute(SdpAttributeType::SctpPort).is_some());
+    msection.remove_codecs();
+    assert_eq!(msection.get_formats().len(), 0);
+    assert!(msection.get_attribute(SdpAttributeType::Rtpmap).is_none());
+    assert!(msection.get_attribute(SdpAttributeType::Rtcpfb).is_none());
+    assert!(msection.get_attribute(SdpAttributeType::Fmtp).is_none());
+    assert!(msection.get_attribute(SdpAttributeType::Sctpmap).is_none());
+    assert!(msection.get_attribute(SdpAttributeType::SctpPort).is_none());
 }
 
 #[test]
