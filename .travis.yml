@@ -4,14 +4,17 @@ sudo: required
 dist: trusty
 os:
   - linux
+  - osx
 
 env:
   - FEATURES=""
   - FEATURES="serialize"
 rust:
   - nightly
-  # - beta
+  - beta
   - stable
+  # minimum stable version
+  - 1.17.0
 
 matrix:
   allow_failures:
@@ -57,11 +60,15 @@ script:
     if [[ "$TRAVIS_RUST_VERSION" == "stable" ]]; then
       cargo clippy --all-targets --all-features -- -D warnings;
     fi
-  - cargo test --all-features --verbose --all
+  - |
+    if [[ "$TRAVIS_RUST_VERSION" == "1.17.0" ]]; then
+      cargo test --all-features --verbose --all
+    else
+      cargo test --all-targets --all-features --verbose --all
+    fi
 
 after_success: |
   if [[ "$TRAVIS_OS_NAME" == "linux" && "$TRAVIS_RUST_VERSION" == "nightly" && "$FEATURES" == "serialize" ]]; then
-    # Uncomment the following two lines create and upload a report for codecov.io
     cargo tarpaulin --out Xml &&
     bash <(curl -s https://codecov.io/bash)
   fi
