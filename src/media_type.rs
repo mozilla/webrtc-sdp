@@ -97,6 +97,17 @@ impl ToString for SdpFormatList {
     }
 }
 
+// TODO is this useful outside of tests?
+#[cfg(test)]
+impl SdpFormatList {
+    fn len(&self) -> usize {
+        match *self {
+            SdpFormatList::Integers(ref x) => x.len(),
+            SdpFormatList::Strings(ref x) => x.len(),
+        }
+    }
+}
+
 #[cfg_attr(feature = "serialize", derive(Serialize))]
 pub struct SdpMedia {
     media: SdpMediaLine,
@@ -191,7 +202,8 @@ impl SdpMedia {
                 SdpAttribute::Rtpmap(_)
                 | SdpAttribute::Fmtp(_)
                 | SdpAttribute::Rtcpfb(_)
-                | SdpAttribute::Sctpmap(_) => false,
+                | SdpAttribute::Sctpmap(_)
+                | SdpAttribute::SctpPort(_) => false,
                 _ => true,
             }
         });
@@ -251,10 +263,10 @@ impl SdpMedia {
                 }))?;
             }
         }
-
         if msg_size > 0 {
             self.set_attribute(SdpAttribute::MaxMessageSize(u64::from(msg_size)))?;
         }
+        self.media.media = SdpMediaValue::Application;
 
         Ok(())
     }
@@ -285,6 +297,185 @@ pub fn create_dummy_media_section() -> SdpMedia {
         formats: SdpFormatList::Integers(Vec::new()),
     };
     SdpMedia::new(media_line)
+}
+
+#[cfg(test)]
+pub fn add_dummy_attributes(media: &mut SdpMedia) {
+    assert!(media
+        .add_attribute(SdpAttribute::Rtcpfb(SdpAttributeRtcpFb {
+            payload_type: SdpAttributePayloadType::Wildcard,
+            feedback_type: SdpAttributeRtcpFbType::Ack,
+            parameter: "".to_string(),
+            extra: "".to_string(),
+        },))
+        .is_ok());
+    assert!(media
+        .add_attribute(SdpAttribute::Fmtp(SdpAttributeFmtp {
+            payload_type: 1,
+            parameters: SdpAttributeFmtpParameters {
+                packetization_mode: 0,
+                level_asymmetry_allowed: false,
+                profile_level_id: 0x0042_0010,
+                max_fs: 0,
+                max_cpb: 0,
+                max_dpb: 0,
+                max_br: 0,
+                max_mbps: 0,
+                usedtx: false,
+                stereo: false,
+                useinbandfec: false,
+                cbr: false,
+                max_fr: 0,
+                maxplaybackrate: 48000,
+                encodings: Vec::new(),
+                dtmf_tones: "".to_string(),
+                unknown_tokens: Vec::new()
+            }
+        },))
+        .is_ok());
+    assert!(media
+        .add_attribute(SdpAttribute::Sctpmap(SdpAttributeSctpmap {
+            port: 5000,
+            channels: 2,
+        }))
+        .is_ok());
+    assert!(media.add_attribute(SdpAttribute::BundleOnly).is_ok());
+    assert!(media.add_attribute(SdpAttribute::SctpPort(5000)).is_ok());
+
+    assert!(media.get_attribute(SdpAttributeType::Rtpmap).is_some());
+    assert!(media.get_attribute(SdpAttributeType::Rtcpfb).is_some());
+    assert!(media.get_attribute(SdpAttributeType::Fmtp).is_some());
+    assert!(media.get_attribute(SdpAttributeType::Sctpmap).is_some());
+    assert!(media.get_attribute(SdpAttributeType::SctpPort).is_some());
+    assert!(media.get_attribute(SdpAttributeType::BundleOnly).is_some());
+}
+
+#[test]
+fn test_get_set_port() {
+    let mut msection = create_dummy_media_section();
+    assert_eq!(msection.get_port(), 9);
+    msection.set_port(2048);
+    assert_eq!(msection.get_port(), 2048);
+}
+
+#[test]
+fn test_add_codec() {
+    let mut msection = create_dummy_media_section();
+    assert!(msection
+        .add_codec(SdpAttributeRtpmap::new(96, "foobar".to_string(), 1000))
+        .is_ok());
+    assert_eq!(msection.get_formats().len(), 1);
+    assert!(msection.get_attribute(SdpAttributeType::Rtpmap).is_some());
+
+    let mut msection = create_dummy_media_section();
+    msection.media.formats = SdpFormatList::Strings(Vec::new());
+    assert!(msection
+        .add_codec(SdpAttributeRtpmap::new(97, "boofar".to_string(), 1001))
+        .is_ok());
+    assert_eq!(msection.get_formats().len(), 1);
+    assert!(msection.get_attribute(SdpAttributeType::Rtpmap).is_some());
+}
+
+#[cfg(test)]
+use attribute_type::{
+    SdpAttributeFmtp, SdpAttributeFmtpParameters, SdpAttributePayloadType, SdpAttributeRtcpFb,
+    SdpAttributeRtcpFbType,
+};
+#[test]
+fn test_remove_codecs() {
+    let mut msection = create_dummy_media_section();
+    assert!(msection
+        .add_codec(SdpAttributeRtpmap::new(96, "foobar".to_string(), 1000))
+        .is_ok());
+    assert_eq!(msection.get_formats().len(), 1);
+    assert!(msection.get_attribute(SdpAttributeType::Rtpmap).is_some());
+    msection.remove_codecs();
+    assert_eq!(msection.get_formats().len(), 0);
+    assert!(msection.get_attribute(SdpAttributeType::Rtpmap).is_none());
+
+    let mut msection = create_dummy_media_section();
+    msection.media.formats = SdpFormatList::Strings(Vec::new());
+    assert!(msection
+        .add_codec(SdpAttributeRtpmap::new(97, "boofar".to_string(), 1001))
+        .is_ok());
+    assert_eq!(msection.get_formats().len(), 1);
+
+    add_dummy_attributes(&mut msection);
+
+    msection.remove_codecs();
+    assert_eq!(msection.get_formats().len(), 0);
+    assert!(msection.get_attribute(SdpAttributeType::Rtpmap).is_none());
+    assert!(msection.get_attribute(SdpAttributeType::Rtcpfb).is_none());
+    assert!(msection.get_attribute(SdpAttributeType::Fmtp).is_none());
+    assert!(msection.get_attribute(SdpAttributeType::Sctpmap).is_none());
+    assert!(msection.get_attribute(SdpAttributeType::SctpPort).is_none());
+}
+
+#[test]
+fn test_add_datachannel() {
+    let mut msection = create_dummy_media_section();
+    assert!(msection
+        .add_datachannel("foo".to_string(), 5000, 256, 0)
+        .is_ok());
+    assert_eq!(*msection.get_type(), SdpMediaValue::Application);
+    assert!(msection.get_attribute(SdpAttributeType::SctpPort).is_none());
+    assert!(msection
+        .get_attribute(SdpAttributeType::MaxMessageSize)
+        .is_none());
+    assert!(msection.get_attribute(SdpAttributeType::Sctpmap).is_some());
+    match *msection.get_attribute(SdpAttributeType::Sctpmap).unwrap() {
+        SdpAttribute::Sctpmap(ref s) => {
+            assert_eq!(s.port, 5000);
+            assert_eq!(s.channels, 256);
+        }
+        _ => unreachable!(),
+    }
+
+    let mut msection = create_dummy_media_section();
+    assert!(msection
+        .add_datachannel("foo".to_string(), 5000, 256, 1234)
+        .is_ok());
+    assert_eq!(*msection.get_type(), SdpMediaValue::Application);
+    assert!(msection.get_attribute(SdpAttributeType::SctpPort).is_none());
+    assert!(msection
+        .get_attribute(SdpAttributeType::MaxMessageSize)
+        .is_some());
+    match *msection
+        .get_attribute(SdpAttributeType::MaxMessageSize)
+        .unwrap()
+    {
+        SdpAttribute::MaxMessageSize(m) => {
+            assert_eq!(m, 1234);
+        }
+        _ => unreachable!(),
+    }
+
+    let mut msection = create_dummy_media_section();
+    msection.media.proto = SdpProtocolValue::UdpDtlsSctp;
+    assert!(msection
+        .add_datachannel("foo".to_string(), 5000, 256, 5678)
+        .is_ok());
+    assert_eq!(*msection.get_type(), SdpMediaValue::Application);
+    assert!(msection.get_attribute(SdpAttributeType::Sctpmap).is_none());
+    assert!(msection.get_attribute(SdpAttributeType::SctpPort).is_some());
+    match *msection.get_attribute(SdpAttributeType::SctpPort).unwrap() {
+        SdpAttribute::SctpPort(s) => {
+            assert_eq!(s, 5000);
+        }
+        _ => unreachable!(),
+    }
+    assert!(msection
+        .get_attribute(SdpAttributeType::MaxMessageSize)
+        .is_some());
+    match *msection
+        .get_attribute(SdpAttributeType::MaxMessageSize)
+        .unwrap()
+    {
+        SdpAttribute::MaxMessageSize(m) => {
+            assert_eq!(m, 5678);
+        }
+        _ => unreachable!(),
+    }
 }
 
 fn parse_media_token(value: &str) -> Result<SdpMediaValue, SdpParserInternalError> {
@@ -465,7 +656,7 @@ fn check_parse(media_line_str: &str) -> SdpMediaLine {
     if let Ok(SdpType::Media(media_line)) = parse_media(media_line_str) {
         media_line
     } else {
-        unreachable!();
+        unreachable!()
     }
 }
 

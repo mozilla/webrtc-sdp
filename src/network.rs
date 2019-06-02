@@ -1,4 +1,3 @@
-use std::fmt;
 use std::net::IpAddr;
 use std::str::FromStr;
 
@@ -16,13 +15,10 @@ impl SdpAddrType {
     }
 }
 
-impl fmt::Display for SdpAddrType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let printable = match *self {
-            SdpAddrType::IP4 => "Ip4",
-            SdpAddrType::IP6 => "Ip6",
-        };
-        write!(f, "{}", printable)
+pub fn addr_to_string(addr: IpAddr) -> String {
+    match addr {
+        IpAddr::V4(ipv4) => format!("IN IP4 {}", ipv4.to_string()),
+        IpAddr::V6(ipv6) => format!("IN IP6 {}", ipv6.to_string()),
     }
 }
 

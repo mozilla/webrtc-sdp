@@ -27,5 +27,5 @@ fn main() {
         Ok(s) => s,
     };
 
-    webrtc_sdp::parse_sdp(&s, true).is_ok();
+    assert!(webrtc_sdp::parse_sdp(&s, true).is_ok());
 }

@@ -1,6 +1,7 @@
 language: rust
 cache: cargo
-sudo: true
+sudo: required
+dist: trusty
 os:
   - linux
   - osx
@@ -12,7 +13,7 @@ rust:
   - nightly
   - beta
   - stable
-  # mimimum stable version because we use init shorthand
+  # minimum stable version
   - 1.17.0
 
 matrix:
@@ -30,6 +31,13 @@ addons:
       - cmake
       - gcc
       - binutils-dev
+      - libssl-dev
+
+# Add tarpaulin
+before_cache: |
+  if [[ "$TRAVIS_OS_NAME" == "linux" && "$TRAVIS_RUST_VERSION" == "nightly" && "$FEATURES" == "serialize" ]]; then
+    RUSTFLAGS="--cfg procmacro2_semver_exempt" cargo install cargo-tarpaulin -f
+  fi
 
 # Add clippy
 before_script:
@@ -46,6 +54,7 @@ script:
     if [[ "$TRAVIS_RUST_VERSION" == "stable" ]]; then
       cargo fmt --all -- --check
     fi
+  - cargo clean
   - cargo build --verbose --all --features="$FEATURES"
   - |
     if [[ "$TRAVIS_RUST_VERSION" == "stable" ]]; then
@@ -58,24 +67,8 @@ script:
       cargo test --all-targets --all-features --verbose --all
     fi
 
-
-after_success:
-  - |
-      if [[ "$TRAVIS_OS_NAME" == "linux" && "$TRAVIS_RUST_VERSION" == "stable" && "$FEATURES" == "serialize" ]]; then
-        wget https://github.com/SimonKagstrom/kcov/archive/v34.tar.gz &&
-        tar xzf v34.tar.gz &&
-        cd kcov-34 &&
-        mkdir build &&
-        cd build &&
-        cmake .. &&
-        make &&
-        sudo make install &&
-        cd ../.. &&
-        rm -rf kcov-34 &&
-        kcov --version &&
-        (cd target/debug/ && ls -al) &&
-        for file in target/debug/webrtc_sdp-*[^\.d]; do echo "$file"; mkdir -p "target/cov/$(basename $file)"; kcov --verify --exclude-pattern=/.cargo,/usr/lib "target/cov/$(basename $file)" "$file"; done &&
-        for file in target/debug/unit_tests-*[^\.d]; do echo "$file"; mkdir -p "target/cov/$(basename $file)"; kcov --verify --exclude-pattern=/.cargo,/usr/lib "target/cov/$(basename $file)" "$file"; done &&
-        bash <(curl -s https://codecov.io/bash) &&
-        echo "Uploaded code coverage"
-      fi
+after_success: |
+  if [[ "$TRAVIS_OS_NAME" == "linux" && "$TRAVIS_RUST_VERSION" == "nightly" && "$FEATURES" == "serialize" ]]; then
+    cargo tarpaulin --out Xml &&
+    bash <(curl -s https://codecov.io/bash)
+  fi

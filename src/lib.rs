@@ -18,15 +18,15 @@ pub mod media_type;
 pub mod network;
 
 use attribute_type::{
-    addr_to_string, parse_attribute, SdpAttribute, SdpAttributeRid, SdpAttributeSimulcastVersion,
-    SdpAttributeType, SdpSingleDirection,
+    parse_attribute, SdpAttribute, SdpAttributeRid, SdpAttributeSimulcastVersion, SdpAttributeType,
+    SdpSingleDirection,
 };
 use error::{SdpParserError, SdpParserInternalError};
 use media_type::{
     parse_media, parse_media_vector, SdpFormatList, SdpMedia, SdpMediaLine, SdpMediaValue,
     SdpProtocolValue,
 };
-use network::{parse_addrtype, parse_nettype, parse_unicast_addr};
+use network::{addr_to_string, parse_addrtype, parse_nettype, parse_unicast_addr};
 
 #[cfg_attr(feature = "serialize", derive(Serialize))]
 pub enum SdpBandwidth {
@@ -58,11 +58,8 @@ pub struct SdpConnection {
 impl ToString for SdpConnection {
     fn to_string(&self) -> String {
         format!(
-            "IN {addr}{ttl}{amount}",
-            addr = match self.addr {
-                IpAddr::V4(ipv4) => format!("IP4 {}", ipv4.to_string()),
-                IpAddr::V6(ipv6) => format!("IP6 {}", ipv6.to_string()),
-            },
+            "{addr}{ttl}{amount}",
+            addr = addr_to_string(self.addr),
             ttl = option_to_string!("/{}", self.ttl),
             amount = option_to_string!("/{}", self.amount)
         )
@@ -355,7 +352,7 @@ fn parse_origin(value: &str) -> Result<SdpType, SdpParserInternalError> {
     match tokens.next() {
         None => {
             return Err(SdpParserInternalError::Generic(
-                "Origin type is missing session version token".to_string(),
+                "Origin type is missing network type token".to_string(),
             ));
         }
         Some(x) => parse_nettype(x)?,
@@ -394,13 +391,27 @@ fn parse_origin(value: &str) -> Result<SdpType, SdpParserInternalError> {
 #[test]
 fn test_origin_works() {
     assert!(parse_origin("mozilla 506705521068071134 0 IN IP4 0.0.0.0").is_ok());
-    assert!(parse_origin("mozilla 506705521068071134 0 IN IP6 ::1").is_ok());
+    assert!(parse_origin("mozilla 506705521068071134 0 IN IP6 2001:db8::1").is_ok());
 }
 
 #[test]
-fn test_origin_wrong_amount_of_tokens() {
-    assert!(parse_origin("a b c d e").is_err());
-    assert!(parse_origin("a b c d e f g").is_err());
+fn test_origin_missing_username() {
+    assert!(parse_origin("").is_err());
+}
+
+#[test]
+fn test_origin_missing_session_id() {
+    assert!(parse_origin("mozilla ").is_err());
+}
+
+#[test]
+fn test_origin_missing_session_version() {
+    assert!(parse_origin("mozilla 506705521068071134 ").is_err());
+}
+
+#[test]
+fn test_origin_missing_nettype() {
+    assert!(parse_origin("mozilla 506705521068071134 0 ").is_err());
 }
 
 #[test]
@@ -409,12 +420,22 @@ fn test_origin_unsupported_nettype() {
 }
 
 #[test]
+fn test_origin_missing_addtype() {
+    assert!(parse_origin("mozilla 506705521068071134 0 IN ").is_err());
+}
+
+#[test]
+fn test_origin_missing_ip_addr() {
+    assert!(parse_origin("mozilla 506705521068071134 0 IN IP4 ").is_err());
+}
+
+#[test]
 fn test_origin_unsupported_addrtpe() {
     assert!(parse_origin("mozilla 506705521068071134 0 IN IP1 0.0.0.0").is_err());
 }
 
 #[test]
-fn test_origin_broken_ip_addr() {
+fn test_origin_invalid_ip_addr() {
     assert!(parse_origin("mozilla 506705521068071134 0 IN IP4 1.1.1.256").is_err());
     assert!(parse_origin("mozilla 506705521068071134 0 IN IP6 ::g").is_err());
 }
@@ -459,6 +480,8 @@ fn parse_connection(value: &str) -> Result<SdpType, SdpParserInternalError> {
 fn connection_works() {
     assert!(parse_connection("IN IP4 127.0.0.1").is_ok());
     assert!(parse_connection("IN IP4 127.0.0.1/10/10").is_ok());
+    assert!(parse_connection("IN IP6 ::1").is_ok());
+    assert!(parse_connection("IN IP6 ::1/1/1").is_ok());
 }
 
 #[test]
@@ -739,39 +762,45 @@ fn test_parse_sdp_line_invalid_a_line() {
 }
 
 fn sanity_check_sdp_session(session: &SdpSession) -> Result<(), SdpParserError> {
-    let make_error = |x: &str| SdpParserError::Sequence {
+    let make_seq_error = |x: &str| SdpParserError::Sequence {
         message: x.to_string(),
         line_number: 0,
     };
 
     if session.timing.is_none() {
-        return Err(SdpParserError::Sequence {
-            message: "Missing timing type".to_string(),
-            line_number: 0,
-        });
+        return Err(make_seq_error("Missing timing type at session level"));
+    }
+
+    let mut mconnections = 0;
+    for msection in &session.media {
+        if msection.get_connection().is_some() {
+            mconnections += 1;
+        }
     }
 
     if session.get_connection().is_none() {
-        for msection in &session.media {
-            if msection.get_connection().is_none() {
-                return Err(SdpParserError::Sequence {
-                    message: "Each media section must define a connection
-                              if it is not defined on session level"
-                        .to_string(),
-                    line_number: 0,
-                });
-            }
+        if session.media.is_empty() {
+            return Err(make_seq_error("Missing connection type at session level"));
         }
+        if mconnections != session.media.len() {
+            return Err(make_seq_error(
+                "Without connection type at session level all media section
+                 must have connection types",
+            ));
+        }
+    } else if mconnections > 0 {
+        return Err(make_seq_error(
+            "Session xor media sections can define connection types, but not both",
+        ));
     }
 
     // Check that extmaps are not defined on session and media level
     if session.get_attribute(SdpAttributeType::Extmap).is_some() {
         for msection in &session.media {
             if msection.get_attribute(SdpAttributeType::Extmap).is_some() {
-                return Err(SdpParserError::Sequence {
-                    message: "Extmap can't be define at session and media level".to_string(),
-                    line_number: 0,
-                });
+                return Err(make_seq_error(
+                    "Extmap can't be define at session and media level",
+                ));
             }
         }
     }
@@ -782,11 +811,9 @@ fn sanity_check_sdp_session(session: &SdpSession) -> Result<(), SdpParserError> 
                 msection.get_attribute(SdpAttributeType::Simulcast)
             {
                 if !x.receive.is_empty() {
-                    return Err(SdpParserError::Sequence {
-                        message: "Simulcast can't define receive parameters for sendonly"
-                            .to_string(),
-                        line_number: 0,
-                    });
+                    return Err(make_seq_error(
+                        "Simulcast can't define receive parameters for sendonly",
+                    ));
                 }
             }
         }
@@ -795,10 +822,9 @@ fn sanity_check_sdp_session(session: &SdpSession) -> Result<(), SdpParserError> 
                 msection.get_attribute(SdpAttributeType::Simulcast)
             {
                 if !x.send.is_empty() {
-                    return Err(SdpParserError::Sequence {
-                        message: "Simulcast can't define send parameters for recvonly".to_string(),
-                        line_number: 0,
-                    });
+                    return Err(make_seq_error(
+                        "Simulcast can't define send parameters for recvonly",
+                    ));
                 }
             }
         }
@@ -830,12 +856,16 @@ fn sanity_check_sdp_session(session: &SdpSession) -> Result<(), SdpParserError> 
             match *msection.get_formats() {
                 SdpFormatList::Integers(ref int_fmt) => {
                     if !int_fmt.contains(&(u32::from(*rid_format))) {
-                        return Err(make_error("Rid pts must be declared in the media section"));
+                        return Err(make_seq_error(
+                            "Rid pts must be declared in the media section",
+                        ));
                     }
                 }
                 SdpFormatList::Strings(ref str_fmt) => {
                     if !str_fmt.contains(&rid_format.to_string()) {
-                        return Err(make_error("Rid pts must be declared in the media section"));
+                        return Err(make_seq_error(
+                            "Rid pts must be declared in the media section",
+                        ));
                     }
                 }
             }
@@ -850,7 +880,7 @@ fn sanity_check_sdp_session(session: &SdpSession) -> Result<(), SdpParserError> 
                  -> Result<(), SdpParserError> {
                     for simulcast_rid in simulcast_version_list.iter().flat_map(|x| &x.ids) {
                         if !rid_ids.contains(&simulcast_rid.id.as_str()) {
-                            return Err(make_error(
+                            return Err(make_seq_error(
                                 "Simulcast RIDs must be defined in any rid attribute",
                             ));
                         }
@@ -879,10 +909,10 @@ fn create_dummy_sdp_session() -> SdpSession {
         if let Ok(SdpType::Connection(c)) = connection {
             sdp_session.connection = Some(c);
         } else {
-            panic!("Sdp type is not Connection")
+            unreachable!();
         }
     } else {
-        panic!("SdpType is not Origin");
+        unreachable!();
     }
     sdp_session
 }
@@ -917,6 +947,50 @@ fn test_sanity_check_sdp_session_media() {
 }
 
 #[test]
+fn test_sanity_check_sdp_connection() {
+    let origin = parse_origin("mozilla 506705521068071134 0 IN IP4 0.0.0.0");
+    assert!(origin.is_ok());
+    let mut sdp_session;
+    if let SdpType::Origin(o) = origin.unwrap() {
+        sdp_session = SdpSession::new(0, o, "-".to_string());
+    } else {
+        unreachable!();
+    }
+    let t = SdpTiming { start: 0, stop: 0 };
+    sdp_session.set_timing(t);
+
+    assert!(sanity_check_sdp_session(&sdp_session).is_err());
+
+    // the dummy media section doesn't contain a connection
+    sdp_session.extend_media(vec![create_dummy_media_section()]);
+
+    assert!(sanity_check_sdp_session(&sdp_session).is_err());
+
+    let connection = parse_connection("IN IP6 ::1");
+    assert!(connection.is_ok());
+    if let Ok(SdpType::Connection(c)) = connection {
+        sdp_session.connection = Some(c);
+    } else {
+        unreachable!();
+    }
+
+    assert!(sanity_check_sdp_session(&sdp_session).is_ok());
+
+    let mut second_media = create_dummy_media_section();
+    let mconnection = parse_connection("IN IP4 0.0.0.0");
+    assert!(mconnection.is_ok());
+    if let Ok(SdpType::Connection(c)) = mconnection {
+        assert!(second_media.set_connection(c).is_ok());
+    } else {
+        unreachable!();
+    }
+    sdp_session.extend_media(vec![second_media]);
+    assert!(sdp_session.media.len() == 2);
+
+    assert!(sanity_check_sdp_session(&sdp_session).is_err());
+}
+
+#[test]
 fn test_sanity_check_sdp_session_extmap() {
     let mut sdp_session = create_dummy_sdp_session();
     let t = SdpTiming { start: 0, stop: 0 };
@@ -930,7 +1004,7 @@ fn test_sanity_check_sdp_session_extmap() {
     if let SdpType::Attribute(a) = attribute.unwrap() {
         extmap = a;
     } else {
-        panic!("SdpType is not Attribute");
+        unreachable!();
     }
     let ret = sdp_session.add_attribute(extmap);
     assert!(ret.is_ok());
@@ -947,7 +1021,7 @@ fn test_sanity_check_sdp_session_extmap() {
     if let SdpType::Attribute(ma) = mattribute.unwrap() {
         mextmap = ma;
     } else {
-        panic!("SdpType is not Attribute");
+        unreachable!();
     }
     let mut second_media = create_dummy_media_section();
     assert!(second_media.add_attribute(mextmap).is_ok());
@@ -1039,7 +1113,8 @@ pub fn parse_sdp(sdp: &str, fail_on_warning: bool) -> Result<SdpSession, SdpPars
             line_number: 0,
         });
     }
-    if sdp.len() < 40 {
+    // see test_parse_sdp_minimal_sdp_successfully
+    if sdp.len() < 51 {
         return Err(SdpParserError::Line {
             error: SdpParserInternalError::Generic("string too short to be valid SDP".to_string()),
             line: sdp.to_string(),
@@ -1127,8 +1202,9 @@ fn test_parse_sdp_to_short_string() {
 fn test_parse_sdp_minimal_sdp_successfully() {
     assert!(parse_sdp(
         "v=0\r\n
-o=- 0 0 IN IP4 0.0.0.0\r\n
+o=- 0 0 IN IP6 ::1\r\n
 s=-\r\n
+c=IN IP6 ::1\r\n
 t=0 0\r\n",
         true
     )
