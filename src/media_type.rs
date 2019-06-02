@@ -424,7 +424,7 @@ fn test_add_datachannel() {
         .is_none());
     assert!(msection.get_attribute(SdpAttributeType::Sctpmap).is_some());
     match msection.get_attribute(SdpAttributeType::Sctpmap).unwrap() {
-        SdpAttribute::Sctpmap(s) => {
+        &SdpAttribute::Sctpmap(ref s) => {
             assert_eq!(s.port, 5000);
             assert_eq!(s.channels, 256);
         }
@@ -444,8 +444,8 @@ fn test_add_datachannel() {
         .get_attribute(SdpAttributeType::MaxMessageSize)
         .unwrap()
     {
-        SdpAttribute::MaxMessageSize(m) => {
-            assert_eq!(*m, 1234);
+        &SdpAttribute::MaxMessageSize(m) => {
+            assert_eq!(m, 1234);
         }
         _ => unreachable!(),
     }
@@ -459,8 +459,8 @@ fn test_add_datachannel() {
     assert!(msection.get_attribute(SdpAttributeType::Sctpmap).is_none());
     assert!(msection.get_attribute(SdpAttributeType::SctpPort).is_some());
     match msection.get_attribute(SdpAttributeType::SctpPort).unwrap() {
-        SdpAttribute::SctpPort(s) => {
-            assert_eq!(*s, 5000);
+        &SdpAttribute::SctpPort(s) => {
+            assert_eq!(s, 5000);
         }
         _ => unreachable!(),
     }
@@ -471,8 +471,8 @@ fn test_add_datachannel() {
         .get_attribute(SdpAttributeType::MaxMessageSize)
         .unwrap()
     {
-        SdpAttribute::MaxMessageSize(m) => {
-            assert_eq!(*m, 5678);
+        &SdpAttribute::MaxMessageSize(m) => {
+            assert_eq!(m, 5678);
         }
         _ => unreachable!(),
     }
