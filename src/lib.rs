@@ -96,6 +96,7 @@ impl ToString for SdpOrigin {
 impl AnonymizingClone for SdpOrigin {
     fn masked_clone(&self, anon: &mut StatefulSdpAnonymizer) -> Self {
         let mut masked = self.clone();
+        masked.username = anon.mask_origin_user(&self.username);
         masked.unicast_addr = anon.mask_ip(&masked.unicast_addr);
         masked
     }
@@ -466,8 +467,8 @@ fn test_mask_origin() {
     if let SdpType::Origin(origin_1) = parse_origin("mozilla 506705521068071134 0 IN IP4 0.0.0.0").unwrap() {
         for _ in 0..2 {
             let masked = origin_1.masked_clone(&mut anon);
-            assert!(origin_1.username == "origin-user-00000001");
-            assert!(origin_1.unicast_addr == std::net::Ipv4Addr::from(1));
+            assert_eq!(masked.username, "origin-user-00000001");
+            assert_eq!(masked.unicast_addr, std::net::Ipv4Addr::from(1));
         }
     } else {
         unreachable!();
