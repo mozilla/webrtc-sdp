@@ -6,6 +6,8 @@ use error::SdpParserInternalError;
 use network::{parse_addrtype, parse_nettype, parse_unicast_addr};
 use SdpType;
 
+use anonymizer::{AnonymizingClone, StatefulSdpAnonymizer};
+
 // Serialization helper marcos and functions
 #[macro_export]
 macro_rules! option_to_string {
@@ -264,6 +266,17 @@ impl ToString for SdpAttributeCandidate {
                 .map(|&(ref name, ref value)| format!(" {} {}", name, value))
                 .collect::<String>()
         )
+    }
+}
+
+impl AnonymizingClone for SdpAttributeCandidate {
+    fn masked_clone(&self, anonymizer: &mut StatefulSdpAnonymizer) -> Self {
+        let mut masked = self.clone();
+        masked.address = anonymizer.mask_ip(&self.address);
+        masked.port = anonymizer.mask_port(self.port);
+        masked.raddr = self.raddr.and_then(|addr| Some(anonymizer.mask_ip(&addr)));
+        masked.rport = self.rport.and_then(|port| Some(anonymizer.mask_port(port)));
+        masked
     }
 }
 
@@ -638,6 +651,14 @@ impl ToString for SdpAttributeFingerprint {
                 .collect::<Vec<String>>()
                 .join(":")
         )
+    }
+}
+
+impl AnonymizingClone for SdpAttributeFingerprint {
+    fn masked_clone(&self, anon: &mut StatefulSdpAnonymizer) -> Self {
+        let mut masked = self.clone();
+        masked.fingerprint = anon.mask_cert_finger_print(&self.fingerprint);
+        masked
     }
 }
 
@@ -2841,6 +2862,41 @@ fn test_parse_attribute_candidate_and_serialize() {
 }
 
 #[test]
+fn test_anonymize_attribute_candidate() {
+    let mut anon = StatefulSdpAnonymizer::new();
+    let candidate_1 = parse_attribute("candidate:0 1 TCP 2122252543 ::8 49760 typ host").unwrap();
+    let candidate_2 =
+        parse_attribute("candidate:0 1 UDP 2122252543 172.16.156.106 19361 typ srflx").unwrap();
+    let candidate_3 = parse_attribute("candidate:1 1 TCP 1685987071 24.23.204.141 54609 typ srflx raddr 192.168.1.4 rport 61665 tcptype passive generation 1 ufrag +DGd").unwrap();
+    if let SdpType::Attribute(SdpAttribute::Candidate(candidate)) = candidate_1 {
+        let masked = candidate.masked_clone(&mut anon);
+        assert!(masked.address == std::net::Ipv6Addr::from(1));
+        assert!(masked.port == 1);
+    } else {
+        unreachable!();
+    }
+
+    if let SdpType::Attribute(SdpAttribute::Candidate(candidate)) = candidate_2 {
+        let masked = candidate.masked_clone(&mut anon);
+        assert!(masked.address == std::net::Ipv4Addr::from(1));
+        assert!(masked.port == 2);
+    } else {
+        unreachable!();
+    }
+
+    if let SdpType::Attribute(SdpAttribute::Candidate(candidate)) = candidate_3 {
+        let masked = candidate.masked_clone(&mut anon);
+        assert!(masked.address == std::net::Ipv4Addr::from(2));
+        assert!(masked.port == 3);
+        println!("{}", masked.raddr.unwrap());
+        assert!(masked.raddr.unwrap() == std::net::Ipv4Addr::from(3));
+        assert!(masked.rport.unwrap() == 4);
+    } else {
+        assert!(false);
+    }
+}
+
+#[test]
 fn test_parse_attribute_candidate_errors() {
     assert!(parse_attribute("candidate:0 1 UDP 2122252543 172.16.156.106 49760 typ").is_err());
     assert!(
@@ -3028,6 +3084,21 @@ fn test_parse_attribute_fingerprint() {
         "fingerprint:sha-1 CD:B:D1:62:16:95:7B:B7:EB:74:E2:39:27:97:EB:0B:23:73:AC:BC"
     )
     .is_err());
+}
+
+#[test]
+fn test_anonymize_attribute_fingerprint() {
+    let mut anon = StatefulSdpAnonymizer::new();
+    let print_1 = parse_attribute(
+        "fingerprint:sha-1 CD:34:D1:62:16:95:7B:B7:EB:74:E2:39:27:97:EB:0B:23:73:AC:BC",
+    )
+    .unwrap();
+    if let SdpType::Attribute(SdpAttribute::Fingerprint(print)) = print_1 {
+        println!("{}", print.masked_clone(&mut anon).to_string());
+        assert!(print.masked_clone(&mut anon).to_string() == "sha-1 00:00:00:00:00:00:00:01");
+    } else {
+        unreachable!();
+    }
 }
 
 #[test]

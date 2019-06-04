@@ -4,6 +4,7 @@ use attribute_type::{
 use error::{SdpParserError, SdpParserInternalError};
 use {SdpBandwidth, SdpConnection, SdpLine, SdpType};
 
+#[derive(Clone)]
 #[cfg_attr(feature = "serialize", derive(Serialize))]
 pub struct SdpMediaLine {
     pub media: SdpMediaValue,
@@ -26,7 +27,7 @@ impl ToString for SdpMediaLine {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(feature = "serialize", derive(Serialize))]
 pub enum SdpMediaValue {
     Audio,
@@ -45,7 +46,7 @@ impl ToString for SdpMediaValue {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(feature = "serialize", derive(Serialize))]
 pub enum SdpProtocolValue {
     RtpAvp,
@@ -82,6 +83,7 @@ impl ToString for SdpProtocolValue {
     }
 }
 
+#[derive(Clone)]
 #[cfg_attr(feature = "serialize", derive(Serialize))]
 pub enum SdpFormatList {
     Integers(Vec<u32>),
@@ -97,6 +99,7 @@ impl ToString for SdpFormatList {
     }
 }
 
+#[derive(Clone)]
 #[cfg_attr(feature = "serialize", derive(Serialize))]
 pub struct SdpMedia {
     media: SdpMediaLine,

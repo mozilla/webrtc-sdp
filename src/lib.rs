@@ -13,10 +13,12 @@ use std::str::FromStr;
 
 #[macro_use]
 pub mod attribute_type;
+pub mod anonymizer;
 pub mod error;
 pub mod media_type;
 pub mod network;
 
+use anonymizer::{AnonymizingClone, StatefulSdpAnonymizer};
 use attribute_type::{
     addr_to_string, parse_attribute, SdpAttribute, SdpAttributeRid, SdpAttributeSimulcastVersion,
     SdpAttributeType, SdpSingleDirection,
@@ -28,6 +30,7 @@ use media_type::{
 };
 use network::{parse_addrtype, parse_nettype, parse_unicast_addr};
 
+#[derive(Clone)]
 #[cfg_attr(feature = "serialize", derive(Serialize))]
 pub enum SdpBandwidth {
     As(u32),
@@ -69,6 +72,7 @@ impl ToString for SdpConnection {
     }
 }
 
+#[derive(Clone)]
 #[cfg_attr(feature = "serialize", derive(Serialize))]
 pub struct SdpOrigin {
     pub username: String,
@@ -89,6 +93,15 @@ impl ToString for SdpOrigin {
     }
 }
 
+impl AnonymizingClone for SdpOrigin {
+    fn masked_clone(&self, anon: &mut StatefulSdpAnonymizer) -> Self {
+        let mut masked = self.clone();
+        masked.unicast_addr = anon.mask_ip(&masked.unicast_addr);
+        masked
+    }
+}
+
+#[derive(Clone)]
 #[cfg_attr(feature = "serialize", derive(Serialize))]
 pub struct SdpTiming {
     pub start: u64,
@@ -121,6 +134,7 @@ pub struct SdpLine {
     pub sdp_type: SdpType,
 }
 
+#[derive(Clone)]
 #[cfg_attr(feature = "serialize", derive(Serialize))]
 pub struct SdpSession {
     pub version: u64,
@@ -292,6 +306,28 @@ impl ToString for SdpSession {
     }
 }
 
+impl AnonymizingClone for SdpSession {
+    fn masked_clone(&self, anon: &mut StatefulSdpAnonymizer) -> Self {
+        let mut masked: SdpSession = self.clone();
+        let attributes = masked.attribute;
+        masked.attribute = Vec::new();
+        for mut attribute in attributes {
+            masked.attribute.push(match attribute {
+                SdpAttribute::Candidate(candidate) => {
+                    SdpAttribute::Candidate(candidate.masked_clone(anon))
+                }
+                SdpAttribute::IcePwd(pwd) => SdpAttribute::IcePwd(anon.mask_ice_password(&pwd)),
+                SdpAttribute::IceUfrag(ufrag) => SdpAttribute::IceUfrag(anon.mask_ice_user(&ufrag)),
+                SdpAttribute::Fingerprint(print) => {
+                    SdpAttribute::Fingerprint(print.masked_clone(anon))
+                }
+                x => x,
+            });
+        }
+        masked
+    }
+}
+
 fn parse_session(value: &str) -> Result<SdpType, SdpParserInternalError> {
     trace!("session: {}", value);
     Ok(SdpType::Session(String::from(value)))
@@ -422,6 +458,20 @@ fn test_origin_broken_ip_addr() {
 #[test]
 fn test_origin_addr_type_mismatch() {
     assert!(parse_origin("mozilla 506705521068071134 0 IN IP4 ::1").is_err());
+}
+
+#[test]
+fn test_mask_origin() {
+    let mut anon = StatefulSdpAnonymizer::new();
+    if let SdpType::Origin(origin_1) = parse_origin("mozilla 506705521068071134 0 IN IP4 0.0.0.0").unwrap() {
+        for _ in 0..2 {
+            let masked = origin_1.masked_clone(&mut anon);
+            assert!(origin_1.username == "origin-user-00000001");
+            assert!(origin_1.unicast_addr == std::net::Ipv4Addr::from(1));
+        }
+    } else {
+        unreachable!();
+    }
 }
 
 fn parse_connection(value: &str) -> Result<SdpType, SdpParserInternalError> {
@@ -1253,4 +1303,17 @@ a=ice-lite\r\n",
         true
     )
     .is_err());
+}
+
+#[test]
+fn test_mask_sdp() {
+    let mut anon = StatefulSdpAnonymizer::new();
+    let sdp = parse_sdp("v=0\r\n
+    o=- 4294967296 2 IN IP4 127.0.0.1\r\n
+    s=SIP Call\r\n
+    c=IN IP4 198.51.100.7\r\n
+    t=0 0\r\n
+    m=video 56436 RTP/SAVPF 120\r\n
+    a=rtpmap:120 VP8/90000\r\n", true);
+
 }
