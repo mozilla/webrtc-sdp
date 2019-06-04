@@ -49,7 +49,7 @@ impl error::Error for SdpParserInternalError {
         }
     }
 
-    fn cause(&self) -> Option<&error::Error> {
+    fn cause(&self) -> Option<&dyn error::Error> {
         match *self {
             SdpParserInternalError::Integer(ref error) => Some(error),
             SdpParserInternalError::Float(ref error) => Some(error),
@@ -241,7 +241,7 @@ impl error::Error for SdpParserError {
         }
     }
 
-    fn cause(&self) -> Option<&error::Error> {
+    fn cause(&self) -> Option<&dyn error::Error> {
         match *self {
             SdpParserError::Line { ref error, .. }
             | SdpParserError::Unsupported { ref error, .. } => Some(error),
