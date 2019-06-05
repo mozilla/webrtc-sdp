@@ -6,6 +6,8 @@ use error::SdpParserInternalError;
 use network::{addr_to_string, parse_addrtype, parse_nettype, parse_unicast_addr};
 use SdpType;
 
+use anonymizer::{AnonymizingClone, StatefulSdpAnonymizer};
+
 // Serialization helper marcos and functions
 #[macro_export]
 macro_rules! option_to_string {
@@ -260,6 +262,17 @@ impl ToString for SdpAttributeCandidate {
     }
 }
 
+impl AnonymizingClone for SdpAttributeCandidate {
+    fn masked_clone(&self, anonymizer: &mut StatefulSdpAnonymizer) -> Self {
+        let mut masked = self.clone();
+        masked.address = anonymizer.mask_ip(&self.address);
+        masked.port = anonymizer.mask_port(self.port);
+        masked.raddr = self.raddr.and_then(|addr| Some(anonymizer.mask_ip(&addr)));
+        masked.rport = self.rport.and_then(|port| Some(anonymizer.mask_port(port)));
+        masked
+    }
+}
+
 #[derive(Clone)]
 #[cfg_attr(feature = "serialize", derive(Serialize))]
 pub enum SdpAttributeDtlsMessage {
@@ -292,6 +305,15 @@ impl ToString for SdpAttributeRemoteCandidate {
             addr = self.address.to_string(),
             port = self.port.to_string()
         )
+    }
+}
+
+impl AnonymizingClone for SdpAttributeRemoteCandidate {
+    fn masked_clone(&self, anon: &mut StatefulSdpAnonymizer) -> Self {
+        let mut masked = self.clone();
+        masked.address = anon.mask_ip(&self.address);
+        masked.port = anon.mask_port(self.port);
+        masked
     }
 }
 
@@ -631,6 +653,14 @@ impl ToString for SdpAttributeFingerprint {
                 .collect::<Vec<String>>()
                 .join(":")
         )
+    }
+}
+
+impl AnonymizingClone for SdpAttributeFingerprint {
+    fn masked_clone(&self, anon: &mut StatefulSdpAnonymizer) -> Self {
+        let mut masked = self.clone();
+        masked.fingerprint = anon.mask_cert_finger_print(&self.fingerprint);
+        masked
     }
 }
 
@@ -1277,6 +1307,19 @@ impl ToString for SdpAttribute {
             SdpAttribute::Simulcast(ref a) => attr_to_string(a.to_string()),
             SdpAttribute::Ssrc(ref a) => attr_to_string(a.to_string()),
             SdpAttribute::SsrcGroup(ref a) => attr_to_string(a.to_string()),
+        }
+    }
+}
+
+impl AnonymizingClone for SdpAttribute {
+    fn masked_clone(&self, anon: &mut StatefulSdpAnonymizer) -> Self {
+        match self {
+            SdpAttribute::Candidate(i) => SdpAttribute::Candidate(i.masked_clone(anon)),
+            SdpAttribute::Fingerprint(i) => SdpAttribute::Fingerprint(i.masked_clone(anon)),
+            SdpAttribute::IcePwd(i) => SdpAttribute::IcePwd(anon.mask_ice_password(i)),
+            SdpAttribute::IceUfrag(i) => SdpAttribute::IceUfrag(anon.mask_ice_user(i)),
+            SdpAttribute::RemoteCandidate(i) => SdpAttribute::RemoteCandidate(i.masked_clone(anon)),
+            _ => self.clone(),
         }
     }
 }
@@ -2835,6 +2878,40 @@ fn test_parse_attribute_candidate_and_serialize() {
 }
 
 #[test]
+fn test_anonymize_attribute_candidate() {
+    let mut anon = StatefulSdpAnonymizer::new();
+    let candidate_1 = parse_attribute("candidate:0 1 TCP 2122252543 ::8 49760 typ host").unwrap();
+    let candidate_2 =
+        parse_attribute("candidate:0 1 UDP 2122252543 172.16.156.106 19361 typ srflx").unwrap();
+    let candidate_3 = parse_attribute("candidate:1 1 TCP 1685987071 24.23.204.141 54609 typ srflx raddr 192.168.1.4 rport 61665 tcptype passive generation 1 ufrag +DGd").unwrap();
+    if let SdpType::Attribute(SdpAttribute::Candidate(candidate)) = candidate_1 {
+        let masked = candidate.masked_clone(&mut anon);
+        assert!(masked.address == std::net::Ipv6Addr::from(1));
+        assert!(masked.port == 1);
+    } else {
+        unreachable!();
+    }
+
+    if let SdpType::Attribute(SdpAttribute::Candidate(candidate)) = candidate_2 {
+        let masked = candidate.masked_clone(&mut anon);
+        assert!(masked.address == std::net::Ipv4Addr::from(1));
+        assert!(masked.port == 2);
+    } else {
+        unreachable!();
+    }
+
+    if let SdpType::Attribute(SdpAttribute::Candidate(candidate)) = candidate_3 {
+        let masked = candidate.masked_clone(&mut anon);
+        assert!(masked.address == std::net::Ipv4Addr::from(2));
+        assert!(masked.port == 3);
+        assert!(masked.raddr.unwrap() == std::net::Ipv4Addr::from(3));
+        assert!(masked.rport.unwrap() == 4);
+    } else {
+        unreachable!();
+    }
+}
+
+#[test]
 fn test_parse_attribute_candidate_errors() {
     assert!(parse_attribute("candidate:0 1 UDP 2122252543 172.16.156.106 49760 typ").is_err());
     assert!(
@@ -3025,6 +3102,20 @@ fn test_parse_attribute_fingerprint() {
         "fingerprint:sha-1 CD:B:D1:62:16:95:7B:B7:EB:74:E2:39:27:97:EB:0B:23:73:AC:BC"
     )
     .is_err());
+}
+
+#[test]
+fn test_anonymize_attribute_fingerprint() {
+    let mut anon = StatefulSdpAnonymizer::new();
+    let print_1 = parse_attribute(
+        "fingerprint:sha-1 CD:34:D1:62:16:95:7B:B7:EB:74:E2:39:27:97:EB:0B:23:73:AC:BC",
+    )
+    .unwrap();
+    if let SdpType::Attribute(SdpAttribute::Fingerprint(print)) = print_1 {
+        assert!(print.masked_clone(&mut anon).to_string() == "sha-1 00:00:00:00:00:00:00:01");
+    } else {
+        unreachable!();
+    }
 }
 
 #[test]
@@ -3453,6 +3544,19 @@ fn test_parse_attribute_remote_candidate() {
     assert!(parse_attribute("remote-candidates:0 10.0.0.1").is_err());
     assert!(parse_attribute("remote-candidates:0").is_err());
     assert!(parse_attribute("remote-candidates:").is_err());
+}
+
+#[test]
+fn test_anonymize_remote_candidate() {
+    let mut anon = StatefulSdpAnonymizer::new();
+    let remote_1 = parse_attribute("remote-candidates:0 10.0.0.1 5555").unwrap();
+    if let SdpType::Attribute(SdpAttribute::RemoteCandidate(remote)) = remote_1 {
+        let mut masked = remote.masked_clone(&mut anon);
+        assert_eq!(masked.address, std::net::Ipv4Addr::from(1));
+        assert_eq!(masked.port, 1);
+    } else {
+        unreachable!();
+    }
 }
 
 #[test]
