@@ -251,6 +251,7 @@ mod tests {
                 0x14, 0x08, 0x6D, 0x0F, 0x4C,
             ],
         ];
+
         let masked_prints = [1u64.to_byte_vec(), 2u64.to_byte_vec(), 3u64.to_byte_vec()];
         for _ in 0..2 {
             assert_eq!(anon.mask_cert_finger_print(&prints[0]), masked_prints[0]);
