@@ -3,7 +3,7 @@ use std::net::IpAddr;
 use std::str::FromStr;
 
 use error::SdpParserInternalError;
-use network::{parse_addrtype, parse_nettype, parse_unicast_addr};
+use network::{addr_to_string, parse_addrtype, parse_nettype, parse_unicast_addr};
 use SdpType;
 
 use anonymizer::{AnonymizingClone, StatefulSdpAnonymizer};
@@ -66,13 +66,6 @@ pub fn maybe_print_bool_param(name: &str, param: bool, default_value: bool) -> S
         name.to_owned() + "=" + &(if param { "1" } else { "0" }).to_string()
     } else {
         "".to_string()
-    }
-}
-
-pub fn addr_to_string(addr: IpAddr) -> String {
-    match addr {
-        IpAddr::V4(ipv4) => format!("IN IP4 {}", ipv4.to_string()),
-        IpAddr::V6(ipv6) => format!("IN IP4 {}", ipv6.to_string()),
     }
 }
 
@@ -2823,6 +2816,7 @@ fn test_parse_attribute_candidate_and_serialize() {
     check_parse_and_serialize("candidate:foo 1 UDP 2122252543 172.16.156.106 49760 typ host");
     check_parse_and_serialize("candidate:0 1 TCP 2122252543 172.16.156.106 49760 typ host");
     check_parse_and_serialize("candidate:0 1 TCP 2122252543 ::1 49760 typ host");
+    check_parse_and_serialize("candidate:0 1 TCP 2122252543 2001:db8:4860::4444 49760 typ host");
     check_parse_and_serialize("candidate:0 1 UDP 2122252543 172.16.156.106 49760 typ srflx");
     check_parse_and_serialize("candidate:0 1 UDP 2122252543 172.16.156.106 49760 typ prflx");
     check_parse_and_serialize("candidate:0 1 UDP 2122252543 172.16.156.106 49760 typ relay");
@@ -2995,6 +2989,7 @@ fn test_parse_dtls_message() {
 
     assert!(parse_attribute("dtls-message:client").is_err());
     assert!(parse_attribute("dtls-message:server").is_err());
+    assert!(parse_attribute("dtls-message:unsupported SGVsbG8gV29ybGQ=").is_err());
 }
 
 #[test]
@@ -3021,6 +3016,7 @@ fn test_parse_attribute_extmap() {
         "extmap:3 http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time ext_attributes",
     );
 
+    assert!(parse_attribute("extmap:1/sendrecv").is_err());
     assert!(
         parse_attribute("extmap:a/sendrecv urn:ietf:params:rtp-hdrext:ssrc-audio-level").is_err()
     );
@@ -3064,8 +3060,9 @@ fn test_parse_attribute_fingerprint() {
          BC:EB:0B:23",
     );
 
+    assert!(parse_attribute("fingerprint:sha-1").is_err());
     assert!(parse_attribute(
-        "fingerprint:sha-1 CX:34:D1:62:16:95:7B:B7:EB:74:E1:39:27:97:EB:0B:23:73:AC:BC"
+        "fingerprint:unsupported CD:34:D1:62:16:95:7B:B7:EB:74:E1:39:27:97:EB:0B:23:73:AC:BC"
     )
     .is_err());
     assert!(parse_attribute(
@@ -3135,8 +3132,14 @@ fn test_parse_attribute_fmtp() {
     assert!(parse_attribute("fmtp:109 maxplaybackrate=48000; stereo=1; useinbandfec=1").is_ok());
     assert!(parse_attribute("fmtp:109 maxplaybackrate=48000; stereo=1;useinbandfec=1").is_ok());
     check_parse_and_serialize("fmtp:8 maxplaybackrate=46000");
+    check_parse_and_serialize(
+        "fmtp:8 max-cpb=1234;max-dpb=32000;max-br=3;max-mbps=46000;usedtx=1;cbr=1",
+    );
 
     assert!(parse_attribute("fmtp:77 ").is_err());
+    assert!(parse_attribute("fmtp:109 stereo=2;").is_err());
+    assert!(parse_attribute("fmtp:109 111/129;").is_err());
+    assert!(parse_attribute("fmtp:109 packetization-mode=3;").is_err());
     assert!(parse_attribute("fmtp:109 maxplaybackrate=48000stereo=1;").is_err());
     assert!(parse_attribute("fmtp:8 ;maxplaybackrate=48000").is_err());
 }
@@ -3152,6 +3155,7 @@ fn test_parse_attribute_group() {
     check_parse_and_serialize("group:FID 1 2");
     check_parse_and_serialize("group:SRF 1 2");
     check_parse_and_serialize("group:FEC S1 R1");
+    check_parse_and_serialize("group:ANAT S1 R1");
     check_parse_and_serialize("group:DDP L1 L2 L3");
     check_parse_and_serialize("group:BUNDLE sdparta_0 sdparta_1 sdparta_2");
 
@@ -3596,6 +3600,7 @@ fn test_parse_attribute_rtcp() {
 
     check_parse_and_serialize("rtcp:5000");
     check_parse_and_serialize("rtcp:9 IN IP4 0.0.0.0");
+    check_parse_and_serialize("rtcp:9 IN IP6 2001:db8::1");
 
     assert!(parse_attribute("rtcp:").is_err());
     assert!(parse_attribute("rtcp:70000").is_err());
@@ -3663,6 +3668,7 @@ fn test_parse_attribute_rtpmap() {
     check_parse_and_serialize("rtpmap:109 opus/48000");
     check_parse_and_serialize("rtpmap:109 opus/48000/2");
 
+    assert!(parse_attribute("rtpmap: ").is_err());
     assert!(parse_attribute("rtpmap:109 ").is_err());
     assert!(parse_attribute("rtpmap:109 opus").is_err());
     assert!(parse_attribute("rtpmap:128 opus/48000").is_err());
@@ -3676,6 +3682,7 @@ fn test_parse_attribute_sctpmap() {
 
     check_parse_and_serialize("sctpmap:5000 webrtc-datachannel 256");
 
+    assert!(parse_attribute("sctpmap:70000 webrtc-datachannel").is_err());
     assert!(parse_attribute("sctpmap:70000 webrtc-datachannel 256").is_err());
     assert!(parse_attribute("sctpmap:5000 unsupported 256").is_err());
     assert!(parse_attribute("sctpmap:5000 webrtc-datachannel 2a").is_err());

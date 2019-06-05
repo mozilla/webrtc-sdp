@@ -2,15 +2,16 @@ extern crate webrtc_sdp;
 
 #[cfg(test)]
 fn check_parse_and_serialize(sdp_str: &str) {
-    let sdp = webrtc_sdp::parse_sdp(sdp_str, true);
-    assert!(sdp.is_ok());
-    assert_eq!(sdp.unwrap().to_string(), sdp_str.to_string())
+    let parsed_sdp = webrtc_sdp::parse_sdp(sdp_str, true);
+    assert!(parsed_sdp.is_ok());
+    let serialized_sdp = parsed_sdp.unwrap().to_string();
+    assert_eq!(serialized_sdp, sdp_str)
 }
 
 #[test]
 fn parse_minimal_sdp() {
     let sdp_str = "v=0\r\n\
-                   o=- 0 0 IN IP4 0.0.0.0\r\n\
+                   o=- 1 1 IN IP4 0.0.0.0\r\n\
                    s=-\r\n\
                    t=0 0\r\n\
                    c=IN IP4 0.0.0.0\r\n\
@@ -20,9 +21,14 @@ fn parse_minimal_sdp() {
     let sdp_opt = sdp_res.ok();
     assert!(sdp_opt.is_some());
     let sdp = sdp_opt.unwrap();
-    assert_eq!(sdp.version, 0);
-    assert_eq!(sdp.session, "-");
-    assert!(sdp.connection.is_some());
+    assert_eq!(sdp.get_version(), 0);
+    let o = sdp.get_origin();
+    assert_eq!(o.username, "-");
+    assert_eq!(o.session_id, 1);
+    assert_eq!(o.session_version, 1);
+    assert_eq!(sdp.get_session(), "-");
+    assert!(sdp.timing.is_some());
+    assert!(sdp.get_connection().is_some());
     assert_eq!(sdp.attribute.len(), 0);
     assert_eq!(sdp.media.len(), 1);
 
@@ -32,6 +38,7 @@ fn parse_minimal_sdp() {
         webrtc_sdp::media_type::SdpMediaValue::Audio
     );
     assert_eq!(msection.get_port(), 0);
+    assert_eq!(msection.get_port_count(), 0);
     assert_eq!(
         *msection.get_proto(),
         webrtc_sdp::media_type::SdpProtocolValue::UdpTlsRtpSavpf
@@ -58,8 +65,8 @@ m=audio 0 UDP/TLS/RTP/SAVPF 0\r\n";
     let sdp_opt = sdp_res.ok();
     assert!(sdp_opt.is_some());
     let sdp = sdp_opt.unwrap();
-    assert_eq!(sdp.version, 0);
-    assert_eq!(sdp.session, "-");
+    assert_eq!(sdp.get_version(), 0);
+    assert_eq!(sdp.get_session(), "-");
 }
 
 #[test]
@@ -71,7 +78,8 @@ fn parse_minimal_sdp_with_most_session_types() {
                    b=AS:1\r\n\
                    b=CT:123\r\n\
                    b=TIAS:12345\r\n\
-                   c=IN IP4 0.0.0.0\r\n\
+                   b=UNKNOWN:9\r\n\
+                   c=IN IP6 ::1/1/1\r\n\
                    a=ice-options:trickle\r\n\
                    m=audio 0 UDP/TLS/RTP/SAVPF 0\r\n";
     let sdp_res = webrtc_sdp::parse_sdp(sdp_str, false);
@@ -168,6 +176,7 @@ a=ssrc:2655508255 cname:{735484ea-4f6c-f74a-bd66-7425f8476c2e}\r\n";
         webrtc_sdp::media_type::SdpMediaValue::Audio
     );
     assert_eq!(msection.get_port(), 9);
+    assert_eq!(msection.get_port_count(), 0);
     assert_eq!(
         *msection.get_proto(),
         webrtc_sdp::media_type::SdpProtocolValue::UdpTlsRtpSavpf
@@ -202,9 +211,12 @@ a=ssrc:2655508255 cname:{735484ea-4f6c-f74a-bd66-7425f8476c2e}\r\n";
     assert!(msection
         .get_attribute(webrtc_sdp::attribute_type::SdpAttributeType::RtcpMux)
         .is_some());
-    assert!(msection
-        .get_attribute(webrtc_sdp::attribute_type::SdpAttributeType::Rtpmap)
-        .is_some());
+    assert_eq!(
+        msection
+            .get_attributes_of_type(webrtc_sdp::attribute_type::SdpAttributeType::Rtpmap)
+            .len(),
+        4
+    );
     assert!(msection
         .get_attribute(webrtc_sdp::attribute_type::SdpAttributeType::Setup)
         .is_some());
@@ -277,9 +289,12 @@ a=ssrc:2709871439 cname:{735484ea-4f6c-f74a-bd66-7425f8476c2e}";
     assert!(!msection
         .get_attribute(webrtc_sdp::attribute_type::SdpAttributeType::Extmap)
         .is_some());
-    assert!(msection
-        .get_attribute(webrtc_sdp::attribute_type::SdpAttributeType::Fmtp)
-        .is_some());
+    assert_eq!(
+        msection
+            .get_attributes_of_type(webrtc_sdp::attribute_type::SdpAttributeType::Fmtp)
+            .len(),
+        3
+    );
     assert!(msection
         .get_attribute(webrtc_sdp::attribute_type::SdpAttributeType::IcePwd)
         .is_some());
@@ -295,15 +310,21 @@ a=ssrc:2709871439 cname:{735484ea-4f6c-f74a-bd66-7425f8476c2e}";
     assert!(!msection
         .get_attribute(webrtc_sdp::attribute_type::SdpAttributeType::Msid)
         .is_some());
-    assert!(msection
-        .get_attribute(webrtc_sdp::attribute_type::SdpAttributeType::Rtcpfb)
-        .is_some());
+    assert_eq!(
+        msection
+            .get_attributes_of_type(webrtc_sdp::attribute_type::SdpAttributeType::Rtcpfb)
+            .len(),
+        12
+    );
     assert!(msection
         .get_attribute(webrtc_sdp::attribute_type::SdpAttributeType::RtcpMux)
         .is_some());
-    assert!(msection
-        .get_attribute(webrtc_sdp::attribute_type::SdpAttributeType::Rtpmap)
-        .is_some());
+    assert_eq!(
+        msection
+            .get_attributes_of_type(webrtc_sdp::attribute_type::SdpAttributeType::Rtpmap)
+            .len(),
+        3
+    );
     assert!(msection
         .get_attribute(webrtc_sdp::attribute_type::SdpAttributeType::Setup)
         .is_some());
@@ -618,4 +639,25 @@ fn parse_firefox_simulcast_answer() {
     let sdp = sdp_opt.unwrap();
     assert_eq!(sdp.version, 0);
     assert_eq!(sdp.media.len(), 1);
+}
+
+#[test]
+fn parse_and_serialize_sdp_with_unusual_attributes() {
+    let sdp_str = "v=0\r\n\
+                   o=- 0 0 IN IP6 2001:db8::4444\r\n\
+                   s=-\r\n\
+                   t=0 0\r\n\
+                   m=video 0 UDP/TLS/RTP/SAVPF 0\r\n\
+                   b=UNSUPPORTED:12345\r\n\
+                   c=IN IP6 ::1\r\n\
+                   a=rtcp:9 IN IP6 2001:db8::8888\r\n\
+                   a=rtcp-fb:* nack\r\n\
+                   a=extmap:1/recvonly urn:ietf:params:rtp-hdrext:toffset\r\n\
+                   a=extmap:2/sendonly urn:ietf:params:rtp-hdrext:toffset\r\n\
+                   a=extmap:3/sendrecv urn:ietf:params:rtp-hdrext:toffset\r\n\
+                   a=imageattr:* send [x=330,y=250,sar=[1.1,1.3,1.9],q=0.1] recv [x=800,y=[50,80,30],sar=1.1]\r\n\
+                   a=imageattr:97 send [x=[480:16:800],y=[100,200,300],par=[1.2-1.3],q=0.6] [x=1080,y=[144:176],sar=[0.5-0.7]] recv *\r\n\
+                   a=sendrecv\r\n";
+
+    check_parse_and_serialize(sdp_str);
 }

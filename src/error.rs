@@ -49,7 +49,7 @@ impl error::Error for SdpParserInternalError {
         }
     }
 
-    fn cause(&self) -> Option<&error::Error> {
+    fn cause(&self) -> Option<&dyn error::Error> {
         match *self {
             SdpParserInternalError::Integer(ref error) => Some(error),
             SdpParserInternalError::Float(ref error) => Some(error),
@@ -97,6 +97,21 @@ fn test_sdp_parser_internal_error_integer() {
         "Integer parsing error: invalid digit found in string"
     );
     assert_eq!(int_err.description(), "invalid digit found in string");
+    assert!(!int_err.cause().is_none());
+}
+
+#[test]
+#[allow(deprecated)] // see issue #102
+fn test_sdp_parser_internal_error_float() {
+    let v = "12.2a";
+    let float = v.parse::<f32>();
+    assert!(float.is_err());
+    let int_err = SdpParserInternalError::Float(float.err().unwrap());
+    assert_eq!(
+        format!("{}", int_err),
+        "Float parsing error: invalid float literal"
+    );
+    assert_eq!(int_err.description(), "invalid float literal");
     assert!(!int_err.cause().is_none());
 }
 
@@ -226,7 +241,7 @@ impl error::Error for SdpParserError {
         }
     }
 
-    fn cause(&self) -> Option<&error::Error> {
+    fn cause(&self) -> Option<&dyn error::Error> {
         match *self {
             SdpParserError::Line { ref error, .. }
             | SdpParserError::Unsupported { ref error, .. } => Some(error),

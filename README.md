@@ -10,7 +10,7 @@ A SDP parser written in Rust specifically aimed to handle WebRTC SDP offers and 
 
 ## Dependecies
 
-* Rust >= 1.17.0
+* Rust >= 1.30.0
 * log module
 * serde module
 * serde-derive module
@@ -34,7 +34,7 @@ Warnings will be for example unknown parameters in attributes. Setting `fail_on_
 
 ## Examples
 
-The [file parser](https://github.com/nils-ohlmeier/rsdparsa/blob/master/src/bin/file_parser.rs) in the webrtc-sdp package gives you an easy example of how to invoke the webrtc-sdp parser.
+The [file parser](https://github.com/nils-ohlmeier/rsdparsa/blob/master/examples/file_parser.rs) in the webrtc-sdp package gives you an easy example of how to invoke the webrtc-sdp parser.
 
 ## Contributing
 
