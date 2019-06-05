@@ -77,7 +77,7 @@ impl StatefulSdpAnonymizer {
         self.ports.insert(port, self.port_inc.0);
         self.port_inc.0
     }
-    
+
     pub fn mask_origin_user(&mut self, user: &str) -> String {
         self.origin_users.mask(user)
     }

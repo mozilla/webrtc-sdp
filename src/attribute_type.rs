@@ -315,6 +315,15 @@ impl ToString for SdpAttributeRemoteCandidate {
     }
 }
 
+impl AnonymizingClone for SdpAttributeRemoteCandidate {
+    fn masked_clone(&self, anon: &mut StatefulSdpAnonymizer) -> Self {
+        let mut masked = self.clone();
+        masked.address = anon.mask_ip(&self.address);
+        masked.port = anon.mask_port(self.port);
+        masked
+    }
+}
+
 #[derive(Clone)]
 #[cfg_attr(feature = "serialize", derive(Serialize))]
 pub struct SdpAttributeSimulcastId {
@@ -1305,6 +1314,19 @@ impl ToString for SdpAttribute {
             SdpAttribute::Simulcast(ref a) => attr_to_string(a.to_string()),
             SdpAttribute::Ssrc(ref a) => attr_to_string(a.to_string()),
             SdpAttribute::SsrcGroup(ref a) => attr_to_string(a.to_string()),
+        }
+    }
+}
+
+impl AnonymizingClone for SdpAttribute {
+    fn masked_clone(&self, anon: &mut StatefulSdpAnonymizer) -> Self {
+        match self {
+            SdpAttribute::Candidate(i) => SdpAttribute::Candidate(i.masked_clone(anon)),
+            SdpAttribute::Fingerprint(i) => SdpAttribute::Fingerprint(i.masked_clone(anon)),
+            SdpAttribute::IcePwd(i) => SdpAttribute::IcePwd(anon.mask_ice_password(i)),
+            SdpAttribute::IceUfrag(i) => SdpAttribute::IceUfrag(anon.mask_ice_user(i)),
+            SdpAttribute::RemoteCandidate(i) => SdpAttribute::RemoteCandidate(i.masked_clone(anon)),
+            _ => self.clone(),
         }
     }
 }
@@ -2888,7 +2910,6 @@ fn test_anonymize_attribute_candidate() {
         let masked = candidate.masked_clone(&mut anon);
         assert!(masked.address == std::net::Ipv4Addr::from(2));
         assert!(masked.port == 3);
-        println!("{}", masked.raddr.unwrap());
         assert!(masked.raddr.unwrap() == std::net::Ipv4Addr::from(3));
         assert!(masked.rport.unwrap() == 4);
     } else {
@@ -3094,7 +3115,6 @@ fn test_anonymize_attribute_fingerprint() {
     )
     .unwrap();
     if let SdpType::Attribute(SdpAttribute::Fingerprint(print)) = print_1 {
-        println!("{}", print.masked_clone(&mut anon).to_string());
         assert!(print.masked_clone(&mut anon).to_string() == "sha-1 00:00:00:00:00:00:00:01");
     } else {
         unreachable!();
@@ -3520,6 +3540,19 @@ fn test_parse_attribute_remote_candidate() {
     assert!(parse_attribute("remote-candidates:0 10.0.0.1").is_err());
     assert!(parse_attribute("remote-candidates:0").is_err());
     assert!(parse_attribute("remote-candidates:").is_err());
+}
+
+#[test]
+fn test_anonymize_remote_candidate() {
+    let mut anon = StatefulSdpAnonymizer::new();
+    let remote_1 = parse_attribute("remote-candidates:0 10.0.0.1 5555").unwrap();
+    if let SdpType::Attribute(SdpAttribute::RemoteCandidate(remote)) = remote_1 {
+        let mut masked = remote.masked_clone(&mut anon);
+        assert_eq!(masked.address, std::net::Ipv4Addr::from(1));
+        assert_eq!(masked.port, 1);
+    } else {
+        unreachable!();
+    }
 }
 
 #[test]

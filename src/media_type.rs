@@ -1,3 +1,4 @@
+use anonymizer::{AnonymizingClone, StatefulSdpAnonymizer};
 use attribute_type::{
     maybe_print_param, SdpAttribute, SdpAttributeRtpmap, SdpAttributeSctpmap, SdpAttributeType,
 };
@@ -275,6 +276,18 @@ impl ToString for SdpMedia {
             bandwidth = maybe_vector_to_string!("b={}\r\n", self.bandwidth, "\r\nb="),
             attributes = maybe_vector_to_string!("a={}\r\n", self.attribute, "\r\na=")
         )
+    }
+}
+
+impl AnonymizingClone for SdpMedia {
+    fn masked_clone(&self, anon: &mut StatefulSdpAnonymizer) -> Self {
+        let mut masked = self.clone();
+        masked.attribute = masked
+            .attribute
+            .iter()
+            .map(|a: &SdpAttribute| a.masked_clone(anon))
+            .collect();
+        masked
     }
 }
 

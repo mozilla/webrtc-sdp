@@ -72,6 +72,14 @@ impl ToString for SdpConnection {
     }
 }
 
+impl AnonymizingClone for SdpConnection {
+    fn masked_clone(&self, anon: &mut StatefulSdpAnonymizer) -> Self {
+        let mut masked = self.clone();
+        masked.addr = anon.mask_ip(&self.addr);
+        masked
+    }
+}
+
 #[derive(Clone)]
 #[cfg_attr(feature = "serialize", derive(Serialize))]
 pub struct SdpOrigin {
@@ -310,21 +318,15 @@ impl ToString for SdpSession {
 impl AnonymizingClone for SdpSession {
     fn masked_clone(&self, anon: &mut StatefulSdpAnonymizer) -> Self {
         let mut masked: SdpSession = self.clone();
-        let attributes = masked.attribute;
-        masked.attribute = Vec::new();
-        for mut attribute in attributes {
-            masked.attribute.push(match attribute {
-                SdpAttribute::Candidate(candidate) => {
-                    SdpAttribute::Candidate(candidate.masked_clone(anon))
-                }
-                SdpAttribute::IcePwd(pwd) => SdpAttribute::IcePwd(anon.mask_ice_password(&pwd)),
-                SdpAttribute::IceUfrag(ufrag) => SdpAttribute::IceUfrag(anon.mask_ice_user(&ufrag)),
-                SdpAttribute::Fingerprint(print) => {
-                    SdpAttribute::Fingerprint(print.masked_clone(anon))
-                }
-                x => x,
-            });
-        }
+        masked.origin = self.origin.masked_clone(anon);
+        masked.connection = masked
+            .connection
+            .and_then(|con| Some(con.masked_clone(anon)));
+        masked.attribute = masked
+            .attribute
+            .iter()
+            .map(|a: &SdpAttribute| a.masked_clone(anon))
+            .collect();
         masked
     }
 }
@@ -464,7 +466,9 @@ fn test_origin_addr_type_mismatch() {
 #[test]
 fn test_mask_origin() {
     let mut anon = StatefulSdpAnonymizer::new();
-    if let SdpType::Origin(origin_1) = parse_origin("mozilla 506705521068071134 0 IN IP4 0.0.0.0").unwrap() {
+    if let SdpType::Origin(origin_1) =
+        parse_origin("mozilla 506705521068071134 0 IN IP4 0.0.0.0").unwrap()
+    {
         for _ in 0..2 {
             let masked = origin_1.masked_clone(&mut anon);
             assert_eq!(masked.username, "origin-user-00000001");
@@ -1309,12 +1313,46 @@ a=ice-lite\r\n",
 #[test]
 fn test_mask_sdp() {
     let mut anon = StatefulSdpAnonymizer::new();
-    let sdp = parse_sdp("v=0\r\n
-    o=- 4294967296 2 IN IP4 127.0.0.1\r\n
+    let sdp = parse_sdp(
+        "v=0\r\n
+    o=ausername 4294967296 2 IN IP4 127.0.0.1\r\n
     s=SIP Call\r\n
-    c=IN IP4 198.51.100.7\r\n
+    c=IN IP4 198.51.100.7/51\r\n
+    a=ice-pwd:12340\r\n
+    a=ice-ufrag:4a799b2e\r\n
+    a=fingerprint:sha-1 CD:34:D1:62:16:95:7B:B7:EB:74:E2:39:27:97:EB:0B:23:73:AC:BC\r\n
     t=0 0\r\n
     m=video 56436 RTP/SAVPF 120\r\n
-    a=rtpmap:120 VP8/90000\r\n", true);
-
+    a=candidate:77142221 1 udp 2113937151 192.168.137.1 54081 typ host\r\n
+    a=remote-candidates:0 10.0.0.1 5555\r\n
+    a=rtpmap:120 VP8/90000\r\n",
+        true,
+    )
+    .unwrap();
+    let masked = sdp.masked_clone(&mut anon);
+    assert_eq!(masked.origin.username, "origin-user-00000001");
+    assert_eq!(masked.origin.unicast_addr, std::net::Ipv4Addr::from(1));
+    assert_eq!(masked.connection.unwrap().addr, std::net::Ipv4Addr::from(2));
+    for mut attr in masked.attribute {
+        match attr {
+            SdpAttribute::Candidate(c) => {
+                assert_eq!(c.address, std::net::Ipv4Addr::from(3));
+                assert_eq!(c.port, 1);
+            }
+            SdpAttribute::Fingerprint(f) => {
+                assert_eq!(f.fingerprint, 1u64.to_be_bytes());
+            }
+            SdpAttribute::IcePwd(p) => {
+                assert_eq!(p, "ice-password-00000001");
+            }
+            SdpAttribute::IceUfrag(u) => {
+                assert_eq!(u, "ice-user-00000001");
+            }
+            SdpAttribute::RemoteCandidate(r) => {
+                assert_eq!(r.address, std::net::Ipv4Addr::from(4));
+                assert_eq!(r.port, 2);
+            }
+            _ => {}
+        }
+    }
 }
