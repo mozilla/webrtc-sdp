@@ -161,14 +161,14 @@ mod tests {
         ];
         let v6_masked = [Ipv6Addr::from(1), Ipv6Addr::from(2), Ipv6Addr::from(3)];
         for _ in 0..2 {
-            assert!(anon.mask_ip(&IpAddr::V4(v4[0])) == v4_masked[0]);
-            assert!(anon.mask_ip(&IpAddr::V6(v6[0])) == v6_masked[0]);
+            assert_eq!(anon.mask_ip(&IpAddr::V4(v4[0])), v4_masked[0]);
+            assert_eq!(anon.mask_ip(&IpAddr::V6(v6[0])), v6_masked[0]);
 
-            assert!(anon.mask_ip(&IpAddr::V4(v4[1])) == v4_masked[1]);
-            assert!(anon.mask_ip(&IpAddr::V6(v6[1])) == v6_masked[1]);
+            assert_eq!(anon.mask_ip(&IpAddr::V4(v4[1])), v4_masked[1]);
+            assert_eq!(anon.mask_ip(&IpAddr::V6(v6[1])), v6_masked[1]);
 
-            assert!(anon.mask_ip(&IpAddr::V4(v4[2])) == v4_masked[2]);
-            assert!(anon.mask_ip(&IpAddr::V6(v6[2])) == v6_masked[2]);
+            assert_eq!(anon.mask_ip(&IpAddr::V4(v4[2])), v4_masked[2]);
+            assert_eq!(anon.mask_ip(&IpAddr::V6(v6[2])), v6_masked[2]);
         }
     }
 
@@ -178,9 +178,9 @@ mod tests {
         let ports = [0, 125, 12346];
         let masked_ports = [1, 2, 3];
         for _ in 0..2 {
-            assert!(anon.mask_port(ports[0]) == masked_ports[0]);
-            assert!(anon.mask_port(ports[1]) == masked_ports[1]);
-            assert!(anon.mask_port(ports[2]) == masked_ports[2]);
+            assert_eq!(anon.mask_port(ports[0]), masked_ports[0]);
+            assert_eq!(anon.mask_port(ports[1]), masked_ports[1]);
+            assert_eq!(anon.mask_port(ports[2]), masked_ports[2]);
         }
     }
 
@@ -194,9 +194,9 @@ mod tests {
             "ice-password-00000003",
         ];
         for _ in 0..2 {
-            assert!(anon.mask_ice_password(passwords[0]) == masked_passwords[0]);
-            assert!(anon.mask_ice_password(passwords[1]) == masked_passwords[1]);
-            assert!(anon.mask_ice_password(passwords[2]) == masked_passwords[2]);
+            assert_eq!(anon.mask_ice_password(passwords[0]), masked_passwords[0]);
+            assert_eq!(anon.mask_ice_password(passwords[1]), masked_passwords[1]);
+            assert_eq!(anon.mask_ice_password(passwords[2]), masked_passwords[2]);
         }
     }
 
@@ -210,9 +210,9 @@ mod tests {
             "ice-user-00000003",
         ];
         for _ in 0..2 {
-            assert!(anon.mask_ice_user(users[0]) == masked_users[0]);
-            assert!(anon.mask_ice_user(users[1]) == masked_users[1]);
-            assert!(anon.mask_ice_user(users[2]) == masked_users[2]);
+            assert_eq!(anon.mask_ice_user(users[0]), masked_users[0]);
+            assert_eq!(anon.mask_ice_user(users[1]), masked_users[1]);
+            assert_eq!(anon.mask_ice_user(users[2]), masked_users[2]);
         }
     }
 
@@ -242,9 +242,9 @@ mod tests {
             3u64.to_be_bytes().to_vec(),
         ];
         for _ in 0..2 {
-            assert!(anon.mask_cert_finger_print(&prints[0]) == masked_prints[0]);
-            assert!(anon.mask_cert_finger_print(&prints[1]) == masked_prints[1]);
-            assert!(anon.mask_cert_finger_print(&prints[2]) == masked_prints[2]);
+            assert_eq!(anon.mask_cert_finger_print(&prints[0]), masked_prints[0]);
+            assert_eq!(anon.mask_cert_finger_print(&prints[1]), masked_prints[1]);
+            assert_eq!(anon.mask_cert_finger_print(&prints[2]), masked_prints[2]);
         }
     }
 }
