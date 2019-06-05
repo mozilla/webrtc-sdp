@@ -301,6 +301,7 @@ pub fn create_dummy_media_section() -> SdpMedia {
 
 #[cfg(test)]
 pub fn add_dummy_attributes(media: &mut SdpMedia) {
+    use attribute_type::{ SdpAttributeFmtp, SdpAttributeFmtpParameters, SdpAttributePayloadType, SdpAttributeRtcpFb, SdpAttributeRtcpFbType};
     assert!(media
         .add_attribute(SdpAttribute::Rtcpfb(SdpAttributeRtcpFb {
             payload_type: SdpAttributePayloadType::Wildcard,
@@ -376,11 +377,6 @@ fn test_add_codec() {
     assert!(msection.get_attribute(SdpAttributeType::Rtpmap).is_some());
 }
 
-#[cfg(test)]
-use attribute_type::{
-    SdpAttributeFmtp, SdpAttributeFmtpParameters, SdpAttributePayloadType, SdpAttributeRtcpFb,
-    SdpAttributeRtcpFbType,
-};
 #[test]
 fn test_remove_codecs() {
     let mut msection = create_dummy_media_section();
@@ -804,10 +800,10 @@ fn test_media_vector_multiple_connections() {
         sdp_type: SdpType::Media(media_line),
     };
     sdp_lines.push(media);
-    use network::parse_unicast_addr;
-    let addr = parse_unicast_addr("127.0.0.1").unwrap();
+    use network::parse_unicast_address;
+    let address = parse_unicast_address("127.0.0.1").unwrap();
     let c = SdpConnection {
-        addr,
+        address,
         ttl: None,
         amount: None,
     };

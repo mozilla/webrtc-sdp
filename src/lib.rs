@@ -26,7 +26,7 @@ use media_type::{
     parse_media, parse_media_vector, SdpFormatList, SdpMedia, SdpMediaLine, SdpMediaValue,
     SdpProtocolValue,
 };
-use network::{addr_to_string, parse_addrtype, parse_nettype, parse_unicast_addr};
+use network::{address_to_string, parse_address_type, parse_network_type, parse_unicast_address};
 
 #[cfg_attr(feature = "serialize", derive(Serialize))]
 pub enum SdpBandwidth {
@@ -50,7 +50,7 @@ impl ToString for SdpBandwidth {
 #[derive(Clone)]
 #[cfg_attr(feature = "serialize", derive(Serialize))]
 pub struct SdpConnection {
-    pub addr: IpAddr,
+    pub address: IpAddr,
     pub ttl: Option<u8>,
     pub amount: Option<u32>,
 }
@@ -58,8 +58,8 @@ pub struct SdpConnection {
 impl ToString for SdpConnection {
     fn to_string(&self) -> String {
         format!(
-            "{addr}{ttl}{amount}",
-            addr = addr_to_string(self.addr),
+            "{address}{ttl}{amount}",
+            address = address_to_string(self.address),
             ttl = option_to_string!("/{}", self.ttl),
             amount = option_to_string!("/{}", self.amount)
         )
@@ -81,7 +81,7 @@ impl ToString for SdpOrigin {
             username = self.username.clone(),
             sess_id = self.session_id.to_string(),
             sess_vers = self.session_version.to_string(),
-            unicast_addr = addr_to_string(self.unicast_addr)
+            unicast_addr = address_to_string(self.unicast_addr)
         )
     }
 }
@@ -255,7 +255,7 @@ impl SdpSession {
         media.add_attribute(direction)?;
 
         media.set_connection(SdpConnection {
-            addr: IpAddr::from_str(addr.as_str())?,
+            address: IpAddr::from_str(addr.as_str())?,
             ttl: None,
             amount: None,
         })?;
@@ -355,7 +355,7 @@ fn parse_origin(value: &str) -> Result<SdpType, SdpParserInternalError> {
                 "Origin type is missing network type token".to_string(),
             ));
         }
-        Some(x) => parse_nettype(x)?,
+        Some(x) => parse_network_type(x)?,
     };
     let addrtype = match tokens.next() {
         None => {
@@ -363,7 +363,7 @@ fn parse_origin(value: &str) -> Result<SdpType, SdpParserInternalError> {
                 "Origin type is missing address type token".to_string(),
             ));
         }
-        Some(x) => parse_addrtype(x)?,
+        Some(x) => parse_address_type(x)?,
     };
     let unicast_addr = match tokens.next() {
         None => {
@@ -371,7 +371,7 @@ fn parse_origin(value: &str) -> Result<SdpType, SdpParserInternalError> {
                 "Origin type is missing IP address token".to_string(),
             ));
         }
-        Some(x) => parse_unicast_addr(x)?,
+        Some(x) => parse_unicast_address(x)?,
     };
     if !addrtype.same_protocol(&unicast_addr) {
         return Err(SdpParserInternalError::Generic(
@@ -452,8 +452,8 @@ fn parse_connection(value: &str) -> Result<SdpType, SdpParserInternalError> {
             "connection attribute must have three tokens".to_string(),
         ));
     }
-    parse_nettype(cv[0])?;
-    let addrtype = parse_addrtype(cv[1])?;
+    parse_network_type(cv[0])?;
+    let addrtype = parse_address_type(cv[1])?;
     let mut ttl = None;
     let mut amount = None;
     let mut addr_token = cv[2];
@@ -465,14 +465,14 @@ fn parse_connection(value: &str) -> Result<SdpType, SdpParserInternalError> {
         ttl = Some(addr_tokens[1].parse::<u8>()?);
         addr_token = addr_tokens[0];
     }
-    let addr = parse_unicast_addr(addr_token)?;
-    if !addrtype.same_protocol(&addr) {
+    let address = parse_unicast_address(addr_token)?;
+    if !addrtype.same_protocol(&address) {
         return Err(SdpParserInternalError::Generic(
             "connection addrtype does not match address.".to_string(),
         ));
     }
-    let c = SdpConnection { addr, ttl, amount };
-    trace!("connection: {}", c.addr);
+    let c = SdpConnection { address, ttl, amount };
+    trace!("connection: {}", c.address);
     Ok(SdpType::Connection(c))
 }
 
