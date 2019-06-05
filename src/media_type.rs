@@ -891,8 +891,3 @@ fn test_media_vector_invalid_media_level_attribute() {
     sdp_lines.push(aline);
     assert!(parse_media_vector(&mut sdp_lines).is_err());
 }
-
-#[test]
-fn test_anonymize_media() {
-    let anon = StatefulSdpAnonymizer::new();
-}
