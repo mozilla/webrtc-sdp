@@ -49,7 +49,7 @@ impl error::Error for SdpParserInternalError {
         }
     }
 
-    fn cause(&self) -> Option<&dyn error::Error> {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match *self {
             SdpParserInternalError::Integer(ref error) => Some(error),
             SdpParserInternalError::Float(ref error) => Some(error),
@@ -61,7 +61,6 @@ impl error::Error for SdpParserInternalError {
 }
 
 #[test]
-#[allow(deprecated)] // see issue #102
 fn test_sdp_parser_internal_error_generic() {
     let generic = SdpParserInternalError::Generic("generic message".to_string());
     assert_eq!(
@@ -69,11 +68,10 @@ fn test_sdp_parser_internal_error_generic() {
         "Generic parsing error: generic message"
     );
     assert_eq!(generic.description(), "generic message");
-    assert!(generic.cause().is_none());
+    assert!(generic.source().is_none());
 }
 
 #[test]
-#[allow(deprecated)] // see issue #102
 fn test_sdp_parser_internal_error_unsupported() {
     let unsupported =
         SdpParserInternalError::Unsupported("unsupported internal message".to_string());
@@ -82,11 +80,10 @@ fn test_sdp_parser_internal_error_unsupported() {
         "Unsupported parsing error: unsupported internal message"
     );
     assert_eq!(unsupported.description(), "unsupported internal message");
-    assert!(unsupported.cause().is_none());
+    assert!(unsupported.source().is_none());
 }
 
 #[test]
-#[allow(deprecated)] // see issue #102
 fn test_sdp_parser_internal_error_integer() {
     let v = "12a";
     let integer = v.parse::<u64>();
@@ -97,11 +94,10 @@ fn test_sdp_parser_internal_error_integer() {
         "Integer parsing error: invalid digit found in string"
     );
     assert_eq!(int_err.description(), "invalid digit found in string");
-    assert!(!int_err.cause().is_none());
+    assert!(!int_err.source().is_none());
 }
 
 #[test]
-#[allow(deprecated)] // see issue #102
 fn test_sdp_parser_internal_error_float() {
     let v = "12.2a";
     let float = v.parse::<f32>();
@@ -112,11 +108,10 @@ fn test_sdp_parser_internal_error_float() {
         "Float parsing error: invalid float literal"
     );
     assert_eq!(int_err.description(), "invalid float literal");
-    assert!(!int_err.cause().is_none());
+    assert!(!int_err.source().is_none());
 }
 
 #[test]
-#[allow(deprecated)] // see issue #102
 fn test_sdp_parser_internal_error_address() {
     let v = "127.0.0.a";
     use std::net::IpAddr;
@@ -129,7 +124,7 @@ fn test_sdp_parser_internal_error_address() {
         "IP address parsing error: invalid IP address syntax"
     );
     assert_eq!(addr_err.description(), "invalid IP address syntax");
-    assert!(!addr_err.cause().is_none());
+    assert!(!addr_err.source().is_none());
 }
 
 #[derive(Debug)]
@@ -241,7 +236,7 @@ impl error::Error for SdpParserError {
         }
     }
 
-    fn cause(&self) -> Option<&dyn error::Error> {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match *self {
             SdpParserError::Line { ref error, .. }
             | SdpParserError::Unsupported { ref error, .. } => Some(error),
@@ -270,7 +265,6 @@ impl From<ParseFloatError> for SdpParserInternalError {
 }
 
 #[test]
-#[allow(deprecated)] // see issue #102
 fn test_sdp_parser_error_line() {
     let line1 = SdpParserError::Line {
         error: SdpParserInternalError::Generic("test message".to_string()),
@@ -282,11 +276,10 @@ fn test_sdp_parser_error_line() {
         "Line error: test message in line(13): test line"
     );
     assert_eq!(line1.description(), "test message");
-    assert!(line1.cause().is_some());
+    assert!(line1.source().is_some());
 }
 
 #[test]
-#[allow(deprecated)] // see issue #102
 fn test_sdp_parser_error_unsupported() {
     let unsupported1 = SdpParserError::Unsupported {
         error: SdpParserInternalError::Generic("unsupported value".to_string()),
@@ -298,11 +291,10 @@ fn test_sdp_parser_error_unsupported() {
         "Unsupported: unsupported value in line(21): unsupported line"
     );
     assert_eq!(unsupported1.description(), "unsupported value");
-    assert!(unsupported1.cause().is_some());
+    assert!(unsupported1.source().is_some());
 }
 
 #[test]
-#[allow(deprecated)] // see issue #102
 fn test_sdp_parser_error_sequence() {
     let sequence1 = SdpParserError::Sequence {
         message: "sequence message".to_string(),
@@ -313,5 +305,5 @@ fn test_sdp_parser_error_sequence() {
         "Sequence error in line(42): sequence message"
     );
     assert_eq!(sequence1.description(), "sequence message");
-    assert!(sequence1.cause().is_none());
+    assert!(sequence1.source().is_none());
 }
