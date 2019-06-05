@@ -1243,6 +1243,9 @@ pub fn parse_sdp(sdp: &str, fail_on_warning: bool) -> Result<SdpSession, SdpPars
     Ok(session)
 }
 
+#[cfg(test)]
+use anonymizer::ToBytesVec;
+
 #[test]
 fn test_parse_sdp_zero_length_string_fails() {
     assert!(parse_sdp("", true).is_err());
@@ -1416,7 +1419,7 @@ fn test_mask_sdp() {
                 assert_eq!(c.port, 1);
             }
             SdpAttribute::Fingerprint(f) => {
-                assert_eq!(f.fingerprint, 1u64.to_be_bytes());
+                assert_eq!(f.fingerprint, 1u64.to_byte_vec());
             }
             SdpAttribute::IcePwd(p) => {
                 assert_eq!(p, "ice-password-00000001");
