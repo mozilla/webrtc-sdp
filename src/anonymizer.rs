@@ -16,7 +16,7 @@ impl ToBytesVec for u64 {
         let mut val = *self;
         for _ in 0..8 {
             bytes.push(val as u8);
-            val = val << 8;
+            val <<= 8;
         }
         bytes.reverse();
         bytes
