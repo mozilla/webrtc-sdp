@@ -31,15 +31,6 @@ pub fn parse_nettype(value: &str) -> Result<(), SdpParserInternalError> {
     Ok(())
 }
 
-#[test]
-fn test_parse_nettype() {
-    let internet = parse_nettype("iN");
-    assert!(internet.is_ok());
-
-    assert!(parse_nettype("").is_err());
-    assert!(parse_nettype("FOO").is_err());
-}
-
 pub fn parse_addrtype(value: &str) -> Result<SdpAddrType, SdpParserInternalError> {
     Ok(match value.to_uppercase().as_ref() {
         "IP4" => SdpAddrType::IP4,
@@ -52,27 +43,41 @@ pub fn parse_addrtype(value: &str) -> Result<SdpAddrType, SdpParserInternalError
     })
 }
 
-#[test]
-fn test_parse_addrtype() {
-    let ip4 = parse_addrtype("iP4");
-    assert!(ip4.is_ok());
-    assert_eq!(ip4.unwrap(), SdpAddrType::IP4);
-    let ip6 = parse_addrtype("Ip6");
-    assert!(ip6.is_ok());
-    assert_eq!(ip6.unwrap(), SdpAddrType::IP6);
-
-    assert!(parse_addrtype("").is_err());
-    assert!(parse_addrtype("IP5").is_err());
-}
-
 pub fn parse_unicast_addr(value: &str) -> Result<IpAddr, SdpParserInternalError> {
     Ok(IpAddr::from_str(value)?)
 }
 
-#[test]
-fn test_parse_unicast_addr() {
-    let ip4 = parse_unicast_addr("127.0.0.1");
-    assert!(ip4.is_ok());
-    let ip6 = parse_unicast_addr("::1");
-    assert!(ip6.is_ok());
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_nettype() {
+        let internet = parse_nettype("iN");
+        assert!(internet.is_ok());
+
+        assert!(parse_nettype("").is_err());
+        assert!(parse_nettype("FOO").is_err());
+    }
+
+    #[test]
+    fn test_parse_addrtype() {
+        let ip4 = parse_addrtype("iP4");
+        assert!(ip4.is_ok());
+        assert_eq!(ip4.unwrap(), SdpAddrType::IP4);
+        let ip6 = parse_addrtype("Ip6");
+        assert!(ip6.is_ok());
+        assert_eq!(ip6.unwrap(), SdpAddrType::IP6);
+
+        assert!(parse_addrtype("").is_err());
+        assert!(parse_addrtype("IP5").is_err());
+    }
+
+    #[test]
+    fn test_parse_unicast_addr() {
+        let ip4 = parse_unicast_addr("127.0.0.1");
+        assert!(ip4.is_ok());
+        let ip6 = parse_unicast_addr("::1");
+        assert!(ip6.is_ok());
+    }
 }
