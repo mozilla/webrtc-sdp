@@ -6,6 +6,23 @@ pub trait AnonymizingClone {
     fn masked_clone(&self, anon: &mut StatefulSdpAnonymizer) -> Self;
 }
 
+pub trait ToBytesVec {
+    fn to_byte_vec(&self) -> Vec<u8>;
+}
+
+impl ToBytesVec for u64 {
+    fn to_byte_vec(&self) -> Vec<u8> {
+        let mut bytes = Vec::new();
+        let mut val = *self;
+        for _ in 0..8 {
+            bytes.push(val as u8);
+            val = val << 8;
+        }
+        bytes.reverse();
+        bytes
+    }
+}
+
 /*
 * Anonymizes SDP in a stateful fashion, such that a pre-anonymized value will
 * always be transformed into the same anonymized value within the context of
@@ -95,9 +112,9 @@ impl StatefulSdpAnonymizer {
         self.cert_finger_print_inc += Wrapping(1);
         self.cert_finger_prints.insert(
             finger_print.to_vec(),
-            self.cert_finger_print_inc.0.to_be_bytes().to_vec(),
+            self.cert_finger_print_inc.0.to_byte_vec(),
         );
-        self.cert_finger_print_inc.0.to_be_bytes().to_vec()
+        self.cert_finger_print_inc.0.to_byte_vec()
     }
 }
 
@@ -235,9 +252,9 @@ mod tests {
             ],
         ];
         let masked_prints = [
-            1u64.to_be_bytes().to_vec(),
-            2u64.to_be_bytes().to_vec(),
-            3u64.to_be_bytes().to_vec(),
+            1u64.to_byte_vec(),
+            2u64.to_byte_vec(),
+            3u64.to_byte_vec(),
         ];
         for _ in 0..2 {
             assert_eq!(anon.mask_cert_finger_print(&prints[0]), masked_prints[0]);
