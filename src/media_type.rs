@@ -293,12 +293,15 @@ impl ToString for SdpMedia {
 
 impl AnonymizingClone for SdpMedia {
     fn masked_clone(&self, anon: &mut StatefulSdpAnonymizer) -> Self {
-        let mut masked = self.clone();
-        masked.attribute = masked
-            .attribute
-            .iter()
-            .map(|a: &SdpAttribute| a.masked_clone(anon))
-            .collect();
+        let mut masked = SdpMedia {
+            media: self.media.clone(),
+            bandwidth: self.bandwidth.clone(),
+            connection: self.connection.clone(),
+            attribute: Vec::new(),
+        };
+        for i in &self.attribute {
+            masked.attribute.push(i.masked_clone(anon));
+        }
         masked
     }
 }
@@ -887,4 +890,9 @@ fn test_media_vector_invalid_media_level_attribute() {
     };
     sdp_lines.push(aline);
     assert!(parse_media_vector(&mut sdp_lines).is_err());
+}
+
+#[test]
+fn test_anonymize_media() {
+    let anon = StatefulSdpAnonymizer::new();
 }

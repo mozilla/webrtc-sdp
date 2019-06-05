@@ -317,12 +317,12 @@ impl AnonymizingClone for SdpSession {
         let mut masked: SdpSession = SdpSession {
             version: self.version,
             session: self.session.clone(),
-            origin: self.origin.clone(),
+            origin: self.origin.masked_clone(anon),
             connection: self.connection.clone(),
             timing: self.timing.clone(),
             bandwidth: self.bandwidth.clone(),
             attribute: Vec::new(),
-            media: self.media.clone(),
+            media: Vec::new(),
             warnings: Vec::new(),
         };
         masked.origin = self.origin.masked_clone(anon);
@@ -1416,12 +1416,18 @@ fn test_mask_sdp() {
         true,
     )
     .unwrap();
-    let masked = sdp.masked_clone(&mut anon);
+    let mut masked = sdp.masked_clone(&mut anon);
     assert_eq!(masked.origin.username, "origin-user-00000001");
     assert_eq!(masked.origin.unicast_addr, std::net::Ipv4Addr::from(1));
     assert_eq!(masked.connection.unwrap().addr, std::net::Ipv4Addr::from(2));
-    for mut attr in masked.attribute {
-        match attr {
+    let mut attributes = masked.attribute;
+    for m in &mut masked.media {
+        for attribute in m.get_attributes() {
+            attributes.push(attribute.clone());
+        }
+    }
+    for mut attribute in attributes {
+        match attribute {
             SdpAttribute::Candidate(c) => {
                 assert_eq!(c.address, std::net::Ipv4Addr::from(3));
                 assert_eq!(c.port, 1);
