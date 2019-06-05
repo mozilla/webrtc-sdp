@@ -2913,7 +2913,7 @@ fn test_anonymize_attribute_candidate() {
         assert!(masked.raddr.unwrap() == std::net::Ipv4Addr::from(3));
         assert!(masked.rport.unwrap() == 4);
     } else {
-        assert!(false);
+        unreachable!();
     }
 }
 
