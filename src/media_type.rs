@@ -301,7 +301,10 @@ pub fn create_dummy_media_section() -> SdpMedia {
 
 #[cfg(test)]
 pub fn add_dummy_attributes(media: &mut SdpMedia) {
-    use attribute_type::{ SdpAttributeFmtp, SdpAttributeFmtpParameters, SdpAttributePayloadType, SdpAttributeRtcpFb, SdpAttributeRtcpFbType};
+    use attribute_type::{
+        SdpAttributeFmtp, SdpAttributeFmtpParameters, SdpAttributePayloadType, SdpAttributeRtcpFb,
+        SdpAttributeRtcpFbType,
+    };
     assert!(media
         .add_attribute(SdpAttribute::Rtcpfb(SdpAttributeRtcpFb {
             payload_type: SdpAttributePayloadType::Wildcard,

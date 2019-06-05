@@ -471,7 +471,11 @@ fn parse_connection(value: &str) -> Result<SdpType, SdpParserInternalError> {
             "connection addrtype does not match address.".to_string(),
         ));
     }
-    let c = SdpConnection { address, ttl, amount };
+    let c = SdpConnection {
+        address,
+        ttl,
+        amount,
+    };
     trace!("connection: {}", c.address);
     Ok(SdpType::Connection(c))
 }

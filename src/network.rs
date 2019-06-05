@@ -11,7 +11,8 @@ pub enum SdpAddressType {
 
 impl SdpAddressType {
     pub fn same_protocol(self, addr: &IpAddr) -> bool {
-        (addr.is_ipv6() && self == SdpAddressType::IP6) || (addr.is_ipv4() && self == SdpAddressType::IP4)
+        (addr.is_ipv6() && self == SdpAddressType::IP6)
+            || (addr.is_ipv4() && self == SdpAddressType::IP4)
     }
 }
 
