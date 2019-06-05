@@ -314,16 +314,24 @@ impl ToString for SdpSession {
 
 impl AnonymizingClone for SdpSession {
     fn masked_clone(&self, anon: &mut StatefulSdpAnonymizer) -> Self {
-        let mut masked: SdpSession = self.clone();
+        let mut masked: SdpSession = SdpSession {
+            version: self.version,
+            session: self.session.clone(),
+            origin: self.origin.clone(),
+            connection: self.connection.clone(),
+            timing: self.timing.clone(),
+            bandwidth: self.bandwidth.clone(),
+            attribute: Vec::new(),
+            media: self.media.clone(),
+            warnings: Vec::new(),
+        };
         masked.origin = self.origin.masked_clone(anon);
         masked.connection = masked
             .connection
             .and_then(|con| Some(con.masked_clone(anon)));
-        masked.attribute = masked
-            .attribute
-            .iter()
-            .map(|a: &SdpAttribute| a.masked_clone(anon))
-            .collect();
+        for i in &self.attribute {
+            masked.attribute.push(i.masked_clone(anon));
+        }
         masked
     }
 }
