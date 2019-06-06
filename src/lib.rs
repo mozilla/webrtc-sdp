@@ -1113,6 +1113,15 @@ mod tests {
     }
 
     #[test]
+    fn test_add_attribute() {
+        let mut sdp_session = create_dummy_sdp_session();
+
+        assert!(sdp_session.add_attribute(SdpAttribute::Sendrecv).is_ok());
+        assert!(sdp_session.add_attribute(SdpAttribute::BundleOnly).is_err());
+        assert_eq!(sdp_session.attribute.len(), 1);
+    }
+
+    #[test]
     fn test_sanity_check_sdp_session_timing() {
         let mut sdp_session = create_dummy_sdp_session();
         sdp_session.extend_media(vec![create_dummy_media_section()]);
