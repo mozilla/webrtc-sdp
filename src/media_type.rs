@@ -495,6 +495,7 @@ mod tests {
         SdpAttributeFmtp, SdpAttributeFmtpParameters, SdpAttributePayloadType, SdpAttributeRtcpFb,
         SdpAttributeRtcpFbType,
     };
+    use network::parse_unicast_address;
 
     // TODO is this useful outside of tests?
     impl SdpFormatList {
@@ -823,10 +824,9 @@ mod tests {
             sdp_type: SdpType::Media(media_line),
         };
         sdp_lines.push(media);
-        use network::parse_unicast_addr;
-        let addr = parse_unicast_addr("127.0.0.1").unwrap();
+        let address = parse_unicast_address("127.0.0.1").unwrap();
         let c = SdpConnection {
-            addr,
+            address,
             ttl: None,
             amount: None,
         };
