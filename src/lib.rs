@@ -1048,7 +1048,7 @@ fn test_sanity_check_sdp_connection() {
         unreachable!();
     }
     sdp_session.extend_media(vec![second_media]);
-    assert!(sdp_session.media.len() == 2);
+    assert_eq!(sdp_session.media.len(), 2);
 
     assert!(sanity_check_sdp_session(&sdp_session).is_err());
 }
@@ -1093,7 +1093,7 @@ fn test_sanity_check_sdp_session_extmap() {
         .is_some());
 
     sdp_session.extend_media(vec![second_media]);
-    assert!(sdp_session.media.len() == 2);
+    assert_eq!(sdp_session.media.len(), 2);
 
     assert!(sanity_check_sdp_session(&sdp_session).is_err());
 
