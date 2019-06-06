@@ -3,7 +3,7 @@ use std::net::IpAddr;
 use std::str::FromStr;
 
 use error::SdpParserInternalError;
-use network::{addr_to_string, parse_addrtype, parse_nettype, parse_unicast_addr};
+use network::{address_to_string, parse_address_type, parse_network_type, parse_unicast_address};
 use SdpType;
 
 use anonymizer::{AnonymizingClone, StatefulSdpAnonymizer};
@@ -421,7 +421,7 @@ impl ToString for SdpAttributeRtcp {
     fn to_string(&self) -> String {
         let unicast_addr_str_opt = match self.unicast_addr {
             None => None,
-            Some(x) => Some(addr_to_string(x)),
+            Some(x) => Some(address_to_string(x)),
         };
         format!(
             "{port}{unicast_addr}",
@@ -1518,7 +1518,7 @@ fn parse_candidate(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalErro
         }
     };
     let priority = tokens[3].parse::<u64>()?;
-    let address = parse_unicast_addr(tokens[4])?;
+    let address = parse_unicast_address(tokens[4])?;
     let port = tokens[5].parse::<u32>()?;
     if port > 65535 {
         return Err(SdpParserInternalError::Generic(
@@ -1568,7 +1568,7 @@ fn parse_candidate(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalErro
                     index += 2;
                 }
                 "raddr" => {
-                    let addr = parse_unicast_addr(tokens[index + 1])?;
+                    let addr = parse_unicast_address(tokens[index + 1])?;
                     cand.set_remote_address(addr);
                     index += 2;
                 }
@@ -2393,7 +2393,7 @@ fn parse_remote_candidates(to_parse: &str) -> Result<SdpAttribute, SdpParserInte
                 "Remote-candidate attribute is missing connection address".to_string(),
             ));
         }
-        Some(x) => parse_unicast_addr(x)?,
+        Some(x) => parse_unicast_address(x)?,
     };
     let port = match tokens.next() {
         None => {
@@ -2478,7 +2478,7 @@ fn parse_rtcp(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
     match tokens.next() {
         None => (),
         Some(x) => {
-            parse_nettype(x)?;
+            parse_network_type(x)?;
             match tokens.next() {
                 None => {
                     return Err(SdpParserInternalError::Generic(
@@ -2486,7 +2486,7 @@ fn parse_rtcp(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
                     ));
                 }
                 Some(x) => {
-                    let addrtype = parse_addrtype(x)?;
+                    let addrtype = parse_address_type(x)?;
                     let addr = match tokens.next() {
                         None => {
                             return Err(SdpParserInternalError::Generic(
@@ -2494,7 +2494,7 @@ fn parse_rtcp(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
                             ));
                         }
                         Some(x) => {
-                            let addr = parse_unicast_addr(x)?;
+                            let addr = parse_unicast_address(x)?;
                             if !addrtype.same_protocol(&addr) {
                                 return Err(SdpParserInternalError::Generic(
                                     "Failed to parse unicast address attribute.\
