@@ -1,9 +1,11 @@
+use anonymizer::{AnonymizingClone, StatefulSdpAnonymizer};
 use attribute_type::{
     maybe_print_param, SdpAttribute, SdpAttributeRtpmap, SdpAttributeSctpmap, SdpAttributeType,
 };
 use error::{SdpParserError, SdpParserInternalError};
 use {SdpBandwidth, SdpConnection, SdpLine, SdpType};
 
+#[derive(Clone)]
 #[cfg_attr(feature = "serialize", derive(Serialize))]
 pub struct SdpMediaLine {
     pub media: SdpMediaValue,
@@ -26,7 +28,7 @@ impl ToString for SdpMediaLine {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(feature = "serialize", derive(Serialize))]
 pub enum SdpMediaValue {
     Audio,
@@ -45,7 +47,7 @@ impl ToString for SdpMediaValue {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(feature = "serialize", derive(Serialize))]
 pub enum SdpProtocolValue {
     RtpAvp,
@@ -82,6 +84,7 @@ impl ToString for SdpProtocolValue {
     }
 }
 
+#[derive(Clone)]
 #[cfg_attr(feature = "serialize", derive(Serialize))]
 pub enum SdpFormatList {
     Integers(Vec<u32>),
@@ -97,6 +100,8 @@ impl ToString for SdpFormatList {
     }
 }
 
+
+#[derive(Clone)]
 #[cfg_attr(feature = "serialize", derive(Serialize))]
 pub struct SdpMedia {
     media: SdpMediaLine,
@@ -273,6 +278,21 @@ impl ToString for SdpMedia {
             bandwidth = maybe_vector_to_string!("b={}\r\n", self.bandwidth, "\r\nb="),
             attributes = maybe_vector_to_string!("a={}\r\n", self.attribute, "\r\na=")
         )
+    }
+}
+
+impl AnonymizingClone for SdpMedia {
+    fn masked_clone(&self, anon: &mut StatefulSdpAnonymizer) -> Self {
+        let mut masked = SdpMedia {
+            media: self.media.clone(),
+            bandwidth: self.bandwidth.clone(),
+            connection: self.connection.clone(),
+            attribute: Vec::new(),
+        };
+        for i in &self.attribute {
+            masked.attribute.push(i.masked_clone(anon));
+        }
+        masked
     }
 }
 
