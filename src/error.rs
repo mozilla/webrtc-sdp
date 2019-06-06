@@ -209,7 +209,7 @@ mod tests {
             "Generic parsing error: generic message"
         );
         assert_eq!(generic.description(), "generic message");
-        assert!(generic.cause().is_none());
+        assert!(generic.source().is_none());
     }
 
     #[test]
@@ -221,7 +221,7 @@ mod tests {
             "Unsupported parsing error: unsupported internal message"
         );
         assert_eq!(unsupported.description(), "unsupported internal message");
-        assert!(unsupported.cause().is_none());
+        assert!(unsupported.source().is_none());
     }
 
     #[test]
@@ -235,7 +235,7 @@ mod tests {
             "Integer parsing error: invalid digit found in string"
         );
         assert_eq!(int_err.description(), "invalid digit found in string");
-        assert!(!int_err.cause().is_none());
+        assert!(!int_err.source().is_none());
     }
 
     #[test]
@@ -249,7 +249,7 @@ mod tests {
             "Float parsing error: invalid float literal"
         );
         assert_eq!(int_err.description(), "invalid float literal");
-        assert!(!int_err.cause().is_none());
+        assert!(!int_err.source().is_none());
     }
 
     #[test]
@@ -265,7 +265,7 @@ mod tests {
             "IP address parsing error: invalid IP address syntax"
         );
         assert_eq!(addr_err.description(), "invalid IP address syntax");
-        assert!(!addr_err.cause().is_none());
+        assert!(!addr_err.source().is_none());
     }
 
     #[test]
@@ -280,7 +280,7 @@ mod tests {
             "Line error: test message in line(13): test line"
         );
         assert_eq!(line1.description(), "test message");
-        assert!(line1.cause().is_some());
+        assert!(line1.source().is_some());
     }
 
     #[test]
@@ -295,7 +295,7 @@ mod tests {
             "Unsupported: unsupported value in line(21): unsupported line"
         );
         assert_eq!(unsupported1.description(), "unsupported value");
-        assert!(unsupported1.cause().is_some());
+        assert!(unsupported1.source().is_some());
     }
 
     #[test]
@@ -309,6 +309,6 @@ mod tests {
             "Sequence error in line(42): sequence message"
         );
         assert_eq!(sequence1.description(), "sequence message");
-        assert!(sequence1.cause().is_none());
+        assert!(sequence1.source().is_none());
     }
 }
