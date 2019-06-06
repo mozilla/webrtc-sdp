@@ -880,8 +880,8 @@ pub fn parse_sdp(sdp: &str, fail_on_warning: bool) -> Result<SdpSession, SdpPars
 #[cfg(test)]
 mod tests {
     use super::*;
-    use media_type::create_dummy_media_section;
     use anonymizer::ToBytesVec;
+    use media_type::create_dummy_media_section;
 
     fn create_dummy_sdp_session() -> SdpSession {
         let origin = parse_origin("mozilla 506705521068071134 0 IN IP4 0.0.0.0");
@@ -1422,7 +1422,10 @@ a=ice-lite\r\n",
         let mut masked = sdp.masked_clone(&mut anon);
         assert_eq!(masked.origin.username, "origin-user-00000001");
         assert_eq!(masked.origin.unicast_addr, std::net::Ipv4Addr::from(1));
-        assert_eq!(masked.connection.unwrap().address, std::net::Ipv4Addr::from(2));
+        assert_eq!(
+            masked.connection.unwrap().address,
+            std::net::Ipv4Addr::from(2)
+        );
         let mut attributes = masked.attribute;
         for m in &mut masked.media {
             for attribute in m.get_attributes() {
@@ -1453,4 +1456,3 @@ a=ice-lite\r\n",
         }
     }
 }
-

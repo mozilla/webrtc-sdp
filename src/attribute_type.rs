@@ -2892,7 +2892,8 @@ mod tests {
     #[test]
     fn test_anonymize_attribute_candidate() {
         let mut anon = StatefulSdpAnonymizer::new();
-        let candidate_1 = parse_attribute("candidate:0 1 TCP 2122252543 ::8 49760 typ host").unwrap();
+        let candidate_1 =
+            parse_attribute("candidate:0 1 TCP 2122252543 ::8 49760 typ host").unwrap();
         let candidate_2 =
             parse_attribute("candidate:0 1 UDP 2122252543 172.16.156.106 19361 typ srflx").unwrap();
         let candidate_3 = parse_attribute("candidate:1 1 TCP 1685987071 24.23.204.141 54609 typ srflx raddr 192.168.1.4 rport 61665 tcptype passive generation 1 ufrag +DGd").unwrap();

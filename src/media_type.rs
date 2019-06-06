@@ -100,7 +100,6 @@ impl ToString for SdpFormatList {
     }
 }
 
-
 #[derive(Clone)]
 #[cfg_attr(feature = "serialize", derive(Serialize))]
 pub struct SdpMedia {
