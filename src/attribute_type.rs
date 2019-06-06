@@ -310,10 +310,11 @@ impl ToString for SdpAttributeRemoteCandidate {
 
 impl AnonymizingClone for SdpAttributeRemoteCandidate {
     fn masked_clone(&self, anon: &mut StatefulSdpAnonymizer) -> Self {
-        let mut masked = self.clone();
-        masked.address = anon.mask_ip(&self.address);
-        masked.port = anon.mask_port(self.port);
-        masked
+        SdpAttributeRemoteCandidate {
+            address: anon.mask_ip(&self.address),
+            port: anon.mask_port(self.port),
+            component: self.component,
+        }
     }
 }
 
@@ -658,9 +659,10 @@ impl ToString for SdpAttributeFingerprint {
 
 impl AnonymizingClone for SdpAttributeFingerprint {
     fn masked_clone(&self, anon: &mut StatefulSdpAnonymizer) -> Self {
-        let mut masked = self.clone();
-        masked.fingerprint = anon.mask_cert_finger_print(&self.fingerprint);
-        masked
+        SdpAttributeFingerprint {
+            hash_algorithm: self.hash_algorithm,
+            fingerprint: anon.mask_cert_finger_print(&self.fingerprint),
+        }
     }
 }
 
