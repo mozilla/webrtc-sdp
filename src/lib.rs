@@ -1464,4 +1464,33 @@ a=ice-lite\r\n",
             }
         }
     }
+
+    #[test]
+    fn test_parse_session_vector() {
+        let mut sdp_session = create_dummy_sdp_session();
+        let mut lines: Vec<SdpLine> = Vec::new();
+        let line = parse_sdp_line("a=sendrecv", 1);
+        assert!(line.is_ok());
+        lines.push(line.unwrap());
+        assert!(sdp_session.parse_session_vector(&mut lines).is_ok());
+        assert_eq!(sdp_session.attribute.len(), 1);
+
+        let line = parse_sdp_line("a=bundle-only", 2);
+        assert!(line.is_ok());
+        lines.push(line.unwrap());
+        assert!(sdp_session.parse_session_vector(&mut lines).is_err());
+        assert_eq!(sdp_session.attribute.len(), 1);
+
+        let line = parse_sdp_line("v=0", 3);
+        assert!(line.is_ok());
+        lines.push(line.unwrap());
+        assert!(sdp_session.parse_session_vector(&mut lines).is_err());
+        assert_eq!(sdp_session.attribute.len(), 1);
+
+        let line = parse_sdp_line("m=audio 0 UDP/TLS/RTP/SAVPF 0", 4);
+        assert!(line.is_ok());
+        lines.push(line.unwrap());
+        assert!(sdp_session.parse_session_vector(&mut lines).is_err());
+        assert_eq!(sdp_session.attribute.len(), 1);
+    }
 }
