@@ -1559,7 +1559,9 @@ a=ice-lite\r\n",
         let line = parse_sdp_line("v=0", 1);
         assert!(line.is_ok());
         lines.push(line.unwrap());
-        assert!(parse_sdp_vector(&mut lines).is_err());
+        let ret = parse_sdp_vector(&mut lines);
+        assert!(ret.is_err());
+        debug!("{:?}", ret.err());
     }
 
     #[test]
@@ -1568,12 +1570,14 @@ a=ice-lite\r\n",
         let line = parse_sdp_line("o=ausername 4294967296 2 IN IP4 127.0.0.1", 1);
         assert!(line.is_ok());
         lines.push(line.unwrap());
-        for _ in 0..2 {
+        for _ in 0..3 {
             let dummy_line = parse_sdp_line("a=sendrecv", 1);
             assert!(dummy_line.is_ok());
             lines.push(dummy_line.unwrap());
         }
-        assert!(parse_sdp_vector(&mut lines).is_err());
+        let ret = parse_sdp_vector(&mut lines);
+        assert!(ret.is_err());
+        debug!("{:?}", ret.err());
     }
 
     #[test]
@@ -1582,17 +1586,18 @@ a=ice-lite\r\n",
         let line = parse_sdp_line("v=0", 1);
         assert!(line.is_ok());
         lines.push(line.unwrap());
-        for _ in 0..2 {
+        for _ in 0..3 {
             let dummy_line = parse_sdp_line("a=sendrecv", 1);
             assert!(dummy_line.is_ok());
             lines.push(dummy_line.unwrap());
         }
-        assert!(parse_sdp_vector(&mut lines).is_err());
+        let ret = parse_sdp_vector(&mut lines);
+        assert!(ret.is_err());
+        debug!("{:?}", ret.err());
     }
 
     #[test]
     fn test_parse_sdp_vector_missing_session() {
-        // third line isn't session
         let mut lines: Vec<SdpLine> = Vec::new();
         let line = parse_sdp_line("v=0", 1);
         assert!(line.is_ok());
@@ -1600,11 +1605,13 @@ a=ice-lite\r\n",
         let line = parse_sdp_line("o=ausername 4294967296 2 IN IP4 127.0.0.1", 1);
         assert!(line.is_ok());
         lines.push(line.unwrap());
-        for _ in 0..1 {
+        for _ in 0..2 {
             let dummy_line = parse_sdp_line("a=sendrecv", 1);
             assert!(dummy_line.is_ok());
             lines.push(dummy_line.unwrap());
         }
-        assert!(parse_sdp_vector(&mut lines).is_err());
+        let ret = parse_sdp_vector(&mut lines);
+        assert!(ret.is_err());
+        debug!("{:?}", ret.err());
     }
 }
