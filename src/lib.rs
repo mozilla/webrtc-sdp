@@ -1509,24 +1509,15 @@ a=ice-lite\r\n",
     }
 
     #[test]
-    fn test_parse_sdp_vector_no_media_section() {
+    fn test_parse_sdp_vector_no_media_section() -> Result<(), SdpParserError> {
         let mut lines: Vec<SdpLine> = Vec::new();
-        let line = parse_sdp_line("v=0", 1);
-        assert!(line.is_ok());
-        lines.push(line.unwrap());
-        let line = parse_sdp_line("o=ausername 4294967296 2 IN IP4 127.0.0.1", 1);
-        assert!(line.is_ok());
-        lines.push(line.unwrap());
-        let line = parse_sdp_line("s=SIP Call", 1);
-        assert!(line.is_ok());
-        lines.push(line.unwrap());
-        let line = parse_sdp_line("t=0 0", 1);
-        assert!(line.is_ok());
-        lines.push(line.unwrap());
-        let line = parse_sdp_line("c=IN IP6 ::1", 1);
-        assert!(line.is_ok());
-        lines.push(line.unwrap());
+        lines.push(parse_sdp_line("v=0", 1)?);
+        lines.push(parse_sdp_line("o=ausername 4294967296 2 IN IP4 127.0.0.1", 1)?);
+        lines.push(parse_sdp_line("s=SIP Call", 1)?);
+        lines.push(parse_sdp_line("t=0 0", 1)?);
+        lines.push(parse_sdp_line("c=IN IP6 ::1", 1)?);
         assert!(parse_sdp_vector(&mut lines).is_ok());
+        Ok(())
     }
 
     #[test]
