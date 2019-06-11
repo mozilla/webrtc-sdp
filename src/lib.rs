@@ -1521,88 +1521,57 @@ a=ice-lite\r\n",
     }
 
     #[test]
-    fn test_parse_sdp_vector_with_media_section() {
+    fn test_parse_sdp_vector_with_media_section() -> Result<(), SdpParserError> {
         let mut lines: Vec<SdpLine> = Vec::new();
-        let line = parse_sdp_line("v=0", 1);
-        assert!(line.is_ok());
-        lines.push(line.unwrap());
-        let line = parse_sdp_line("o=ausername 4294967296 2 IN IP4 127.0.0.1", 1);
-        assert!(line.is_ok());
-        lines.push(line.unwrap());
-        let line = parse_sdp_line("s=SIP Call", 1);
-        assert!(line.is_ok());
-        lines.push(line.unwrap());
-        let line = parse_sdp_line("t=0 0", 1);
-        assert!(line.is_ok());
-        lines.push(line.unwrap());
-        let line = parse_sdp_line("m=video 56436 RTP/SAVPF 120", 1);
-        assert!(line.is_ok());
-        lines.push(line.unwrap());
-        let line = parse_sdp_line("c=IN IP6 ::1", 1);
-        assert!(line.is_ok());
-        lines.push(line.unwrap());
+        lines.push(parse_sdp_line("v=0", 1)?);
+        lines.push(parse_sdp_line("o=ausername 4294967296 2 IN IP4 127.0.0.1", 1)?);
+        lines.push(parse_sdp_line("s=SIP Call", 1)?);
+        lines.push(parse_sdp_line("t=0 0", 1)?);
+        lines.push(parse_sdp_line("m=video 56436 RTP/SAVPF 120", 1)?);
+        lines.push(parse_sdp_line("c=IN IP6 ::1", 1)?);
         assert!(parse_sdp_vector(&mut lines).is_ok());
+        Ok(())
     }
 
     #[test]
-    fn test_parse_sdp_vector_too_short() {
+    fn test_parse_sdp_vector_too_short() -> Result<(), SdpParserError> {
         let mut lines: Vec<SdpLine> = Vec::new();
-        let line = parse_sdp_line("v=0", 1);
-        assert!(line.is_ok());
-        lines.push(line.unwrap());
-        let ret = parse_sdp_vector(&mut lines);
-        assert!(ret.is_err());
-        debug!("{:?}", ret.err());
+        lines.push(parse_sdp_line("v=0", 1)?);
+        assert!(parse_sdp_vector(&mut lines).is_err());
+        Ok(())
     }
 
     #[test]
-    fn test_parse_sdp_vector_missing_version() {
+    fn test_parse_sdp_vector_missing_version() -> Result<(), SdpParserError> {
         let mut lines: Vec<SdpLine> = Vec::new();
-        let line = parse_sdp_line("o=ausername 4294967296 2 IN IP4 127.0.0.1", 1);
-        assert!(line.is_ok());
-        lines.push(line.unwrap());
+        lines.push(parse_sdp_line("o=ausername 4294967296 2 IN IP4 127.0.0.1", 1)?);
         for _ in 0..3 {
-            let dummy_line = parse_sdp_line("a=sendrecv", 1);
-            assert!(dummy_line.is_ok());
-            lines.push(dummy_line.unwrap());
+            lines.push(parse_sdp_line("a=sendrecv", 1)?);
         }
-        let ret = parse_sdp_vector(&mut lines);
-        assert!(ret.is_err());
-        debug!("{:?}", ret.err());
+        assert!(parse_sdp_vector(&mut lines).is_err());
+        Ok(())
     }
 
     #[test]
-    fn test_parse_sdp_vector_missing_origin() {
+    fn test_parse_sdp_vector_missing_origin() -> Result<(), SdpParserError> {
         let mut lines: Vec<SdpLine> = Vec::new();
-        let line = parse_sdp_line("v=0", 1);
-        assert!(line.is_ok());
-        lines.push(line.unwrap());
+        lines.push(parse_sdp_line("v=0", 1)?);
         for _ in 0..3 {
-            let dummy_line = parse_sdp_line("a=sendrecv", 1);
-            assert!(dummy_line.is_ok());
-            lines.push(dummy_line.unwrap());
+            lines.push(parse_sdp_line("a=sendrecv", 1)?);
         }
-        let ret = parse_sdp_vector(&mut lines);
-        assert!(ret.is_err());
-        debug!("{:?}", ret.err());
+        assert!(parse_sdp_vector(&mut lines).is_err());
+        Ok(())
     }
 
     #[test]
-    fn test_parse_sdp_vector_missing_session() {
+    fn test_parse_sdp_vector_missing_session() -> Result<(), SdpParserError> {
         let mut lines: Vec<SdpLine> = Vec::new();
-        let line = parse_sdp_line("v=0", 1);
-        assert!(line.is_ok());
-        lines.push(line.unwrap());
-        let line = parse_sdp_line("o=ausername 4294967296 2 IN IP4 127.0.0.1", 1);
-        assert!(line.is_ok());
-        lines.push(line.unwrap());
+        lines.push(parse_sdp_line("v=0", 1)?);
+        lines.push(parse_sdp_line("o=ausername 4294967296 2 IN IP4 127.0.0.1", 1)?);
         for _ in 0..2 {
-            let dummy_line = parse_sdp_line("a=sendrecv", 1);
-            assert!(dummy_line.is_ok());
-            lines.push(dummy_line.unwrap());
+            lines.push(parse_sdp_line("a=sendrecv", 1)?);
         }
-        let ret = parse_sdp_vector(&mut lines);
-        assert!(ret.is_err());
-        debug!("{:?}", ret.err());
+        assert!(parse_sdp_vector(&mut lines).is_err());
+        Ok(())
     }
 }
