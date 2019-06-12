@@ -630,10 +630,6 @@ fn sanity_check_sdp_session(session: &SdpSession) -> Result<(), SdpParserError> 
                  must have connection types",
             ));
         }
-    } else if mconnections > 0 {
-        return Err(make_seq_error(
-            "Session xor media sections can define connection types, but not both",
-        ));
     }
 
     // Check that extmaps are not defined on session and media level
@@ -1179,7 +1175,7 @@ mod tests {
         sdp_session.extend_media(vec![second_media]);
         assert!(sdp_session.media.len() == 2);
 
-        assert!(sanity_check_sdp_session(&sdp_session).is_err());
+        assert!(sanity_check_sdp_session(&sdp_session).is_ok());
     }
 
     #[test]
