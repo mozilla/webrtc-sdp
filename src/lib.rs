@@ -1512,7 +1512,10 @@ a=ice-lite\r\n",
     fn test_parse_sdp_vector_no_media_section() -> Result<(), SdpParserError> {
         let mut lines: Vec<SdpLine> = Vec::new();
         lines.push(parse_sdp_line("v=0", 1)?);
-        lines.push(parse_sdp_line("o=ausername 4294967296 2 IN IP4 127.0.0.1", 1)?);
+        lines.push(parse_sdp_line(
+            "o=ausername 4294967296 2 IN IP4 127.0.0.1",
+            1,
+        )?);
         lines.push(parse_sdp_line("s=SIP Call", 1)?);
         lines.push(parse_sdp_line("t=0 0", 1)?);
         lines.push(parse_sdp_line("c=IN IP6 ::1", 1)?);
@@ -1524,7 +1527,10 @@ a=ice-lite\r\n",
     fn test_parse_sdp_vector_with_media_section() -> Result<(), SdpParserError> {
         let mut lines: Vec<SdpLine> = Vec::new();
         lines.push(parse_sdp_line("v=0", 1)?);
-        lines.push(parse_sdp_line("o=ausername 4294967296 2 IN IP4 127.0.0.1", 1)?);
+        lines.push(parse_sdp_line(
+            "o=ausername 4294967296 2 IN IP4 127.0.0.1",
+            1,
+        )?);
         lines.push(parse_sdp_line("s=SIP Call", 1)?);
         lines.push(parse_sdp_line("t=0 0", 1)?);
         lines.push(parse_sdp_line("m=video 56436 RTP/SAVPF 120", 1)?);
@@ -1544,7 +1550,10 @@ a=ice-lite\r\n",
     #[test]
     fn test_parse_sdp_vector_missing_version() -> Result<(), SdpParserError> {
         let mut lines: Vec<SdpLine> = Vec::new();
-        lines.push(parse_sdp_line("o=ausername 4294967296 2 IN IP4 127.0.0.1", 1)?);
+        lines.push(parse_sdp_line(
+            "o=ausername 4294967296 2 IN IP4 127.0.0.1",
+            1,
+        )?);
         for _ in 0..3 {
             lines.push(parse_sdp_line("a=sendrecv", 1)?);
         }
@@ -1567,11 +1576,66 @@ a=ice-lite\r\n",
     fn test_parse_sdp_vector_missing_session() -> Result<(), SdpParserError> {
         let mut lines: Vec<SdpLine> = Vec::new();
         lines.push(parse_sdp_line("v=0", 1)?);
-        lines.push(parse_sdp_line("o=ausername 4294967296 2 IN IP4 127.0.0.1", 1)?);
+        lines.push(parse_sdp_line(
+            "o=ausername 4294967296 2 IN IP4 127.0.0.1",
+            1,
+        )?);
         for _ in 0..2 {
             lines.push(parse_sdp_line("a=sendrecv", 1)?);
         }
         assert!(parse_sdp_vector(&mut lines).is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn test_session_add_media_works() -> Result<(), SdpParserError> {
+        let mut sdp_session = create_dummy_sdp_session();
+        assert!(sdp_session
+            .add_media(
+                SdpMediaValue::Audio,
+                SdpAttribute::Sendrecv,
+                99,
+                SdpProtocolValue::RtpSavpf,
+                "127.0.0.1".to_string()
+            )
+            .is_ok());
+        assert!(sdp_session.get_connection().is_some());
+        assert_eq!(sdp_session.attribute.len(), 0);
+        assert_eq!(sdp_session.media.len(), 1);
+        assert_eq!(sdp_session.media[0].get_attributes().len(), 1);
+        assert!(sdp_session.media[0]
+            .get_attribute(SdpAttributeType::Sendrecv)
+            .is_some());
+        Ok(())
+    }
+
+    #[test]
+    fn test_session_add_media_invalid_ip_fails() -> Result<(), SdpParserError> {
+        let mut sdp_session = create_dummy_sdp_session();
+        assert!(sdp_session
+            .add_media(
+                SdpMediaValue::Audio,
+                SdpAttribute::Sendrecv,
+                99,
+                SdpProtocolValue::RtpSavpf,
+                "600.0.0.1".to_string()
+            )
+            .is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn test_session_add_media_invalid_attribute_fails() -> Result<(), SdpParserError> {
+        let mut sdp_session = create_dummy_sdp_session();
+        assert!(sdp_session
+            .add_media(
+                SdpMediaValue::Audio,
+                SdpAttribute::IceLite,
+                99,
+                SdpProtocolValue::RtpSavpf,
+                "127.0.0.1".to_string()
+            )
+            .is_err());
         Ok(())
     }
 }
