@@ -2892,8 +2892,7 @@ mod tests {
     #[test]
     fn test_anonymize_attribute_candidate() -> Result<(), SdpParserInternalError> {
         let mut anon = StatefulSdpAnonymizer::new();
-        let candidate_1 =
-            parse_attribute("candidate:0 1 TCP 2122252543 ::8 49760 typ host")?;
+        let candidate_1 = parse_attribute("candidate:0 1 TCP 2122252543 ::8 49760 typ host")?;
         let candidate_2 =
             parse_attribute("candidate:0 1 UDP 2122252543 172.16.156.106 19361 typ srflx")?;
         let candidate_3 = parse_attribute("candidate:1 1 TCP 1685987071 24.23.204.141 54609 typ srflx raddr 192.168.1.4 rport 61665 tcptype passive generation 1 ufrag +DGd")?;
@@ -3154,7 +3153,9 @@ mod tests {
     #[test]
     fn test_anonymize_attribute_fingerprint() -> Result<(), SdpParserInternalError> {
         let mut anon = StatefulSdpAnonymizer::new();
-        if let SdpType::Attribute(SdpAttribute::Fingerprint(print)) = parse_attribute("fingerprint:sha-1 CD:34:D1:62:16:95:7B:B7:EB:74:E2:39:27:97:EB:0B:23:73:AC:BC",)? {
+        if let SdpType::Attribute(SdpAttribute::Fingerprint(print)) = parse_attribute(
+            "fingerprint:sha-1 CD:34:D1:62:16:95:7B:B7:EB:74:E2:39:27:97:EB:0B:23:73:AC:BC",
+        )? {
             assert!(print.masked_clone(&mut anon).to_string() == "sha-1 00:00:00:00:00:00:00:01");
         } else {
             unreachable!();
@@ -3482,7 +3483,9 @@ mod tests {
     #[test]
     fn test_anonymize_remote_candidate() -> Result<(), SdpParserInternalError> {
         let mut anon = StatefulSdpAnonymizer::new();
-        if let SdpType::Attribute(SdpAttribute::RemoteCandidate(remote)) = parse_attribute("remote-candidates:0 10.0.0.1 5555")? {
+        if let SdpType::Attribute(SdpAttribute::RemoteCandidate(remote)) =
+            parse_attribute("remote-candidates:0 10.0.0.1 5555")?
+        {
             let mut masked = remote.masked_clone(&mut anon);
             assert_eq!(masked.address, std::net::Ipv4Addr::from(1));
             assert_eq!(masked.port, 1);
