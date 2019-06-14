@@ -53,32 +53,30 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_parse_network_type() {
-        let internet = parse_network_type("iN");
-        assert!(internet.is_ok());
+    fn test_parse_network_type() -> Result<(), SdpParserInternalError> {
+        parse_network_type("iN")?;
 
         assert!(parse_network_type("").is_err());
         assert!(parse_network_type("FOO").is_err());
+        Ok(())
     }
 
     #[test]
-    fn test_parse_address_type() {
-        let ip4 = parse_address_type("iP4");
-        assert!(ip4.is_ok());
-        assert_eq!(ip4.unwrap(), SdpAddressType::IP4);
-        let ip6 = parse_address_type("Ip6");
-        assert!(ip6.is_ok());
-        assert_eq!(ip6.unwrap(), SdpAddressType::IP6);
+    fn test_parse_address_type() -> Result<(), SdpParserInternalError> {
+        let ip4 = parse_address_type("iP4")?;
+        assert_eq!(ip4, SdpAddressType::IP4);
+        let ip6 = parse_address_type("Ip6")?;
+        assert_eq!(ip6, SdpAddressType::IP6);
 
         assert!(parse_address_type("").is_err());
         assert!(parse_address_type("IP5").is_err());
+        Ok(())
     }
 
     #[test]
-    fn test_parse_unicast_address() {
-        let ip4 = parse_unicast_address("127.0.0.1");
-        assert!(ip4.is_ok());
-        let ip6 = parse_unicast_address("::1");
-        assert!(ip6.is_ok());
+    fn test_parse_unicast_address() -> Result<(), SdpParserInternalError> {
+        parse_unicast_address("127.0.0.1")?;
+        parse_unicast_address("::1")?;
+        Ok(())
     }
 }

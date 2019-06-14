@@ -2890,13 +2890,12 @@ mod tests {
     }
 
     #[test]
-    fn test_anonymize_attribute_candidate() {
+    fn test_anonymize_attribute_candidate() -> Result<(), SdpParserInternalError> {
         let mut anon = StatefulSdpAnonymizer::new();
-        let candidate_1 =
-            parse_attribute("candidate:0 1 TCP 2122252543 ::8 49760 typ host").unwrap();
+        let candidate_1 = parse_attribute("candidate:0 1 TCP 2122252543 ::8 49760 typ host")?;
         let candidate_2 =
-            parse_attribute("candidate:0 1 UDP 2122252543 172.16.156.106 19361 typ srflx").unwrap();
-        let candidate_3 = parse_attribute("candidate:1 1 TCP 1685987071 24.23.204.141 54609 typ srflx raddr 192.168.1.4 rport 61665 tcptype passive generation 1 ufrag +DGd").unwrap();
+            parse_attribute("candidate:0 1 UDP 2122252543 172.16.156.106 19361 typ srflx")?;
+        let candidate_3 = parse_attribute("candidate:1 1 TCP 1685987071 24.23.204.141 54609 typ srflx raddr 192.168.1.4 rport 61665 tcptype passive generation 1 ufrag +DGd")?;
         if let SdpType::Attribute(SdpAttribute::Candidate(candidate)) = candidate_1 {
             let masked = candidate.masked_clone(&mut anon);
             assert!(masked.address == std::net::Ipv6Addr::from(1));
@@ -2922,6 +2921,7 @@ mod tests {
         } else {
             unreachable!();
         }
+        Ok(())
     }
 
     #[test]
@@ -2987,8 +2987,7 @@ mod tests {
         check_parse_and_serialize("dtls-message:client IGlzdCBl/W4gUeiBtaXQg+JSB1bmQCAkJJkSNEQ=");
         check_parse_and_serialize("dtls-message:server IGlzdCBl/W4gUeiBtaXQg+JSB1bmQCAkJJkSNEQ=");
 
-        let mut dtls_message = check_parse("dtls-message:client SGVsbG8gV29ybGQ=");
-        match dtls_message {
+        match check_parse("dtls-message:client SGVsbG8gV29ybGQ=") {
             SdpAttributeDtlsMessage::Client(x) => {
                 assert_eq!(x, "SGVsbG8gV29ybGQ=");
             }
@@ -2997,8 +2996,7 @@ mod tests {
             }
         }
 
-        dtls_message = check_parse("dtls-message:server SGVsbG8gV29ybGQ=");
-        match dtls_message {
+        match check_parse("dtls-message:server SGVsbG8gV29ybGQ=") {
             SdpAttributeDtlsMessage::Server(x) => {
                 assert_eq!(x, "SGVsbG8gV29ybGQ=");
             }
@@ -3153,17 +3151,16 @@ mod tests {
     }
 
     #[test]
-    fn test_anonymize_attribute_fingerprint() {
+    fn test_anonymize_attribute_fingerprint() -> Result<(), SdpParserInternalError> {
         let mut anon = StatefulSdpAnonymizer::new();
-        let print_1 = parse_attribute(
+        if let SdpType::Attribute(SdpAttribute::Fingerprint(print)) = parse_attribute(
             "fingerprint:sha-1 CD:34:D1:62:16:95:7B:B7:EB:74:E2:39:27:97:EB:0B:23:73:AC:BC",
-        )
-        .unwrap();
-        if let SdpType::Attribute(SdpAttribute::Fingerprint(print)) = print_1 {
+        )? {
             assert!(print.masked_clone(&mut anon).to_string() == "sha-1 00:00:00:00:00:00:00:01");
         } else {
             unreachable!();
         }
+        Ok(())
     }
 
     #[test]
@@ -3484,16 +3481,18 @@ mod tests {
     }
 
     #[test]
-    fn test_anonymize_remote_candidate() {
+    fn test_anonymize_remote_candidate() -> Result<(), SdpParserInternalError> {
         let mut anon = StatefulSdpAnonymizer::new();
-        let remote_1 = parse_attribute("remote-candidates:0 10.0.0.1 5555").unwrap();
-        if let SdpType::Attribute(SdpAttribute::RemoteCandidate(remote)) = remote_1 {
+        if let SdpType::Attribute(SdpAttribute::RemoteCandidate(remote)) =
+            parse_attribute("remote-candidates:0 10.0.0.1 5555")?
+        {
             let mut masked = remote.masked_clone(&mut anon);
             assert_eq!(masked.address, std::net::Ipv4Addr::from(1));
             assert_eq!(masked.port, 1);
         } else {
             unreachable!();
         }
+        Ok(())
     }
 
     #[test]

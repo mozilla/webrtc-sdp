@@ -734,7 +734,6 @@ fn sanity_check_sdp_session(session: &SdpSession) -> Result<(), SdpParserError> 
     Ok(())
 }
 
-// TODO add unit tests
 fn parse_sdp_vector(lines: &mut Vec<SdpLine>) -> Result<SdpSession, SdpParserError> {
     if lines.len() < 4 {
         return Err(SdpParserError::Sequence {
@@ -900,13 +899,15 @@ mod tests {
     }
 
     #[test]
-    fn test_session_works() {
-        assert!(parse_session("topic").is_ok());
+    fn test_session_works() -> Result<(), SdpParserInternalError> {
+        parse_session("topic")?;
+        Ok(())
     }
 
     #[test]
-    fn test_version_works() {
-        assert!(parse_version("0").is_ok());
+    fn test_version_works() -> Result<(), SdpParserInternalError> {
+        parse_version("0")?;
+        Ok(())
     }
 
     #[test]
@@ -917,9 +918,10 @@ mod tests {
     }
 
     #[test]
-    fn test_origin_works() {
-        assert!(parse_origin("mozilla 506705521068071134 0 IN IP4 0.0.0.0").is_ok());
-        assert!(parse_origin("mozilla 506705521068071134 0 IN IP6 2001:db8::1").is_ok());
+    fn test_origin_works() -> Result<(), SdpParserInternalError> {
+        parse_origin("mozilla 506705521068071134 0 IN IP4 0.0.0.0")?;
+        parse_origin("mozilla 506705521068071134 0 IN IP6 2001:db8::1")?;
+        Ok(())
     }
 
     #[test]
@@ -974,16 +976,18 @@ mod tests {
     }
 
     #[test]
-    fn connection_works() {
-        assert!(parse_connection("IN IP4 127.0.0.1").is_ok());
-        assert!(parse_connection("IN IP4 127.0.0.1/10/10").is_ok());
-        assert!(parse_connection("IN IP6 ::1").is_ok());
-        assert!(parse_connection("IN IP6 ::1/1/1").is_ok());
+    fn connection_works() -> Result<(), SdpParserInternalError> {
+        parse_connection("IN IP4 127.0.0.1")?;
+        parse_connection("IN IP4 127.0.0.1/10/10")?;
+        parse_connection("IN IP6 ::1")?;
+        parse_connection("IN IP6 ::1/1/1")?;
+        Ok(())
     }
 
     #[test]
-    fn connection_lots_of_whitespace() {
-        assert!(parse_connection("IN   IP4   127.0.0.1").is_ok());
+    fn connection_lots_of_whitespace() -> Result<(), SdpParserInternalError> {
+        parse_connection("IN   IP4   127.0.0.1")?;
+        Ok(())
     }
 
     #[test]
@@ -1014,10 +1018,11 @@ mod tests {
     }
 
     #[test]
-    fn bandwidth_works() {
-        assert!(parse_bandwidth("AS:1").is_ok());
-        assert!(parse_bandwidth("CT:123").is_ok());
-        assert!(parse_bandwidth("TIAS:12345").is_ok());
+    fn bandwidth_works() -> Result<(), SdpParserInternalError> {
+        parse_bandwidth("AS:1")?;
+        parse_bandwidth("CT:123")?;
+        parse_bandwidth("TIAS:12345")?;
+        Ok(())
     }
 
     #[test]
@@ -1027,13 +1032,15 @@ mod tests {
     }
 
     #[test]
-    fn bandwidth_unsupported_type() {
-        assert!(parse_bandwidth("UNSUPPORTED:12345").is_ok());
+    fn bandwidth_unsupported_type() -> Result<(), SdpParserInternalError> {
+        parse_bandwidth("UNSUPPORTED:12345")?;
+        Ok(())
     }
 
     #[test]
-    fn test_timing_works() {
-        assert!(parse_timing("0 0").is_ok());
+    fn test_timing_works() -> Result<(), SdpParserInternalError> {
+        parse_timing("0 0")?;
+        Ok(())
     }
 
     #[test]
@@ -1049,9 +1056,10 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_sdp_line_works() {
-        assert!(parse_sdp_line("v=0", 0).is_ok());
-        assert!(parse_sdp_line("s=somesession", 0).is_ok());
+    fn test_parse_sdp_line_works() -> Result<(), SdpParserError> {
+        parse_sdp_line("v=0", 0)?;
+        parse_sdp_line("s=somesession", 0)?;
+        Ok(())
     }
 
     #[test]
@@ -1099,8 +1107,9 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_sdp_line_valid_a_line() {
-        assert!(parse_sdp_line("a=rtpmap:8 PCMA/8000", 0).is_ok());
+    fn test_parse_sdp_line_valid_a_line() -> Result<(), SdpParserError> {
+        parse_sdp_line("a=rtpmap:8 PCMA/8000", 0)?;
+        Ok(())
     }
 
     #[test]
@@ -1109,16 +1118,17 @@ mod tests {
     }
 
     #[test]
-    fn test_add_attribute() {
+    fn test_add_attribute() -> Result<(), SdpParserInternalError> {
         let mut sdp_session = create_dummy_sdp_session();
 
-        assert!(sdp_session.add_attribute(SdpAttribute::Sendrecv).is_ok());
+        sdp_session.add_attribute(SdpAttribute::Sendrecv)?;
         assert!(sdp_session.add_attribute(SdpAttribute::BundleOnly).is_err());
         assert_eq!(sdp_session.attribute.len(), 1);
+        Ok(())
     }
 
     #[test]
-    fn test_sanity_check_sdp_session_timing() {
+    fn test_sanity_check_sdp_session_timing() -> Result<(), SdpParserError> {
         let mut sdp_session = create_dummy_sdp_session();
         sdp_session.extend_media(vec![create_dummy_media_section()]);
 
@@ -1127,28 +1137,29 @@ mod tests {
         let t = SdpTiming { start: 0, stop: 0 };
         sdp_session.set_timing(t);
 
-        assert!(sanity_check_sdp_session(&sdp_session).is_ok());
+        sanity_check_sdp_session(&sdp_session)?;
+        Ok(())
     }
 
     #[test]
-    fn test_sanity_check_sdp_session_media() {
+    fn test_sanity_check_sdp_session_media() -> Result<(), SdpParserError> {
         let mut sdp_session = create_dummy_sdp_session();
         let t = SdpTiming { start: 0, stop: 0 };
         sdp_session.set_timing(t);
 
-        assert!(sanity_check_sdp_session(&sdp_session).is_ok());
+        sanity_check_sdp_session(&sdp_session)?;
 
         sdp_session.extend_media(vec![create_dummy_media_section()]);
 
-        assert!(sanity_check_sdp_session(&sdp_session).is_ok());
+        sanity_check_sdp_session(&sdp_session)?;
+        Ok(())
     }
 
     #[test]
-    fn test_sanity_check_sdp_connection() {
-        let origin = parse_origin("mozilla 506705521068071134 0 IN IP4 0.0.0.0");
-        assert!(origin.is_ok());
+    fn test_sanity_check_sdp_connection() -> Result<(), SdpParserInternalError> {
+        let origin = parse_origin("mozilla 506705521068071134 0 IN IP4 0.0.0.0")?;
         let mut sdp_session;
-        if let SdpType::Origin(o) = origin.unwrap() {
+        if let SdpType::Origin(o) = origin {
             sdp_session = SdpSession::new(0, o, "-".to_string());
         } else {
             unreachable!();
@@ -1163,9 +1174,8 @@ mod tests {
 
         assert!(sanity_check_sdp_session(&sdp_session).is_err());
 
-        let connection = parse_connection("IN IP6 ::1");
-        assert!(connection.is_ok());
-        if let Ok(SdpType::Connection(c)) = connection {
+        let connection = parse_connection("IN IP6 ::1")?;
+        if let SdpType::Connection(c) = connection {
             sdp_session.connection = Some(c);
         } else {
             unreachable!();
@@ -1174,10 +1184,9 @@ mod tests {
         assert!(sanity_check_sdp_session(&sdp_session).is_ok());
 
         let mut second_media = create_dummy_media_section();
-        let mconnection = parse_connection("IN IP4 0.0.0.0");
-        assert!(mconnection.is_ok());
-        if let Ok(SdpType::Connection(c)) = mconnection {
-            assert!(second_media.set_connection(c).is_ok());
+        let mconnection = parse_connection("IN IP4 0.0.0.0")?;
+        if let SdpType::Connection(c) = mconnection {
+            second_media.set_connection(c)?;
         } else {
             unreachable!();
         }
@@ -1185,43 +1194,37 @@ mod tests {
         assert!(sdp_session.media.len() == 2);
 
         assert!(sanity_check_sdp_session(&sdp_session).is_ok());
+        Ok(())
     }
 
     #[test]
-    fn test_sanity_check_sdp_session_extmap() {
+    fn test_sanity_check_sdp_session_extmap() -> Result<(), SdpParserInternalError> {
         let mut sdp_session = create_dummy_sdp_session();
         let t = SdpTiming { start: 0, stop: 0 };
         sdp_session.set_timing(t);
         sdp_session.extend_media(vec![create_dummy_media_section()]);
 
         let attribute =
-            parse_attribute("extmap:3 http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time");
-        assert!(attribute.is_ok());
-        let extmap;
-        if let SdpType::Attribute(a) = attribute.unwrap() {
-            extmap = a;
+            parse_attribute("extmap:3 http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time")?;
+        if let SdpType::Attribute(a) = attribute {
+            sdp_session.add_attribute(a)?;
         } else {
             unreachable!();
         }
-        let ret = sdp_session.add_attribute(extmap);
-        assert!(ret.is_ok());
         assert!(sdp_session
             .get_attribute(SdpAttributeType::Extmap)
             .is_some());
 
         assert!(sanity_check_sdp_session(&sdp_session).is_ok());
 
+        let mut second_media = create_dummy_media_section();
         let mattribute =
-            parse_attribute("extmap:1/sendonly urn:ietf:params:rtp-hdrext:ssrc-audio-level");
-        assert!(mattribute.is_ok());
-        let mextmap;
-        if let SdpType::Attribute(ma) = mattribute.unwrap() {
-            mextmap = ma;
+            parse_attribute("extmap:1/sendonly urn:ietf:params:rtp-hdrext:ssrc-audio-level")?;
+        if let SdpType::Attribute(ma) = mattribute {
+            second_media.add_attribute(ma)?;
         } else {
             unreachable!();
         }
-        let mut second_media = create_dummy_media_section();
-        assert!(second_media.add_attribute(mextmap).is_ok());
         assert!(second_media
             .get_attribute(SdpAttributeType::Extmap)
             .is_some());
@@ -1234,16 +1237,18 @@ mod tests {
         sdp_session.attribute = Vec::new();
 
         assert!(sanity_check_sdp_session(&sdp_session).is_ok());
+        Ok(())
     }
 
     #[test]
-    fn test_sanity_check_sdp_session_simulcast() {
+    fn test_sanity_check_sdp_session_simulcast() -> Result<(), SdpParserError> {
         let mut sdp_session = create_dummy_sdp_session();
         let t = SdpTiming { start: 0, stop: 0 };
         sdp_session.set_timing(t);
         sdp_session.extend_media(vec![create_dummy_media_section()]);
 
-        assert!(sanity_check_sdp_session(&sdp_session).is_ok());
+        sanity_check_sdp_session(&sdp_session)?;
+        Ok(())
     }
 
     #[test]
@@ -1257,16 +1262,16 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_sdp_minimal_sdp_successfully() {
-        assert!(parse_sdp(
+    fn test_parse_sdp_minimal_sdp_successfully() -> Result<(), SdpParserError> {
+        parse_sdp(
             "v=0\r\n
 o=- 0 0 IN IP6 ::1\r\n
 s=-\r\n
 c=IN IP6 ::1\r\n
 t=0 0\r\n",
-            true
-        )
-        .is_ok());
+            true,
+        )?;
+        Ok(())
     }
 
     #[test]
@@ -1307,8 +1312,8 @@ m=foobar 0 UDP/TLS/RTP/SAVPF 0\r\n",
     }
 
     #[test]
-    fn test_parse_sdp_unsupported_warning() {
-        assert!(parse_sdp(
+    fn test_parse_sdp_unsupported_warning() -> Result<(), SdpParserError> {
+        parse_sdp(
             "v=0\r\n
 o=- 0 0 IN IP4 0.0.0.0\r\n
 s=-\r\n
@@ -1316,9 +1321,9 @@ c=IN IP4 198.51.100.7\r\n
 t=0 0\r\n
 m=audio 0 UDP/TLS/RTP/SAVPF 0\r\n
 a=unsupported\r\n",
-            false
-        )
-        .is_ok());
+            false,
+        )?;
+        Ok(())
     }
 
     #[test]
@@ -1463,45 +1468,41 @@ a=ice-lite\r\n",
     }
 
     #[test]
-    fn test_parse_session_vector() {
+    fn test_parse_session_vector() -> Result<(), SdpParserError> {
         let mut sdp_session = create_dummy_sdp_session();
         let mut lines: Vec<SdpLine> = Vec::new();
-        let line = parse_sdp_line("a=sendrecv", 1);
-        assert!(line.is_ok());
-        lines.push(line.unwrap());
-        assert!(sdp_session.parse_session_vector(&mut lines).is_ok());
+        lines.push(parse_sdp_line("a=sendrecv", 1)?);
+        sdp_session.parse_session_vector(&mut lines)?;
         assert_eq!(sdp_session.attribute.len(), 1);
+        Ok(())
     }
 
     #[test]
-    fn test_parse_session_vector_non_session_attribute() {
+    fn test_parse_session_vector_non_session_attribute() -> Result<(), SdpParserError> {
         let mut sdp_session = create_dummy_sdp_session();
         let mut lines: Vec<SdpLine> = Vec::new();
-        let line = parse_sdp_line("a=bundle-only", 2);
-        assert!(line.is_ok());
-        lines.push(line.unwrap());
+        lines.push(parse_sdp_line("a=bundle-only", 2)?);
         assert!(sdp_session.parse_session_vector(&mut lines).is_err());
         assert_eq!(sdp_session.attribute.len(), 0);
+        Ok(())
     }
 
     #[test]
-    fn test_parse_session_vector_version_repeated() {
+    fn test_parse_session_vector_version_repeated() -> Result<(), SdpParserError> {
         let mut sdp_session = create_dummy_sdp_session();
         let mut lines: Vec<SdpLine> = Vec::new();
-        let line = parse_sdp_line("v=0", 3);
-        assert!(line.is_ok());
-        lines.push(line.unwrap());
+        lines.push(parse_sdp_line("v=0", 3)?);
         assert!(sdp_session.parse_session_vector(&mut lines).is_err());
+        Ok(())
     }
 
     #[test]
-    fn test_parse_session_vector_contains_media_type() {
+    fn test_parse_session_vector_contains_media_type() -> Result<(), SdpParserError> {
         let mut sdp_session = create_dummy_sdp_session();
         let mut lines: Vec<SdpLine> = Vec::new();
-        let line = parse_sdp_line("m=audio 0 UDP/TLS/RTP/SAVPF 0", 4);
-        assert!(line.is_ok());
-        lines.push(line.unwrap());
+        lines.push(parse_sdp_line("m=audio 0 UDP/TLS/RTP/SAVPF 0", 4)?);
         assert!(sdp_session.parse_session_vector(&mut lines).is_err());
+        Ok(())
     }
 
     #[test]
