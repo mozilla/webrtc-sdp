@@ -1,3 +1,5 @@
+#![warn(clippy::all)]
+
 use std::net::IpAddr;
 use std::str::FromStr;
 
