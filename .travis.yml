@@ -60,12 +60,7 @@ script:
     if [[ "$TRAVIS_RUST_VERSION" == "stable" ]]; then
       cargo clippy --all-targets --all-features -- -D warnings;
     fi
-  - |
-    if [[ "$TRAVIS_RUST_VERSION" == "1.17.0" ]]; then
-      cargo test --all-features --verbose --all
-    else
-      cargo test --all-targets --all-features --verbose --all
-    fi
+  - cargo test --all-targets --all-features --verbose --all
 
 after_success: |
   if [[ "$TRAVIS_OS_NAME" == "linux" && "$TRAVIS_RUST_VERSION" == "nightly" && "$FEATURES" == "serialize" ]]; then
