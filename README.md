@@ -4,7 +4,7 @@
 [![Build Status](https://travis-ci.org/mozilla/webrtc-sdp.svg?branch=master)](https://travis-ci.org/mozilla/webrtc-sdp)
 [![Codecov coverage status](https://codecov.io/gh/mozilla/webrtc-sdp/branch/master/graph/badge.svg)](https://codecov.io/gh/webrtc-sdp/webrtc-sdp)
 [![License: MPL 2.0](https://img.shields.io/badge/License-MPL%202.0-brightgreen.svg)](#License)
-[![dependency status](https://deps.rs/repo/github/nils-ohlmeier/rsdparsa/status.svg)](https://deps.rs/repo/github/nils-ohlmeier/rsdparsa)
+[![dependency status](https://deps.rs/repo/github/mozilla/weebrtc-sdp/status.svg)](https://deps.rs/repo/github/mozilla/webrtc-sdp)
 
 A SDP parser written in Rust specifically aimed to handle WebRTC SDP offers and answers.
 
