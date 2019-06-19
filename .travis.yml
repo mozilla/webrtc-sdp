@@ -14,7 +14,7 @@ rust:
   - beta
   - stable
   # minimum stable version
-  - 1.30.0
+  - 1.35.0
 
 matrix:
   allow_failures:
