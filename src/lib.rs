@@ -1443,7 +1443,7 @@ a=ice-lite\r\n",
                 attributes.push(attribute.clone());
             }
         }
-        for mut attribute in attributes {
+        for attribute in attributes {
             match attribute {
                 SdpAttribute::Candidate(c) => {
                     assert_eq!(c.address, std::net::Ipv4Addr::from(3));
