@@ -1,6 +1,7 @@
 # Changelog
 
 ## [Unreleased]
+ - Minimum Rust version >= 1.35
 
 ## [0.2.0] - 2019-06-15
 ### Changed
