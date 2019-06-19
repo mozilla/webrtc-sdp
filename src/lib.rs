@@ -1,5 +1,4 @@
 #![warn(clippy::all)]
-
 #![cfg_attr(feature = "clippy", feature(plugin))]
 
 #[macro_use]
