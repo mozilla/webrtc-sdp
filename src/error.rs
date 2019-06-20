@@ -1,3 +1,5 @@
+#![warn(clippy::all)]
+
 #[cfg(feature = "serialize")]
 use serde::ser::{Serialize, SerializeStruct, Serializer};
 use std::error;
