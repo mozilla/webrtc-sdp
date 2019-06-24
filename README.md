@@ -63,7 +63,7 @@ Install cargo-fuzz like this:
 cargo install cargo-fuzz
 ```
 
-Start fuzzing:
+With rust nightly you can start fuzzing like this:
 ```
 cargo fuzz run fuzz_target_parse_sdp
 ```
