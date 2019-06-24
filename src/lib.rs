@@ -1,5 +1,5 @@
 #![warn(clippy::all)]
-#![cfg_attr(feature = "clippy", feature(plugin))]
+#![forbid(unsafe_code)]
 
 #[macro_use]
 extern crate log;
