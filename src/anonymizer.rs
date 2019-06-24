@@ -1,5 +1,3 @@
-#![warn(clippy::all)]
-
 use std::collections::HashMap;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::num::Wrapping;
