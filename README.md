@@ -48,12 +48,24 @@ rustup component add clippy
 
 Check with clippy for warnings in the code:
 ```
-cargo clippy --all-targets --all-features
+cargo clippy
 ```
 
 And format all of the code according to Rust code style convention:
 ```
 cargo fmt --all
+```
+
+## Fuzzing
+
+Install cargo-fuzz like this:
+```
+cargo install cargo-fuzz
+```
+
+With rust nightly you can start fuzzing like this:
+```
+cargo fuzz run fuzz_target_parse_sdp
 ```
 
 ## License

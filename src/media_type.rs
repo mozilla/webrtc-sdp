@@ -1,5 +1,3 @@
-#![warn(clippy::all)]
-
 use anonymizer::{AnonymizingClone, StatefulSdpAnonymizer};
 use attribute_type::{
     maybe_print_param, SdpAttribute, SdpAttributeRtpmap, SdpAttributeSctpmap, SdpAttributeType,
