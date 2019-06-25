@@ -56,6 +56,18 @@ And format all of the code according to Rust code style convention:
 cargo fmt --all
 ```
 
+## Fuzzing
+
+Install cargo-fuzz like this:
+```
+cargo install cargo-fuzz
+```
+
+With rust nightly you can start fuzzing like this:
+```
+cargo fuzz run fuzz_target_parse_sdp
+```
+
 ## License
 
 Licensed under [MPL-2.0](https://www.mozilla.org/MPL/2.0/)
