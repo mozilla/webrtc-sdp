@@ -2053,9 +2053,10 @@ fn parse_image_attr_xyrange(
             Ok(SdpAttributeImageAttrXYRange::DiscreteValues(values))
         }
     } else {
-        Ok(SdpAttributeImageAttrXYRange::DiscreteValues(vec![
-            to_parse.parse::<u32>()?
-        ]))
+        // Using the vec! macro directly leaks memory
+        let mut vec = Vec::with_capacity(1);
+        vec.push(to_parse.parse::<u32>()?);
+        Ok(SdpAttributeImageAttrXYRange::DiscreteValues(vec))
     }
 }
 
