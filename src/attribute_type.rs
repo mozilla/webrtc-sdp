@@ -1999,6 +1999,10 @@ fn parse_imageattr_tokens(to_parse: &str, separator: char) -> Vec<String> {
 }
 
 fn parse_imagettr_braced_token(to_parse: &str) -> Option<&str> {
+    if !to_parse.starts_with('[') {
+        return None;
+    }
+
     if !to_parse.ends_with(']') {
         return None;
     }
@@ -3283,6 +3287,10 @@ mod tests {
         assert!(parse_attribute("imageattr:").is_err());
         assert!(parse_attribute("imageattr:100").is_err());
         assert!(parse_attribute("imageattr:120 send * recv * send *").is_err());
+        assert!(parse_attribute("imageattr:99 send [x=320]").is_err());
+        assert!(parse_attribute("imageattr:99 recv [y=240]").is_err());
+        assert!(parse_attribute("imageattr:99 send [x=320,y=240").is_err());
+        assert!(parse_attribute("imageattr:99 send x=320,y=240]").is_err());
         assert!(
             parse_attribute("imageattr:97 send [x=800,y=640,sar=1.1] send [x=330,y=250]").is_err()
         );
