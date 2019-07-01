@@ -2152,7 +2152,7 @@ fn parse_image_attr_set(
                 }
             } else {
                 sar = Some(SdpAttributeImageAttrSRange::DiscreteValues(vec![
-                    value_token.parse::<f32>()?,
+                    value_token.parse::<f32>()?; 1
                 ]))
             }
         } else if current_token.starts_with("par=") {
