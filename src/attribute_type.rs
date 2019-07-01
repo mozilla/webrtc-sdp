@@ -666,7 +666,7 @@ impl AnonymizingClone for SdpAttributeFingerprint {
     }
 }
 
-fn imageattr_discrete_value_list_to_string<T>(values: Vec<T>) -> String
+fn imageattr_discrete_value_list_to_string<T>(values: &[T]) -> String
 where
     T: ToString,
 {
@@ -700,7 +700,7 @@ impl ToString for SdpAttributeImageAttrXYRange {
                 }
             }
             SdpAttributeImageAttrXYRange::DiscreteValues(ref values) => {
-                imageattr_discrete_value_list_to_string(values.to_vec())
+                imageattr_discrete_value_list_to_string(values)
             }
         }
     }
@@ -718,7 +718,7 @@ impl ToString for SdpAttributeImageAttrSRange {
         match *self {
             SdpAttributeImageAttrSRange::Range(ref min, ref max) => format!("[{}-{}]", min, max),
             SdpAttributeImageAttrSRange::DiscreteValues(ref values) => {
-                imageattr_discrete_value_list_to_string(values.to_vec())
+                imageattr_discrete_value_list_to_string(values)
             }
         }
     }
