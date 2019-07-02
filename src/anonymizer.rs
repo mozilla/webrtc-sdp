@@ -1,6 +1,8 @@
+extern crate url;
 use std::collections::HashMap;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::num::Wrapping;
+use self::url::Host;
 
 pub trait AnonymizingClone {
     fn masked_clone(&self, anon: &mut StatefulSdpAnonymizer) -> Self;
@@ -35,6 +37,7 @@ pub struct StatefulSdpAnonymizer {
     ips: HashMap<IpAddr, IpAddr>,
     ip_v4_inc: Wrapping<u32>,
     ip_v6_inc: Wrapping<u128>,
+    host_names: AnonymizationStrMap,
     ports: HashMap<u32, u32>,
     port_inc: Wrapping<u32>,
     origin_users: AnonymizationStrMap,
@@ -56,6 +59,7 @@ impl StatefulSdpAnonymizer {
             ips: HashMap::new(),
             ip_v4_inc: Wrapping(0),
             ip_v6_inc: Wrapping(0),
+            host_names: AnonymizationStrMap::new("fqdn-", 8),
             ports: HashMap::new(),
             port_inc: Wrapping(0),
             origin_users: AnonymizationStrMap::new("origin-user-", 8),
@@ -65,7 +69,13 @@ impl StatefulSdpAnonymizer {
             cert_finger_print_inc: Wrapping(0),
         }
     }
-
+    pub fn mask_host(&mut self, host: &Host) -> Host {
+        match host {
+            Host::Domain(name) => {
+                Host::Domain(self.host_names.mask(name))
+            }
+        }
+    }
     pub fn mask_ip(&mut self, addr: &IpAddr) -> IpAddr {
         if let Some(address) = self.ips.get(addr) {
             return *address;

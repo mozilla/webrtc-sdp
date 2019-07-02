@@ -1,3 +1,4 @@
+extern crate url;
 use std::iter;
 use std::net::IpAddr;
 use std::str::FromStr;
@@ -164,10 +165,10 @@ pub struct SdpAttributeCandidate {
     pub component: u32,
     pub transport: SdpAttributeCandidateTransport,
     pub priority: u64,
-    pub address: IpAddr,
+    pub address: url::Host,
     pub port: u32,
     pub c_type: SdpAttributeCandidateType,
-    pub raddr: Option<IpAddr>,
+    pub raddr: Option<url::Host>,
     pub rport: Option<u32>,
     pub tcp_type: Option<SdpAttributeCandidateTcpType>,
     pub generation: Option<u32>,
@@ -182,7 +183,7 @@ impl SdpAttributeCandidate {
         component: u32,
         transport: SdpAttributeCandidateTransport,
         priority: u64,
-        address: IpAddr,
+        address: url::Host,
         port: u32,
         c_type: SdpAttributeCandidateType,
     ) -> SdpAttributeCandidate {
@@ -204,8 +205,8 @@ impl SdpAttributeCandidate {
         }
     }
 
-    fn set_remote_address(&mut self, ip: IpAddr) {
-        self.raddr = Some(ip)
+    fn set_remote_address(&mut self, addr: url::Host) {
+        self.raddr = Some(addr)
     }
 
     fn set_remote_port(&mut self, p: u32) {
@@ -265,9 +266,9 @@ impl ToString for SdpAttributeCandidate {
 impl AnonymizingClone for SdpAttributeCandidate {
     fn masked_clone(&self, anonymizer: &mut StatefulSdpAnonymizer) -> Self {
         let mut masked = self.clone();
-        masked.address = anonymizer.mask_ip(&self.address);
+        masked.address = anonymizer.mask_host(&self.address);
         masked.port = anonymizer.mask_port(self.port);
-        masked.raddr = self.raddr.and_then(|addr| Some(anonymizer.mask_ip(&addr)));
+        masked.raddr = self.raddr.and_then(|addr| Some(anonymizer.mask_host(&addr)));
         masked.rport = self.rport.and_then(|port| Some(anonymizer.mask_port(port)));
         masked
     }
@@ -311,7 +312,7 @@ impl ToString for SdpAttributeRemoteCandidate {
 impl AnonymizingClone for SdpAttributeRemoteCandidate {
     fn masked_clone(&self, anon: &mut StatefulSdpAnonymizer) -> Self {
         SdpAttributeRemoteCandidate {
-            address: anon.mask_ip(&self.address),
+            address: anon.mask_host(&self.address),
             port: anon.mask_port(self.port),
             component: self.component,
         }
@@ -2776,6 +2777,8 @@ pub fn parse_attribute(value: &str) -> Result<SdpType, SdpParserInternalError> {
 
 #[cfg(test)]
 mod tests {
+    extern crate url;
+    use url::Host;
     use super::*;
 
     macro_rules! make_check_parse {
@@ -2867,7 +2870,7 @@ mod tests {
         assert_eq!(candidate.priority, 1_685_987_071);
         assert_eq!(
             candidate.address,
-            IpAddr::from_str("24.23.204.141").unwrap()
+            Host::Ip(Ipv4Addr::from_str("24.23.204.141").unwrap())
         );
         assert_eq!(candidate.port, 54609);
         assert_eq!(candidate.c_type, SdpAttributeCandidateType::Srflx);

@@ -16,10 +16,11 @@ impl SdpAddressType {
     }
 }
 
-pub fn address_to_string(addr: IpAddr) -> String {
+pub fn address_to_string(addr: url::Host) -> String {
     match addr {
-        IpAddr::V4(ipv4) => format!("IN IP4 {}", ipv4.to_string()),
-        IpAddr::V6(ipv6) => format!("IN IP6 {}", ipv6.to_string()),
+        url::Host::Domain(s) => format!("IN IP4 {}", s),
+        url::Host::Ipv4(ipv4) => format!("IN IP4 {}", ipv4.to_string()),
+        url::Host::Ipv6(ipv6) => format!("IN IP6 {}", ipv6.to_string()),
     }
 }
 

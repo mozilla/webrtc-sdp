@@ -7,7 +7,8 @@ extern crate log;
 extern crate serde_derive;
 #[cfg(feature = "serialize")]
 extern crate serde;
-
+#[cfg(test)]
+extern crate enum_display_derive;
 use std::net::IpAddr;
 use std::str::FromStr;
 
@@ -17,6 +18,7 @@ pub mod anonymizer;
 pub mod error;
 pub mod media_type;
 pub mod network;
+pub mod address;
 
 use anonymizer::{AnonymizingClone, StatefulSdpAnonymizer};
 use attribute_type::{
@@ -72,7 +74,7 @@ impl ToString for SdpConnection {
 impl AnonymizingClone for SdpConnection {
     fn masked_clone(&self, anon: &mut StatefulSdpAnonymizer) -> Self {
         let mut masked = self.clone();
-        masked.address = anon.mask_ip(&self.address);
+        masked.address = anon.mask_host(&self.address);
         masked
     }
 }
@@ -102,7 +104,7 @@ impl AnonymizingClone for SdpOrigin {
     fn masked_clone(&self, anon: &mut StatefulSdpAnonymizer) -> Self {
         let mut masked = self.clone();
         masked.username = anon.mask_origin_user(&self.username);
-        masked.unicast_addr = anon.mask_ip(&masked.unicast_addr);
+        masked.unicast_addr = anon.mask_host(&masked.unicast_addr);
         masked
     }
 }
@@ -874,9 +876,11 @@ pub fn parse_sdp(sdp: &str, fail_on_warning: bool) -> Result<SdpSession, SdpPars
 
 #[cfg(test)]
 mod tests {
+    extern crate url;
     use super::*;
     use anonymizer::ToBytesVec;
     use media_type::create_dummy_media_section;
+    use self::url::Host;
 
     fn create_dummy_sdp_session() -> SdpSession {
         let origin = parse_origin("mozilla 506705521068071134 0 IN IP4 0.0.0.0");
@@ -1446,7 +1450,7 @@ a=ice-lite\r\n",
         for attribute in attributes {
             match attribute {
                 SdpAttribute::Candidate(c) => {
-                    assert_eq!(c.address, std::net::Ipv4Addr::from(3));
+                    assert_eq!(c.address, Host::Ipv4(std::net::Ipv4Addr::from(3)));
                     assert_eq!(c.port, 1);
                 }
                 SdpAttribute::Fingerprint(f) => {
