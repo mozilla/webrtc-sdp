@@ -9,6 +9,7 @@ extern crate serde_derive;
 #[cfg(feature = "serialize")]
 extern crate serde;
 
+use std::fmt;
 use std::net::IpAddr;
 use std::str::FromStr;
 
@@ -40,14 +41,15 @@ pub enum SdpBandwidth {
     Unknown(String, u32),
 }
 
-impl ToString for SdpBandwidth {
-    fn to_string(&self) -> String {
-        match *self {
-            SdpBandwidth::As(ref x) => format!("AS:{}", x.to_string()),
-            SdpBandwidth::Ct(ref x) => format!("CT:{}", x.to_string()),
-            SdpBandwidth::Tias(ref x) => format!("TIAS:{}", x.to_string()),
-            SdpBandwidth::Unknown(ref tp, ref x) => format!("{}:{}", tp.to_string(), x.to_string()),
-        }
+impl fmt::Display for SdpBandwidth {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let (tp_string, value) = match *self {
+            SdpBandwidth::As(ref x) => ("AS", x),
+            SdpBandwidth::Ct(ref x) => ("CT", x),
+            SdpBandwidth::Tias(ref x) => ("TIAS", x),
+            SdpBandwidth::Unknown(ref tp, ref x) => (&tp[..], x),
+        };
+        write!(f, "{}:{}", tp_string, value)
     }
 }
 
@@ -59,13 +61,14 @@ pub struct SdpConnection {
     pub amount: Option<u32>,
 }
 
-impl ToString for SdpConnection {
-    fn to_string(&self) -> String {
-        format!(
-            "{address}{ttl}{amount}",
-            address = address_to_string(self.address),
-            ttl = option_to_string!("/{}", self.ttl),
-            amount = option_to_string!("/{}", self.amount)
+impl fmt::Display for SdpConnection {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{}{}{}",
+            address_to_string(self.address),
+            option_to_string!("/{}", self.ttl),
+            option_to_string!("/{}", self.amount)
         )
     }
 }
@@ -87,14 +90,15 @@ pub struct SdpOrigin {
     pub unicast_addr: IpAddr,
 }
 
-impl ToString for SdpOrigin {
-    fn to_string(&self) -> String {
-        format!(
-            "{username} {sess_id} {sess_vers} {unicast_addr}",
-            username = self.username.clone(),
-            sess_id = self.session_id.to_string(),
-            sess_vers = self.session_version.to_string(),
-            unicast_addr = address_to_string(self.unicast_addr)
+impl fmt::Display for SdpOrigin {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{} {} {} {}",
+            self.username,
+            self.session_id,
+            self.session_version,
+            address_to_string(self.unicast_addr)
         )
     }
 }
@@ -115,9 +119,9 @@ pub struct SdpTiming {
     pub stop: u64,
 }
 
-impl ToString for SdpTiming {
-    fn to_string(&self) -> String {
-        format!("{} {}", self.start.to_string(), self.stop.to_string())
+impl fmt::Display for SdpTiming {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{} {}", self.start, self.stop)
     }
 }
 
@@ -160,6 +164,23 @@ pub struct SdpSession {
                                        // repeat: Option<String>,
                                        // zone: Option<String>,
                                        // key: Option<String>
+}
+
+impl fmt::Display for SdpSession {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "v={}\r\no={}\r\ns={}\r\n{}{}{}{}{}",
+            self.version,
+            self.origin,
+            self.session,
+            option_to_string!("t={}\r\n", self.timing),
+            maybe_vector_to_string!("b={}\r\n", self.bandwidth, "\r\nb="),
+            option_to_string!("c={}\r\n", self.connection),
+            maybe_vector_to_string!("a={}\r\n", self.attribute, "\r\na="),
+            maybe_vector_to_string!("{}", self.media, "\r\n")
+        )
+    }
 }
 
 impl SdpSession {
@@ -287,29 +308,6 @@ impl SdpSession {
         self.media.push(media);
 
         Ok(())
-    }
-}
-
-impl ToString for SdpSession {
-    fn to_string(&self) -> String {
-        format!(
-            "v={version}\r\n\
-             o={origin}\r\n\
-             s={sess}\r\n\
-             {timing}\
-             {bandwidth}\
-             {connection}\
-             {sess_attributes}\
-             {media_sections}",
-            version = self.version.to_string(),
-            origin = self.origin.to_string(),
-            sess = self.session.clone(),
-            timing = option_to_string!("t={}\r\n", self.timing),
-            bandwidth = maybe_vector_to_string!("b={}\r\n", self.bandwidth, "\r\nb="),
-            connection = option_to_string!("c={}\r\n", self.connection),
-            sess_attributes = maybe_vector_to_string!("a={}\r\n", self.attribute, "\r\na="),
-            media_sections = maybe_vector_to_string!("{}", self.media, "\r\n")
-        )
     }
 }
 
