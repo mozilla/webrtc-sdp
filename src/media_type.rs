@@ -3,6 +3,7 @@ use attribute_type::{
     maybe_print_param, SdpAttribute, SdpAttributeRtpmap, SdpAttributeSctpmap, SdpAttributeType,
 };
 use error::{SdpParserError, SdpParserInternalError};
+use std::fmt;
 use {SdpBandwidth, SdpConnection, SdpLine, SdpType};
 
 #[derive(Clone)]
@@ -15,15 +16,16 @@ pub struct SdpMediaLine {
     pub formats: SdpFormatList,
 }
 
-impl ToString for SdpMediaLine {
-    fn to_string(&self) -> String {
-        format!(
-            "{media_line} {port}{port_count} {protocol} {formats}",
-            media_line = self.media.to_string(),
-            port_count = maybe_print_param("/", self.port_count, 0),
-            port = self.port.to_string(),
-            protocol = self.proto.to_string(),
-            formats = self.formats.to_string()
+impl fmt::Display for SdpMediaLine {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{} {}{} {} {}",
+            self.media,
+            self.port,
+            maybe_print_param("/", self.port_count, 0),
+            self.proto,
+            self.formats
         )
     }
 }
@@ -36,14 +38,14 @@ pub enum SdpMediaValue {
     Application,
 }
 
-impl ToString for SdpMediaValue {
-    fn to_string(&self) -> String {
-        match *self {
+impl fmt::Display for SdpMediaValue {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let value_string = match *self {
             SdpMediaValue::Audio => "audio",
             SdpMediaValue::Video => "video",
             SdpMediaValue::Application => "application",
-        }
-        .to_string()
+        };
+        write!(f, "{}", value_string)
     }
 }
 
@@ -64,9 +66,9 @@ pub enum SdpProtocolValue {
     TcpTlsRtpSavpf, /* not standardized - to be removed */
 }
 
-impl ToString for SdpProtocolValue {
-    fn to_string(&self) -> String {
-        match *self {
+impl fmt::Display for SdpProtocolValue {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let proto_string = match *self {
             SdpProtocolValue::RtpAvp => "RTP/AVP",
             SdpProtocolValue::RtpAvpf => "RTP/AVPF",
             SdpProtocolValue::RtpSavp => "RTP/SAVP",
@@ -79,8 +81,8 @@ impl ToString for SdpProtocolValue {
             SdpProtocolValue::UdpDtlsSctp => "UDP/DTLS/SCTP",
             SdpProtocolValue::TcpDtlsSctp => "TCP/DTLS/SCTP",
             SdpProtocolValue::TcpTlsRtpSavpf => "TCP/TLS/RTP/SAVPF",
-        }
-        .to_string()
+        };
+        write!(f, "{}", proto_string)
     }
 }
 
@@ -91,12 +93,13 @@ pub enum SdpFormatList {
     Strings(Vec<String>),
 }
 
-impl ToString for SdpFormatList {
-    fn to_string(&self) -> String {
-        match *self {
+impl fmt::Display for SdpFormatList {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let format_string = match *self {
             SdpFormatList::Integers(ref x) => maybe_vector_to_string!("{}", x, " "),
             SdpFormatList::Strings(ref x) => x.join(" "),
-        }
+        };
+        write!(f, "{}", format_string)
     }
 }
 
@@ -110,6 +113,19 @@ pub struct SdpMedia {
     // unsupported values:
     // information: Option<String>,
     // key: Option<String>,
+}
+
+impl fmt::Display for SdpMedia {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "m={}\r\n{}{}{}",
+            self.media,
+            maybe_vector_to_string!("b={}\r\n", self.bandwidth, "\r\nb="),
+            option_to_string!("c={}\r\n", self.connection),
+            maybe_vector_to_string!("a={}\r\n", self.attribute, "\r\na=")
+        )
+    }
 }
 
 impl SdpMedia {
@@ -262,21 +278,6 @@ impl SdpMedia {
         self.media.media = SdpMediaValue::Application;
 
         Ok(())
-    }
-}
-
-impl ToString for SdpMedia {
-    fn to_string(&self) -> String {
-        format!(
-            "m={media_line}\r\n\
-             {bandwidth}\
-             {connection}\
-             {attributes}",
-            media_line = self.media.to_string(),
-            connection = option_to_string!("c={}\r\n", self.connection),
-            bandwidth = maybe_vector_to_string!("b={}\r\n", self.bandwidth, "\r\nb="),
-            attributes = maybe_vector_to_string!("a={}\r\n", self.attribute, "\r\na=")
-        )
     }
 }
 
