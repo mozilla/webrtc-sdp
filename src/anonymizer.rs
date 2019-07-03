@@ -2,7 +2,7 @@ extern crate url;
 use std::collections::HashMap;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::num::Wrapping;
-use self::url::Host;
+use address::{Address, ExplicitlyTypedAddress};
 
 pub trait AnonymizingClone {
     fn masked_clone(&self, anon: &mut StatefulSdpAnonymizer) -> Self;
@@ -69,13 +69,11 @@ impl StatefulSdpAnonymizer {
             cert_finger_print_inc: Wrapping(0),
         }
     }
-    pub fn mask_host(&mut self, host: &Host) -> Host {
-        match host {
-            Host::Domain(name) => {
-                Host::Domain(self.host_names.mask(name))
-            }
-        }
+
+    pub fn mask_host(&mut self, host: &String) -> String {
+        self.host_names.mask(host)
     }
+
     pub fn mask_ip(&mut self, addr: &IpAddr) -> IpAddr {
         if let Some(address) = self.ips.get(addr) {
             return *address;
@@ -92,6 +90,22 @@ impl StatefulSdpAnonymizer {
         };
         self.ips.insert(*addr, mapped);
         mapped
+    }
+
+    pub fn mask_address(&mut self, address: &Address) -> Address {
+        match address {
+            Address::Fqdn(host) => Address::Fqdn(self.mask_host(host)),
+            Address::Ip(ip) => Address::Ip(self.mask_ip(ip)),
+        }
+    }
+
+    pub fn mask_typed_address(&mut self, address: &ExplicitlyTypedAddress) -> ExplicitlyTypedAddress {
+        match address {
+            ExplicitlyTypedAddress::Fqdn{address_type, domain} => {
+                ExplicitlyTypedAddress::Fqdn{address_type:*address_type, domain:self.mask_host(domain)}
+            }
+            ExplicitlyTypedAddress::Ip(ip) => ExplicitlyTypedAddress::Ip(self.mask_ip(ip)),
+        }
     }
 
     pub fn mask_port(&mut self, port: u32) -> u32 {

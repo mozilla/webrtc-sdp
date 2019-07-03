@@ -494,7 +494,8 @@ mod tests {
         SdpAttributeFmtp, SdpAttributeFmtpParameters, SdpAttributePayloadType, SdpAttributeRtcpFb,
         SdpAttributeRtcpFbType,
     };
-    use network::parse_unicast_address;
+    use address::{ExplicitlyTypedAddress, AddressType};
+    use std::convert::TryFrom;
 
     // TODO is this useful outside of tests?
     impl SdpFormatList {
@@ -800,9 +801,8 @@ mod tests {
             sdp_type: SdpType::Media(media_line),
         };
         sdp_lines.push(media);
-        let address = parse_unicast_address("127.0.0.1").unwrap();
         let c = SdpConnection {
-            address,
+            address: ExplicitlyTypedAddress::try_from((AddressType::IpV4, "127.0.0.1")).unwrap(),
             ttl: None,
             amount: None,
         };

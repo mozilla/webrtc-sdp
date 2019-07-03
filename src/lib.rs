@@ -9,9 +9,9 @@ extern crate serde_derive;
 extern crate serde;
 #[cfg(test)]
 extern crate enum_display_derive;
-use std::net::IpAddr;
-use std::str::FromStr;
-
+use std::convert::TryFrom;
+extern crate strum;
+extern crate strum_macros;
 #[macro_use]
 pub mod attribute_type;
 pub mod anonymizer;
@@ -30,7 +30,8 @@ use media_type::{
     parse_media, parse_media_vector, SdpFormatList, SdpMedia, SdpMediaLine, SdpMediaValue,
     SdpProtocolValue,
 };
-use network::{address_to_string, parse_address_type, parse_network_type, parse_unicast_address};
+use network::{parse_address_type, parse_network_type};
+use address::{ExplicitlyTypedAddress, AddressTyped};
 
 #[derive(Clone)]
 #[cfg_attr(feature = "serialize", derive(Serialize))]
@@ -55,7 +56,7 @@ impl ToString for SdpBandwidth {
 #[derive(Clone)]
 #[cfg_attr(feature = "serialize", derive(Serialize))]
 pub struct SdpConnection {
-    pub address: IpAddr,
+    pub address: ExplicitlyTypedAddress,
     pub ttl: Option<u8>,
     pub amount: Option<u32>,
 }
@@ -64,7 +65,7 @@ impl ToString for SdpConnection {
     fn to_string(&self) -> String {
         format!(
             "{address}{ttl}{amount}",
-            address = address_to_string(self.address),
+            address = self.address,
             ttl = option_to_string!("/{}", self.ttl),
             amount = option_to_string!("/{}", self.amount)
         )
@@ -74,7 +75,7 @@ impl ToString for SdpConnection {
 impl AnonymizingClone for SdpConnection {
     fn masked_clone(&self, anon: &mut StatefulSdpAnonymizer) -> Self {
         let mut masked = self.clone();
-        masked.address = anon.mask_host(&self.address);
+        masked.address = anon.mask_typed_address(&self.address);
         masked
     }
 }
@@ -85,7 +86,7 @@ pub struct SdpOrigin {
     pub username: String,
     pub session_id: u64,
     pub session_version: u64,
-    pub unicast_addr: IpAddr,
+    pub unicast_addr: ExplicitlyTypedAddress,
 }
 
 impl ToString for SdpOrigin {
@@ -95,7 +96,7 @@ impl ToString for SdpOrigin {
             username = self.username.clone(),
             sess_id = self.session_id.to_string(),
             sess_vers = self.session_version.to_string(),
-            unicast_addr = address_to_string(self.unicast_addr)
+            unicast_addr = self.unicast_addr
         )
     }
 }
@@ -104,7 +105,7 @@ impl AnonymizingClone for SdpOrigin {
     fn masked_clone(&self, anon: &mut StatefulSdpAnonymizer) -> Self {
         let mut masked = self.clone();
         masked.username = anon.mask_origin_user(&self.username);
-        masked.unicast_addr = anon.mask_host(&masked.unicast_addr);
+        masked.unicast_addr = anon.mask_typed_address(&masked.unicast_addr);
         masked
     }
 }
@@ -267,7 +268,7 @@ impl SdpSession {
         direction: SdpAttribute,
         port: u32,
         protocol: SdpProtocolValue,
-        addr: String,
+        addr: ExplicitlyTypedAddress,
     ) -> Result<(), SdpParserInternalError> {
         let mut media = SdpMedia::new(SdpMediaLine {
             media: media_type,
@@ -280,7 +281,7 @@ impl SdpSession {
         media.add_attribute(direction)?;
 
         media.set_connection(SdpConnection {
-            address: IpAddr::from_str(addr.as_str())?,
+            address: addr,
             ttl: None,
             amount: None,
         })?;
@@ -403,9 +404,9 @@ fn parse_origin(value: &str) -> Result<SdpType, SdpParserInternalError> {
                 "Origin type is missing IP address token".to_string(),
             ));
         }
-        Some(x) => parse_unicast_address(x)?,
+        Some(x) => ExplicitlyTypedAddress::try_from((addrtype, x))?,
     };
-    if !addrtype.same_protocol(&unicast_addr) {
+    if addrtype != unicast_addr.address_type() {
         return Err(SdpParserInternalError::Generic(
             "Origin addrtype does not match address.".to_string(),
         ));
@@ -440,12 +441,7 @@ fn parse_connection(value: &str) -> Result<SdpType, SdpParserInternalError> {
         ttl = Some(addr_tokens[1].parse::<u8>()?);
         addr_token = addr_tokens[0];
     }
-    let address = parse_unicast_address(addr_token)?;
-    if !addrtype.same_protocol(&address) {
-        return Err(SdpParserInternalError::Generic(
-            "connection addrtype does not match address.".to_string(),
-        ));
-    }
+    let address = ExplicitlyTypedAddress::try_from((addrtype, addr_token))?;
     let c = SdpConnection {
         address,
         ttl,
@@ -589,10 +585,13 @@ fn parse_sdp_line(line: &str, line_number: usize) -> Result<SdpLine, SdpParserEr
         sdp_type,
     })
     .map_err(|e| match e {
-        SdpParserInternalError::Generic(..)
+        SdpParserInternalError::UnknownAddressType
+        | SdpParserInternalError::AddressTypeMismatch
+        | SdpParserInternalError::Generic(..)
         | SdpParserInternalError::Integer(..)
         | SdpParserInternalError::Float(..)
-        | SdpParserInternalError::Address(..) => SdpParserError::Line {
+        | SdpParserInternalError::Domain(..)
+        | SdpParserInternalError::IpAddress(..) => SdpParserError::Line {
             error: e,
             line: line.to_string(),
             line_number,
@@ -880,7 +879,9 @@ mod tests {
     use super::*;
     use anonymizer::ToBytesVec;
     use media_type::create_dummy_media_section;
-    use self::url::Host;
+    use std::net::IpAddr;
+    use std::net::Ipv4Addr;
+    use address::{Address, AddressType};
 
     fn create_dummy_sdp_session() -> SdpSession {
         let origin = parse_origin("mozilla 506705521068071134 0 IN IP4 0.0.0.0");
@@ -1408,7 +1409,7 @@ a=ice-lite\r\n",
             for _ in 0..2 {
                 let masked = origin_1.masked_clone(&mut anon);
                 assert_eq!(masked.username, "origin-user-00000001");
-                assert_eq!(masked.unicast_addr, std::net::Ipv4Addr::from(1));
+                assert_eq!(masked.unicast_addr, ExplicitlyTypedAddress::Ip(IpAddr::V4(Ipv4Addr::from(1))));
             }
         } else {
             unreachable!();
@@ -1436,10 +1437,10 @@ a=ice-lite\r\n",
         .unwrap();
         let mut masked = sdp.masked_clone(&mut anon);
         assert_eq!(masked.origin.username, "origin-user-00000001");
-        assert_eq!(masked.origin.unicast_addr, std::net::Ipv4Addr::from(1));
+        assert_eq!(masked.origin.unicast_addr, ExplicitlyTypedAddress::Ip(IpAddr::V4(Ipv4Addr::from(1))));
         assert_eq!(
             masked.connection.unwrap().address,
-            std::net::Ipv4Addr::from(2)
+            ExplicitlyTypedAddress::Ip(IpAddr::V4(Ipv4Addr::from(2)))
         );
         let mut attributes = masked.attribute;
         for m in &mut masked.media {
@@ -1450,7 +1451,7 @@ a=ice-lite\r\n",
         for attribute in attributes {
             match attribute {
                 SdpAttribute::Candidate(c) => {
-                    assert_eq!(c.address, Host::Ipv4(std::net::Ipv4Addr::from(3)));
+                    assert_eq!(c.address, Address::Ip(IpAddr::V4(Ipv4Addr::from(3))));
                     assert_eq!(c.port, 1);
                 }
                 SdpAttribute::Fingerprint(f) => {
@@ -1463,7 +1464,7 @@ a=ice-lite\r\n",
                     assert_eq!(u, "ice-user-00000001");
                 }
                 SdpAttribute::RemoteCandidate(r) => {
-                    assert_eq!(r.address, std::net::Ipv4Addr::from(4));
+                    assert_eq!(r.address, Address::Ip(IpAddr::V4(Ipv4Addr::from(4))));
                     assert_eq!(r.port, 2);
                 }
                 _ => {}
@@ -1597,7 +1598,7 @@ a=ice-lite\r\n",
                 SdpAttribute::Sendrecv,
                 99,
                 SdpProtocolValue::RtpSavpf,
-                "127.0.0.1".to_string()
+                ExplicitlyTypedAddress::from(Ipv4Addr::new(127,0,0,1))
             )
             .is_ok());
         assert!(sdp_session.get_connection().is_some());
@@ -1611,22 +1612,7 @@ a=ice-lite\r\n",
     }
 
     #[test]
-    fn test_session_add_media_invalid_ip_fails() -> Result<(), SdpParserError> {
-        let mut sdp_session = create_dummy_sdp_session();
-        assert!(sdp_session
-            .add_media(
-                SdpMediaValue::Audio,
-                SdpAttribute::Sendrecv,
-                99,
-                SdpProtocolValue::RtpSavpf,
-                "600.0.0.1".to_string()
-            )
-            .is_err());
-        Ok(())
-    }
-
-    #[test]
-    fn test_session_add_media_invalid_attribute_fails() -> Result<(), SdpParserError> {
+    fn test_session_add_media_invalid_attribute_fails() -> Result<(), SdpParserInternalError> {
         let mut sdp_session = create_dummy_sdp_session();
         assert!(sdp_session
             .add_media(
@@ -1634,7 +1620,7 @@ a=ice-lite\r\n",
                 SdpAttribute::IceLite,
                 99,
                 SdpProtocolValue::RtpSavpf,
-                "127.0.0.1".to_string()
+                ExplicitlyTypedAddress::try_from((AddressType::IpV4, "127.0.0.1"))?
             )
             .is_err());
         Ok(())

@@ -3,22 +3,31 @@ use serde::ser::{Serialize, SerializeStruct, Serializer};
 use std::error;
 use std::error::Error;
 use std::fmt;
-use std::net::AddrParseError;
+extern crate url;
 use std::num::ParseFloatError;
 use std::num::ParseIntError;
 
 #[derive(Debug, Clone)]
 pub enum SdpParserInternalError {
+    UnknownAddressType,
+    AddressTypeMismatch,
     Generic(String),
     Unsupported(String),
     Integer(ParseIntError),
     Float(ParseFloatError),
-    Address(AddrParseError),
+    Domain(url::ParseError),
+    IpAddress(std::net::AddrParseError),
 }
 
 impl fmt::Display for SdpParserInternalError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
+            SdpParserInternalError::UnknownAddressType => {
+                write!(f, "Address type is not known")
+            }
+            SdpParserInternalError::AddressTypeMismatch => {
+                write!(f, "Address type supplied does not match the type of the supplied address")
+            }
             SdpParserInternalError::Generic(ref message) => {
                 write!(f, "Generic parsing error: {}", message)
             }
@@ -31,7 +40,10 @@ impl fmt::Display for SdpParserInternalError {
             SdpParserInternalError::Float(ref error) => {
                 write!(f, "Float parsing error: {}", error.description())
             }
-            SdpParserInternalError::Address(ref error) => {
+            SdpParserInternalError::Domain(ref error) => {
+                write!(f, "Domain name parsing error: {}", error.description())
+            }
+            SdpParserInternalError::IpAddress(ref error) => {
                 write!(f, "IP address parsing error: {}", error.description())
             }
         }
@@ -41,11 +53,14 @@ impl fmt::Display for SdpParserInternalError {
 impl error::Error for SdpParserInternalError {
     fn description(&self) -> &str {
         match *self {
+            SdpParserInternalError::UnknownAddressType => "Address type unknown",
+            SdpParserInternalError::AddressTypeMismatch => "Address type mismatch",
             SdpParserInternalError::Generic(ref message)
             | SdpParserInternalError::Unsupported(ref message) => message,
             SdpParserInternalError::Integer(ref error) => error.description(),
             SdpParserInternalError::Float(ref error) => error.description(),
-            SdpParserInternalError::Address(ref error) => error.description(),
+            SdpParserInternalError::Domain(ref error) => error.description(),
+            SdpParserInternalError::IpAddress(ref error) => error.description(),
         }
     }
 
@@ -53,7 +68,8 @@ impl error::Error for SdpParserInternalError {
         match *self {
             SdpParserInternalError::Integer(ref error) => Some(error),
             SdpParserInternalError::Float(ref error) => Some(error),
-            SdpParserInternalError::Address(ref error) => Some(error),
+            SdpParserInternalError::Domain(ref error) => Some(error),
+            SdpParserInternalError::IpAddress(ref error) => Some(error),
             // Can't tell much more about our internal errors
             _ => None,
         }
@@ -185,9 +201,15 @@ impl From<ParseIntError> for SdpParserInternalError {
     }
 }
 
-impl From<AddrParseError> for SdpParserInternalError {
-    fn from(err: AddrParseError) -> SdpParserInternalError {
-        SdpParserInternalError::Address(err)
+impl From<url::ParseError> for SdpParserInternalError {
+    fn from(err: url::ParseError) -> SdpParserInternalError {
+        SdpParserInternalError::Domain(err)
+    }
+}
+
+impl From<std::net::AddrParseError> for SdpParserInternalError {
+    fn from(err: std::net::AddrParseError) -> SdpParserInternalError {
+        SdpParserInternalError::IpAddress(err)
     }
 }
 
@@ -200,6 +222,8 @@ impl From<ParseFloatError> for SdpParserInternalError {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use address::Address;
+    use std::str::FromStr;
 
     #[test]
     fn test_sdp_parser_internal_error_generic() {
@@ -254,17 +278,13 @@ mod tests {
 
     #[test]
     fn test_sdp_parser_internal_error_address() {
-        let v = "127.0.0.a";
-        use std::net::IpAddr;
-        use std::str::FromStr;
-        let addr = IpAddr::from_str(v);
-        assert!(addr.is_err());
-        let addr_err = SdpParserInternalError::Address(addr.err().unwrap());
+        let v = "127.0.0.500";
+        let addr_err = Address::from_str(v).err().unwrap();
         assert_eq!(
             format!("{}", addr_err),
-            "IP address parsing error: invalid IP address syntax"
+            "Domain name parsing error: invalid IPv4 address"
         );
-        assert_eq!(addr_err.description(), "invalid IP address syntax");
+        assert_eq!(addr_err.description(), "invalid IPv4 address");
         assert!(!addr_err.source().is_none());
     }
 
