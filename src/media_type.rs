@@ -727,12 +727,18 @@ mod tests {
 
     #[test]
     fn test_parse_protocol_sctp_token() -> Result<(), SdpParserInternalError> {
-        let dtls = parse_protocol_token("dtLs/ScTP")?;
-        assert_eq!(dtls, SdpProtocolValue::DtlsSctp);
-        let usctp = parse_protocol_token("udp/DTLS/sctp")?;
-        assert_eq!(usctp, SdpProtocolValue::UdpDtlsSctp);
-        let tsctp = parse_protocol_token("tcp/dtls/SCTP")?;
-        assert_eq!(tsctp, SdpProtocolValue::TcpDtlsSctp);
+        fn parse_and_serialize_protocol_token(
+            token: &str,
+            result: SdpProtocolValue,
+        ) -> Result<(), SdpParserInternalError> {
+            let rtps = parse_protocol_token(token)?;
+            assert_eq!(rtps, result);
+            assert_eq!(rtps.to_string(), token.to_uppercase());
+            Ok(())
+        }
+        parse_and_serialize_protocol_token("dtLs/ScTP", SdpProtocolValue::DtlsSctp)?;
+        parse_and_serialize_protocol_token("udp/DTLS/sctp", SdpProtocolValue::UdpDtlsSctp)?;
+        parse_and_serialize_protocol_token("tcp/dtls/SCTP", SdpProtocolValue::TcpDtlsSctp)?;
         Ok(())
     }
 
