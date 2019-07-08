@@ -9,6 +9,7 @@ use error::SdpParserInternalError;
 use std::str::FromStr;
 
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "serialize", derive(Serialize))]
 pub enum Address {
     Fqdn(String),
     Ip(IpAddr),
@@ -65,6 +66,7 @@ impl PartialEq for Address {
 }
 
 #[derive(Clone, Copy, strum_macros::Display, PartialEq, Debug)]
+#[cfg_attr(feature = "serialize", derive(Serialize))]
 pub enum AddressType {
     #[strum(serialize="IP4")]
     IpV4 = 4,
@@ -97,6 +99,7 @@ impl AddressTyped for IpAddr {
 }
 
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "serialize", derive(Serialize))]
 pub enum ExplicitlyTypedAddress {
     Fqdn{address_type:AddressType, domain:String},
     Ip(IpAddr),
