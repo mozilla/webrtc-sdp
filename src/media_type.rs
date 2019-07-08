@@ -698,24 +698,27 @@ mod tests {
 
     #[test]
     fn test_parse_protocol_rtp_token() -> Result<(), SdpParserInternalError> {
-        let rtps = parse_protocol_token("rtp/avp")?;
-        assert_eq!(rtps, SdpProtocolValue::RtpAvp);
-        let rtps = parse_protocol_token("rtp/avpf")?;
-        assert_eq!(rtps, SdpProtocolValue::RtpAvpf);
-        let rtps = parse_protocol_token("rtp/savp")?;
-        assert_eq!(rtps, SdpProtocolValue::RtpSavp);
-        let rtps = parse_protocol_token("rtp/savpf")?;
-        assert_eq!(rtps, SdpProtocolValue::RtpSavpf);
-        let udps = parse_protocol_token("udp/tls/rtp/savp")?;
-        assert_eq!(udps, SdpProtocolValue::UdpTlsRtpSavp);
-        let udps = parse_protocol_token("udp/tls/rtp/savpf")?;
-        assert_eq!(udps, SdpProtocolValue::UdpTlsRtpSavpf);
-        let tcps = parse_protocol_token("TCP/dtls/rtp/savp")?;
-        assert_eq!(tcps, SdpProtocolValue::TcpDtlsRtpSavp);
-        let tcps = parse_protocol_token("TCP/dtls/rtp/savpf")?;
-        assert_eq!(tcps, SdpProtocolValue::TcpDtlsRtpSavpf);
-        let tcps = parse_protocol_token("TCP/tls/rtp/savpf")?;
-        assert_eq!(tcps, SdpProtocolValue::TcpTlsRtpSavpf);
+        fn parse_and_serialize_protocol_token(
+            token: &str,
+            result: SdpProtocolValue,
+        ) -> Result<(), SdpParserInternalError> {
+            let rtps = parse_protocol_token(token)?;
+            assert_eq!(rtps, result);
+            assert_eq!(rtps.to_string(), token.to_uppercase());
+            Ok(())
+        }
+        parse_and_serialize_protocol_token("rtp/avp", SdpProtocolValue::RtpAvp)?;
+        parse_and_serialize_protocol_token("rtp/avpf", SdpProtocolValue::RtpAvpf)?;
+        parse_and_serialize_protocol_token("rtp/savp", SdpProtocolValue::RtpSavp)?;
+        parse_and_serialize_protocol_token("rtp/savpf", SdpProtocolValue::RtpSavpf)?;
+        parse_and_serialize_protocol_token("udp/tls/rtp/savp", SdpProtocolValue::UdpTlsRtpSavp)?;
+        parse_and_serialize_protocol_token("udp/tls/rtp/savpf", SdpProtocolValue::UdpTlsRtpSavpf)?;
+        parse_and_serialize_protocol_token("TCP/dtls/rtp/savp", SdpProtocolValue::TcpDtlsRtpSavp)?;
+        parse_and_serialize_protocol_token(
+            "tcp/DTLS/rtp/savpf",
+            SdpProtocolValue::TcpDtlsRtpSavpf,
+        )?;
+        parse_and_serialize_protocol_token("tcp/TLS/rTp/SAVPf", SdpProtocolValue::TcpTlsRtpSavpf)?;
 
         assert!(parse_protocol_token("").is_err());
         assert!(parse_protocol_token("foobar").is_err());
