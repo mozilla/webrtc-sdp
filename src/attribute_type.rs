@@ -1,14 +1,14 @@
 extern crate url;
-use std::iter;
-use std::str::FromStr;
 use std::convert::TryFrom;
 use std::fmt;
+use std::iter;
+use std::str::FromStr;
 
 use error::SdpParserInternalError;
 use network::{parse_network_type, parse_unicast_address};
 use SdpType;
 
-use address::{AddressType, Address, ExplicitlyTypedAddress};
+use address::{Address, AddressType, ExplicitlyTypedAddress};
 use anonymizer::{AnonymizingClone, StatefulSdpAnonymizer};
 
 // Serialization helper marcos and functions
@@ -270,7 +270,10 @@ impl AnonymizingClone for SdpAttributeCandidate {
         let mut masked = self.clone();
         masked.address = anonymizer.mask_address(&self.address);
         masked.port = anonymizer.mask_port(self.port);
-        masked.raddr = self.raddr.clone().and_then(|addr| Some(anonymizer.mask_address(&addr)));
+        masked.raddr = self
+            .raddr
+            .clone()
+            .and_then(|addr| Some(anonymizer.mask_address(&addr)));
         masked.rport = self.rport.and_then(|port| Some(anonymizer.mask_port(port)));
         masked
     }
@@ -2498,18 +2501,17 @@ fn parse_rtcp(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
                                 "Rtcp attribute is missing ip address token".to_string(),
                             ));
                         }
-                        Some(x) => {
-                            match ExplicitlyTypedAddress::try_from((addrtype, x)) {
-                                Ok(address) => address,
-                                Err(SdpParserInternalError::AddressTypeMismatch) => {
-                                    return Err(SdpParserInternalError::Generic(
-                                        "Failed to parse unicast address attribute.\
-                                        addrtype does not match address."
-                                        .to_string()));
-                                },
-                                Err(e) => return Err(e),
+                        Some(x) => match ExplicitlyTypedAddress::try_from((addrtype, x)) {
+                            Ok(address) => address,
+                            Err(SdpParserInternalError::AddressTypeMismatch) => {
+                                return Err(SdpParserInternalError::Generic(
+                                    "Failed to parse unicast address attribute.\
+                                     addrtype does not match address."
+                                        .to_string(),
+                                ));
                             }
-                        }
+                            Err(e) => return Err(e),
+                        },
                     };
                     rtcp.set_addr(addr);
                 }

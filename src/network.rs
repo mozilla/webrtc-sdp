@@ -1,7 +1,7 @@
-use std::net::IpAddr;
-use std::str::FromStr;
 use address::{Address, AddressType};
 use error::SdpParserInternalError;
+use std::net::IpAddr;
+use std::str::FromStr;
 
 pub fn ip_address_to_string(addr: IpAddr) -> String {
     match addr {
@@ -20,10 +20,8 @@ pub fn parse_network_type(value: &str) -> Result<(), SdpParserInternalError> {
 }
 
 pub fn parse_address_type(value: &str) -> Result<AddressType, SdpParserInternalError> {
-    AddressType::from_str(value.to_uppercase().as_str()).map_err(|_| {
-        SdpParserInternalError::Generic(
-                "address type must be IP4 or IP6".to_string())
-    })
+    AddressType::from_str(value.to_uppercase().as_str())
+        .map_err(|_| SdpParserInternalError::Generic("address type must be IP4 or IP6".to_string()))
 }
 
 pub fn parse_unicast_address(value: &str) -> Result<Address, SdpParserInternalError> {

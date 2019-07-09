@@ -5,21 +5,22 @@ extern crate log;
 #[cfg(feature = "serialize")]
 #[macro_use]
 extern crate serde_derive;
-#[cfg(feature = "serialize")]
-extern crate serde;
 #[cfg(test)]
 extern crate enum_display_derive;
+#[cfg(feature = "serialize")]
+extern crate serde;
 use std::convert::TryFrom;
 extern crate strum;
 extern crate strum_macros;
 #[macro_use]
 pub mod attribute_type;
+pub mod address;
 pub mod anonymizer;
 pub mod error;
 pub mod media_type;
 pub mod network;
-pub mod address;
 
+use address::{AddressTyped, ExplicitlyTypedAddress};
 use anonymizer::{AnonymizingClone, StatefulSdpAnonymizer};
 use attribute_type::{
     parse_attribute, SdpAttribute, SdpAttributeRid, SdpAttributeSimulcastVersion, SdpAttributeType,
@@ -31,7 +32,6 @@ use media_type::{
     SdpProtocolValue,
 };
 use network::{parse_address_type, parse_network_type};
-use address::{ExplicitlyTypedAddress, AddressTyped};
 
 #[derive(Clone)]
 #[cfg_attr(feature = "serialize", derive(Serialize))]
@@ -877,11 +877,11 @@ pub fn parse_sdp(sdp: &str, fail_on_warning: bool) -> Result<SdpSession, SdpPars
 mod tests {
     extern crate url;
     use super::*;
+    use address::{Address, AddressType};
     use anonymizer::ToBytesVec;
     use media_type::create_dummy_media_section;
     use std::net::IpAddr;
     use std::net::Ipv4Addr;
-    use address::{Address, AddressType};
 
     fn create_dummy_sdp_session() -> SdpSession {
         let origin = parse_origin("mozilla 506705521068071134 0 IN IP4 0.0.0.0");
@@ -1409,7 +1409,10 @@ a=ice-lite\r\n",
             for _ in 0..2 {
                 let masked = origin_1.masked_clone(&mut anon);
                 assert_eq!(masked.username, "origin-user-00000001");
-                assert_eq!(masked.unicast_addr, ExplicitlyTypedAddress::Ip(IpAddr::V4(Ipv4Addr::from(1))));
+                assert_eq!(
+                    masked.unicast_addr,
+                    ExplicitlyTypedAddress::Ip(IpAddr::V4(Ipv4Addr::from(1)))
+                );
             }
         } else {
             unreachable!();
@@ -1437,7 +1440,10 @@ a=ice-lite\r\n",
         .unwrap();
         let mut masked = sdp.masked_clone(&mut anon);
         assert_eq!(masked.origin.username, "origin-user-00000001");
-        assert_eq!(masked.origin.unicast_addr, ExplicitlyTypedAddress::Ip(IpAddr::V4(Ipv4Addr::from(1))));
+        assert_eq!(
+            masked.origin.unicast_addr,
+            ExplicitlyTypedAddress::Ip(IpAddr::V4(Ipv4Addr::from(1)))
+        );
         assert_eq!(
             masked.connection.unwrap().address,
             ExplicitlyTypedAddress::Ip(IpAddr::V4(Ipv4Addr::from(2)))
@@ -1598,7 +1604,7 @@ a=ice-lite\r\n",
                 SdpAttribute::Sendrecv,
                 99,
                 SdpProtocolValue::RtpSavpf,
-                ExplicitlyTypedAddress::from(Ipv4Addr::new(127,0,0,1))
+                ExplicitlyTypedAddress::from(Ipv4Addr::new(127, 0, 0, 1))
             )
             .is_ok());
         assert!(sdp_session.get_connection().is_some());

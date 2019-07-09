@@ -22,12 +22,11 @@ pub enum SdpParserInternalError {
 impl fmt::Display for SdpParserInternalError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            SdpParserInternalError::UnknownAddressType => {
-                write!(f, "Address type is not known")
-            }
-            SdpParserInternalError::AddressTypeMismatch => {
-                write!(f, "Address type supplied does not match the type of the supplied address")
-            }
+            SdpParserInternalError::UnknownAddressType => write!(f, "Address type is not known"),
+            SdpParserInternalError::AddressTypeMismatch => write!(
+                f,
+                "Address type supplied does not match the type of the supplied address"
+            ),
             SdpParserInternalError::Generic(ref message) => {
                 write!(f, "Generic parsing error: {}", message)
             }

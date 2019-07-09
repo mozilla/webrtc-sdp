@@ -1,11 +1,10 @@
-
 extern crate url;
 use self::url::Host;
 extern crate strum;
-use std::convert::TryFrom;
-use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
-use std::fmt;
 use error::SdpParserInternalError;
+use std::convert::TryFrom;
+use std::fmt;
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::str::FromStr;
 
 #[derive(Clone, Debug)]
@@ -30,26 +29,24 @@ impl FromStr for Address {
         let mut e: Option<SdpParserInternalError> = None;
         if s.find(':').is_some() {
             match IpAddr::from_str(s) {
-              Ok(ip) => return Ok(Address::Ip(ip)),
-              Err(err) => e = Some(err.into()), 
+                Ok(ip) => return Ok(Address::Ip(ip)),
+                Err(err) => e = Some(err.into()),
             }
-        } 
-        Host::parse(s).and_then(|host| {
-            match host {
+        }
+        Host::parse(s)
+            .and_then(|host| match host {
                 Host::Domain(s) => Ok(Address::Fqdn(s)),
                 Host::Ipv4(ip) => Ok(Address::Ip(IpAddr::V4(ip))),
                 Host::Ipv6(ip) => Ok(Address::Ip(IpAddr::V6(ip))),
-            }
-        }).map_err(|err| {
-          e.unwrap_or_else(|| err.into())
-        })
+            })
+            .map_err(|err| e.unwrap_or_else(|| err.into()))
     }
 }
 
 impl From<ExplicitlyTypedAddress> for Address {
     fn from(item: ExplicitlyTypedAddress) -> Self {
         match item {
-            ExplicitlyTypedAddress::Fqdn{domain, .. } => Address::Fqdn(domain),
+            ExplicitlyTypedAddress::Fqdn { domain, .. } => Address::Fqdn(domain),
             ExplicitlyTypedAddress::Ip(ip) => Address::Ip(ip),
         }
     }
@@ -57,7 +54,7 @@ impl From<ExplicitlyTypedAddress> for Address {
 
 impl PartialEq for Address {
     fn eq(&self, other: &Self) -> bool {
-        match (self, other)  {
+        match (self, other) {
             (Address::Fqdn(a), Address::Fqdn(b)) => a.to_lowercase() == b.to_lowercase(),
             (Address::Ip(a), Address::Ip(b)) => a == b,
             (_, _) => false,
@@ -68,9 +65,9 @@ impl PartialEq for Address {
 #[derive(Clone, Copy, strum_macros::Display, PartialEq, Debug)]
 #[cfg_attr(feature = "serialize", derive(Serialize))]
 pub enum AddressType {
-    #[strum(serialize="IP4")]
+    #[strum(serialize = "IP4")]
     IpV4 = 4,
-    #[strum(serialize="IP6")]
+    #[strum(serialize = "IP6")]
     IpV6 = 6,
 }
 
@@ -101,7 +98,10 @@ impl AddressTyped for IpAddr {
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serialize", derive(Serialize))]
 pub enum ExplicitlyTypedAddress {
-    Fqdn{address_type:AddressType, domain:String},
+    Fqdn {
+        address_type: AddressType,
+        domain: String,
+    },
     Ip(IpAddr),
 }
 
@@ -109,7 +109,7 @@ impl fmt::Display for ExplicitlyTypedAddress {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "IN {} ", self.address_type())?;
         match self {
-            ExplicitlyTypedAddress::Fqdn{domain, .. } => domain.fmt(f),
+            ExplicitlyTypedAddress::Fqdn { domain, .. } => domain.fmt(f),
             ExplicitlyTypedAddress::Ip(ip) => ip.fmt(f),
         }
     }
@@ -118,7 +118,7 @@ impl fmt::Display for ExplicitlyTypedAddress {
 impl AddressTyped for ExplicitlyTypedAddress {
     fn address_type(&self) -> AddressType {
         match self {
-            ExplicitlyTypedAddress::Fqdn{address_type, .. } => *address_type,
+            ExplicitlyTypedAddress::Fqdn { address_type, .. } => *address_type,
             ExplicitlyTypedAddress::Ip(ip) => ip.address_type(),
         }
     }
@@ -152,16 +152,28 @@ impl TryFrom<(AddressType, &str)> for ExplicitlyTypedAddress {
                 } else {
                     Ok(ExplicitlyTypedAddress::Ip(ip))
                 }
-            },
-            Address::Fqdn(domain) => Ok(ExplicitlyTypedAddress::Fqdn{address_type:item.0, domain})
+            }
+            Address::Fqdn(domain) => Ok(ExplicitlyTypedAddress::Fqdn {
+                address_type: item.0,
+                domain,
+            }),
         }
     }
 }
 
 impl PartialEq for ExplicitlyTypedAddress {
     fn eq(&self, other: &Self) -> bool {
-        match (self, other)  {
-            (ExplicitlyTypedAddress::Fqdn{address_type:a1, domain:d1}, ExplicitlyTypedAddress::Fqdn{address_type:a2, domain:d2}) => a1 == a2 && d1.to_lowercase() == d2.to_lowercase(),
+        match (self, other) {
+            (
+                ExplicitlyTypedAddress::Fqdn {
+                    address_type: a1,
+                    domain: d1,
+                },
+                ExplicitlyTypedAddress::Fqdn {
+                    address_type: a2,
+                    domain: d2,
+                },
+            ) => a1 == a2 && d1.to_lowercase() == d2.to_lowercase(),
             (ExplicitlyTypedAddress::Ip(a), ExplicitlyTypedAddress::Ip(b)) => a == b,
             (_, _) => false,
         }
@@ -170,11 +182,11 @@ impl PartialEq for ExplicitlyTypedAddress {
 
 #[cfg(test)]
 mod tests {
-    use std::fmt::Display;
-    use std::net::{Ipv4Addr, Ipv6Addr, AddrParseError};
-    use std::error::Error;
     use self::url::ParseError;
     use super::*;
+    use std::error::Error;
+    use std::fmt::Display;
+    use std::net::{AddrParseError, Ipv4Addr, Ipv6Addr};
 
     #[derive(Debug, enum_display_derive::Display)]
     enum ParseTestError {
@@ -198,13 +210,13 @@ mod tests {
                 ParseTestError::Host(a) => Some(a),
                 ParseTestError::Ip(a) => Some(a),
             }
+        }
     }
-}
     #[test]
     fn test_domain_name_parsing() -> Result<(), ParseTestError> {
         let address = Host::parse("this.is.a.fqdn")?;
         if let Host::Domain(domain) = address {
-            assert_eq!(domain , "this.is.a.fqdn");
+            assert_eq!(domain, "this.is.a.fqdn");
         } else {
             panic!();
         }

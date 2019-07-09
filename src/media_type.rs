@@ -490,11 +490,11 @@ pub fn create_dummy_media_section() -> SdpMedia {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use address::{AddressType, ExplicitlyTypedAddress};
     use attribute_type::{
         SdpAttributeFmtp, SdpAttributeFmtpParameters, SdpAttributePayloadType, SdpAttributeRtcpFb,
         SdpAttributeRtcpFbType,
     };
-    use address::{ExplicitlyTypedAddress, AddressType};
     use std::convert::TryFrom;
 
     // TODO is this useful outside of tests?
