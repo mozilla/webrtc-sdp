@@ -41,7 +41,7 @@ impl FromStr for Address {
                 Host::Ipv6(ip) => Ok(Address::Ip(IpAddr::V6(ip))),
             }
         }).map_err(|err| {
-          e.unwrap_or(err.into())
+          e.unwrap_or_else(|| err.into())
         })
     }
 }

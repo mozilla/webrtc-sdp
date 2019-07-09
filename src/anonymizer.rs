@@ -70,7 +70,7 @@ impl StatefulSdpAnonymizer {
         }
     }
 
-    pub fn mask_host(&mut self, host: &String) -> String {
+    pub fn mask_host(&mut self, host: &str) -> String {
         self.host_names.mask(host)
     }
 
