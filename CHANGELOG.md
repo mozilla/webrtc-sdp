@@ -1,8 +1,12 @@
 # Changelog
 
 ## [Unreleased]
-- Minimum Rust version >= 1.34.0
 - Added support for FQDN addresses
+
+## [0.2.2] - 2019-06-21
+### Changed
+ - Minimum Rust version >= 1.35
+
 ## [0.2.0] - 2019-06-15
 ### Changed
 - Minimum Rust version >= 1.30.0

@@ -4,13 +4,13 @@
 [![Build Status](https://travis-ci.org/mozilla/webrtc-sdp.svg?branch=master)](https://travis-ci.org/mozilla/webrtc-sdp)
 [![Codecov coverage status](https://codecov.io/gh/mozilla/webrtc-sdp/branch/master/graph/badge.svg)](https://codecov.io/gh/webrtc-sdp/webrtc-sdp)
 [![License: MPL 2.0](https://img.shields.io/badge/License-MPL%202.0-brightgreen.svg)](#License)
-[![dependency status](https://deps.rs/repo/github/mozilla/weebrtc-sdp/status.svg)](https://deps.rs/repo/github/mozilla/webrtc-sdp)
+[![dependency status](https://deps.rs/repo/github/mozilla/webrtc-sdp/status.svg)](https://deps.rs/repo/github/mozilla/webrtc-sdp)
 
 A SDP parser written in Rust specifically aimed to handle WebRTC SDP offers and answers.
 
 ## Dependecies
 
-* Rust >= 1.30.0
+* Rust >= 1.35.0
 * log module
 * serde module
 * serde-derive module
@@ -48,12 +48,24 @@ rustup component add clippy
 
 Check with clippy for warnings in the code:
 ```
-cargo clippy --all-targets --all-features
+cargo clippy
 ```
 
 And format all of the code according to Rust code style convention:
 ```
 cargo fmt --all
+```
+
+## Fuzzing
+
+Install cargo-fuzz like this:
+```
+cargo install cargo-fuzz
+```
+
+With rust nightly you can start fuzzing like this:
+```
+cargo fuzz run fuzz_target_parse_sdp
 ```
 
 ## License

@@ -668,7 +668,7 @@ impl AnonymizingClone for SdpAttributeFingerprint {
     }
 }
 
-fn imageattr_discrete_value_list_to_string<T>(values: Vec<T>) -> String
+fn imageattr_discrete_value_list_to_string<T>(values: &[T]) -> String
 where
     T: ToString,
 {
@@ -702,7 +702,7 @@ impl ToString for SdpAttributeImageAttrXYRange {
                 }
             }
             SdpAttributeImageAttrXYRange::DiscreteValues(ref values) => {
-                imageattr_discrete_value_list_to_string(values.to_vec())
+                imageattr_discrete_value_list_to_string(values)
             }
         }
     }
@@ -720,7 +720,7 @@ impl ToString for SdpAttributeImageAttrSRange {
         match *self {
             SdpAttributeImageAttrSRange::Range(ref min, ref max) => format!("[{}-{}]", min, max),
             SdpAttributeImageAttrSRange::DiscreteValues(ref values) => {
-                imageattr_discrete_value_list_to_string(values.to_vec())
+                imageattr_discrete_value_list_to_string(values)
             }
         }
     }
@@ -2001,6 +2001,10 @@ fn parse_imageattr_tokens(to_parse: &str, separator: char) -> Vec<String> {
 }
 
 fn parse_imagettr_braced_token(to_parse: &str) -> Option<&str> {
+    if !to_parse.starts_with('[') {
+        return None;
+    }
+
     if !to_parse.ends_with(']') {
         return None;
     }
@@ -3283,6 +3287,10 @@ mod tests {
         assert!(parse_attribute("imageattr:").is_err());
         assert!(parse_attribute("imageattr:100").is_err());
         assert!(parse_attribute("imageattr:120 send * recv * send *").is_err());
+        assert!(parse_attribute("imageattr:99 send [x=320]").is_err());
+        assert!(parse_attribute("imageattr:99 recv [y=240]").is_err());
+        assert!(parse_attribute("imageattr:99 send [x=320,y=240").is_err());
+        assert!(parse_attribute("imageattr:99 send x=320,y=240]").is_err());
         assert!(
             parse_attribute("imageattr:97 send [x=800,y=640,sar=1.1] send [x=330,y=250]").is_err()
         );
