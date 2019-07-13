@@ -11,8 +11,7 @@ extern crate enum_display_derive;
 #[cfg(feature = "serialize")]
 extern crate serde;
 use std::convert::TryFrom;
-extern crate strum;
-extern crate strum_macros;
+
 #[macro_use]
 pub mod attribute_type;
 pub mod address;

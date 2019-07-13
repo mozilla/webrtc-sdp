@@ -1,6 +1,5 @@
 extern crate url;
 use self::url::Host;
-extern crate strum;
 use error::SdpParserInternalError;
 use std::convert::TryFrom;
 use std::fmt;
@@ -62,13 +61,21 @@ impl PartialEq for Address {
     }
 }
 
-#[derive(Clone, Copy, strum_macros::Display, PartialEq, Debug)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 #[cfg_attr(feature = "serialize", derive(Serialize))]
 pub enum AddressType {
-    #[strum(serialize = "IP4")]
     IpV4 = 4,
-    #[strum(serialize = "IP6")]
     IpV6 = 6,
+}
+
+impl fmt::Display for AddressType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            AddressType::IpV4 => "IP4",
+            AddressType::IpV6 => "IP6",
+        }
+        .fmt(f)
+    }
 }
 
 impl FromStr for AddressType {
