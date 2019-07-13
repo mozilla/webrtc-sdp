@@ -77,7 +77,7 @@ impl FromStr for AddressType {
         match s.to_uppercase().as_str() {
             "IP4" => Ok(AddressType::IpV4),
             "IP6" => Ok(AddressType::IpV6),
-            _ => Err(SdpParserInternalError::UnknownAddressType),
+            _ => Err(SdpParserInternalError::UnknownAddressType(s.to_owned())),
         }
     }
 }
@@ -148,7 +148,10 @@ impl TryFrom<(AddressType, &str)> for ExplicitlyTypedAddress {
         match Address::from_str(item.1)? {
             Address::Ip(ip) => {
                 if ip.address_type() != item.0 {
-                    Err(SdpParserInternalError::AddressTypeMismatch)
+                    Err(SdpParserInternalError::AddressTypeMismatch {
+                        found: ip.address_type(),
+                        expected: item.0,
+                    })
                 } else {
                     Ok(ExplicitlyTypedAddress::Ip(ip))
                 }

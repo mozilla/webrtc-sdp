@@ -586,8 +586,8 @@ fn parse_sdp_line(line: &str, line_number: usize) -> Result<SdpLine, SdpParserEr
         sdp_type,
     })
     .map_err(|e| match e {
-        SdpParserInternalError::UnknownAddressType
-        | SdpParserInternalError::AddressTypeMismatch
+        SdpParserInternalError::UnknownAddressType(..)
+        | SdpParserInternalError::AddressTypeMismatch { .. }
         | SdpParserInternalError::Generic(..)
         | SdpParserInternalError::Integer(..)
         | SdpParserInternalError::Float(..)

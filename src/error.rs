@@ -4,13 +4,17 @@ use std::error;
 use std::error::Error;
 use std::fmt;
 extern crate url;
+use address::AddressType;
 use std::num::ParseFloatError;
 use std::num::ParseIntError;
 
 #[derive(Debug, Clone)]
 pub enum SdpParserInternalError {
-    UnknownAddressType,
-    AddressTypeMismatch,
+    UnknownAddressType(String),
+    AddressTypeMismatch {
+        found: AddressType,
+        expected: AddressType,
+    },
     Generic(String),
     Unsupported(String),
     Integer(ParseIntError),
@@ -19,50 +23,42 @@ pub enum SdpParserInternalError {
     IpAddress(std::net::AddrParseError),
 }
 
+const INTERNAL_ERROR_MESSAGE_UNKNOWN_ADDRESS_TYPE: &str = "Unknown address type";
+const INTERNAL_ERROR_MESSAGE_ADDRESS_TYPE_MISMATCH: &str =
+    "Address is of a different type(1) than declared(2)";
+
 impl fmt::Display for SdpParserInternalError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            SdpParserInternalError::UnknownAddressType => write!(f, "Address type is not known"),
-            SdpParserInternalError::AddressTypeMismatch => write!(
+            SdpParserInternalError::UnknownAddressType(ref unknown) => write!(
                 f,
-                "Address type supplied does not match the type of the supplied address"
+                "{}: {}",
+                INTERNAL_ERROR_MESSAGE_UNKNOWN_ADDRESS_TYPE, unknown
             ),
-            SdpParserInternalError::Generic(ref message) => {
-                write!(f, "Generic parsing error: {}", message)
-            }
+            SdpParserInternalError::AddressTypeMismatch { found, expected } => write!(
+                f,
+                "{}: {}, {}",
+                INTERNAL_ERROR_MESSAGE_ADDRESS_TYPE_MISMATCH, found, expected
+            ),
+            SdpParserInternalError::Generic(ref message) => write!(f, "Parsing error: {}", message),
             SdpParserInternalError::Unsupported(ref message) => {
                 write!(f, "Unsupported parsing error: {}", message)
             }
             SdpParserInternalError::Integer(ref error) => {
-                write!(f, "Integer parsing error: {}", error.description())
+                write!(f, "Integer parsing error: {}", error)
             }
-            SdpParserInternalError::Float(ref error) => {
-                write!(f, "Float parsing error: {}", error.description())
-            }
+            SdpParserInternalError::Float(ref error) => write!(f, "Float parsing error: {}", error),
             SdpParserInternalError::Domain(ref error) => {
-                write!(f, "Domain name parsing error: {}", error.description())
+                write!(f, "Domain name parsing error: {}", error)
             }
             SdpParserInternalError::IpAddress(ref error) => {
-                write!(f, "IP address parsing error: {}", error.description())
+                write!(f, "IP address parsing error: {}", error)
             }
         }
     }
 }
 
-impl error::Error for SdpParserInternalError {
-    fn description(&self) -> &str {
-        match *self {
-            SdpParserInternalError::UnknownAddressType => "Address type unknown",
-            SdpParserInternalError::AddressTypeMismatch => "Address type mismatch",
-            SdpParserInternalError::Generic(ref message)
-            | SdpParserInternalError::Unsupported(ref message) => message,
-            SdpParserInternalError::Integer(ref error) => error.description(),
-            SdpParserInternalError::Float(ref error) => error.description(),
-            SdpParserInternalError::Domain(ref error) => error.description(),
-            SdpParserInternalError::IpAddress(ref error) => error.description(),
-        }
-    }
-
+impl Error for SdpParserInternalError {
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match *self {
             SdpParserInternalError::Integer(ref error) => Some(error),
@@ -152,9 +148,7 @@ impl fmt::Display for SdpParserError {
             } => write!(
                 f,
                 "Line error: {} in line({}): {}",
-                error.description(),
-                line_number,
-                line
+                error, line_number, line
             ),
             SdpParserError::Unsupported {
                 ref error,
@@ -163,9 +157,7 @@ impl fmt::Display for SdpParserError {
             } => write!(
                 f,
                 "Unsupported: {} in line({}): {}",
-                error.description(),
-                line_number,
-                line
+                error, line_number, line
             ),
             SdpParserError::Sequence {
                 ref message,
@@ -175,15 +167,7 @@ impl fmt::Display for SdpParserError {
     }
 }
 
-impl error::Error for SdpParserError {
-    fn description(&self) -> &str {
-        match *self {
-            SdpParserError::Line { ref error, .. }
-            | SdpParserError::Unsupported { ref error, .. } => error.description(),
-            SdpParserError::Sequence { ref message, .. } => message,
-        }
-    }
-
+impl Error for SdpParserError {
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match *self {
             SdpParserError::Line { ref error, .. }
@@ -223,15 +207,37 @@ mod tests {
     use super::*;
     use address::Address;
     use std::str::FromStr;
+    #[test]
+    fn test_sdp_parser_internal_error_unknown_address_type() {
+        let error = SdpParserInternalError::UnknownAddressType("foo".to_string());
+        assert_eq!(
+            format!("{}", error),
+            format!("{}: {}", INTERNAL_ERROR_MESSAGE_UNKNOWN_ADDRESS_TYPE, "foo")
+        );
+        assert!(error.source().is_none());
+    }
+    #[test]
+    fn test_sdp_parser_internal_error_address_type_mismatch() {
+        let error = SdpParserInternalError::AddressTypeMismatch {
+            found: AddressType::IpV4,
+            expected: AddressType::IpV6,
+        };
+        assert_eq!(
+            format!("{}", error),
+            format!(
+                "{}: {}, {}",
+                INTERNAL_ERROR_MESSAGE_ADDRESS_TYPE_MISMATCH,
+                AddressType::IpV4,
+                AddressType::IpV6
+            )
+        );
+        assert!(error.source().is_none());
+    }
 
     #[test]
     fn test_sdp_parser_internal_error_generic() {
         let generic = SdpParserInternalError::Generic("generic message".to_string());
-        assert_eq!(
-            format!("{}", generic),
-            "Generic parsing error: generic message"
-        );
-        assert_eq!(generic.description(), "generic message");
+        assert_eq!(format!("{}", generic), "Parsing error: generic message");
         assert!(generic.source().is_none());
     }
 
@@ -243,7 +249,6 @@ mod tests {
             format!("{}", unsupported),
             "Unsupported parsing error: unsupported internal message"
         );
-        assert_eq!(unsupported.description(), "unsupported internal message");
         assert!(unsupported.source().is_none());
     }
 
@@ -257,7 +262,6 @@ mod tests {
             format!("{}", int_err),
             "Integer parsing error: invalid digit found in string"
         );
-        assert_eq!(int_err.description(), "invalid digit found in string");
         assert!(!int_err.source().is_none());
     }
 
@@ -271,7 +275,6 @@ mod tests {
             format!("{}", int_err),
             "Float parsing error: invalid float literal"
         );
-        assert_eq!(int_err.description(), "invalid float literal");
         assert!(!int_err.source().is_none());
     }
 
@@ -283,7 +286,6 @@ mod tests {
             format!("{}", addr_err),
             "Domain name parsing error: invalid IPv4 address"
         );
-        assert_eq!(addr_err.description(), "invalid IPv4 address");
         assert!(!addr_err.source().is_none());
     }
 
@@ -296,9 +298,8 @@ mod tests {
         };
         assert_eq!(
             format!("{}", line1),
-            "Line error: test message in line(13): test line"
+            "Line error: Parsing error: test message in line(13): test line"
         );
-        assert_eq!(line1.description(), "test message");
         assert!(line1.source().is_some());
     }
 
@@ -311,9 +312,8 @@ mod tests {
         };
         assert_eq!(
             format!("{}", unsupported1),
-            "Unsupported: unsupported value in line(21): unsupported line"
+            "Unsupported: Parsing error: unsupported value in line(21): unsupported line"
         );
-        assert_eq!(unsupported1.description(), "unsupported value");
         assert!(unsupported1.source().is_some());
     }
 
@@ -327,7 +327,6 @@ mod tests {
             format!("{}", sequence1),
             "Sequence error in line(42): sequence message"
         );
-        assert_eq!(sequence1.description(), "sequence message");
         assert!(sequence1.source().is_none());
     }
 }

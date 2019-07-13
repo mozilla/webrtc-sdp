@@ -425,10 +425,9 @@ impl SdpAttributeRtcp {
 
 impl fmt::Display for SdpAttributeRtcp {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if let Some(addr) = self.unicast_addr.clone() {
-            write!(f, "{} {}", self.port, addr)
-        } else {
-            self.port.fmt(f)
+        match self.unicast_addr {
+            Some(ref addr) => write!(f, "{} {}", self.port, addr),
+            None => self.port.fmt(f),
         }
     }
 }
@@ -2507,13 +2506,6 @@ fn parse_rtcp(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
                         }
                         Some(x) => match ExplicitlyTypedAddress::try_from((addrtype, x)) {
                             Ok(address) => address,
-                            Err(SdpParserInternalError::AddressTypeMismatch) => {
-                                return Err(SdpParserInternalError::Generic(
-                                    "Failed to parse unicast address attribute.\
-                                     addrtype does not match address."
-                                        .to_string(),
-                                ));
-                            }
                             Err(e) => return Err(e),
                         },
                     };
