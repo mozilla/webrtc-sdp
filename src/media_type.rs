@@ -490,11 +490,12 @@ pub fn create_dummy_media_section() -> SdpMedia {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use address::{AddressType, ExplicitlyTypedAddress};
     use attribute_type::{
         SdpAttributeFmtp, SdpAttributeFmtpParameters, SdpAttributePayloadType, SdpAttributeRtcpFb,
         SdpAttributeRtcpFbType,
     };
-    use network::parse_unicast_address;
+    use std::convert::TryFrom;
 
     // TODO is this useful outside of tests?
     impl SdpFormatList {
@@ -800,9 +801,8 @@ mod tests {
             sdp_type: SdpType::Media(media_line),
         };
         sdp_lines.push(media);
-        let address = parse_unicast_address("127.0.0.1").unwrap();
         let c = SdpConnection {
-            address,
+            address: ExplicitlyTypedAddress::try_from((AddressType::IpV4, "127.0.0.1")).unwrap(),
             ttl: None,
             amount: None,
         };
