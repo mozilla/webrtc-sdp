@@ -11,6 +11,7 @@ extern crate enum_display_derive;
 #[cfg(feature = "serialize")]
 extern crate serde;
 use std::convert::TryFrom;
+use std::fmt;
 
 #[macro_use]
 pub mod attribute_type;
@@ -50,7 +51,7 @@ impl fmt::Display for SdpBandwidth {
             SdpBandwidth::Tias(ref x) => ("TIAS", x),
             SdpBandwidth::Unknown(ref tp, ref x) => (&tp[..], x),
         };
-        write!(f, "{}:{}", tp_string, value)
+        write!(f, "{tp}:{val}", tp = tp_string, val = value)
     }
 }
 
@@ -122,7 +123,7 @@ pub struct SdpTiming {
 
 impl fmt::Display for SdpTiming {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} {}", self.start, self.stop)
+        write!(f, "{start} {stop}", start = self.start, stop = self.stop)
     }
 }
 
@@ -171,15 +172,22 @@ impl fmt::Display for SdpSession {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "v={}\r\no={}\r\ns={}\r\n{}{}{}{}{}",
-            self.version,
-            self.origin,
-            self.session,
-            option_to_string!("t={}\r\n", self.timing),
-            maybe_vector_to_string!("b={}\r\n", self.bandwidth, "\r\nb="),
-            option_to_string!("c={}\r\n", self.connection),
-            maybe_vector_to_string!("a={}\r\n", self.attribute, "\r\na="),
-            maybe_vector_to_string!("{}", self.media, "\r\n")
+            "v={version}\r\n\
+             o={origin}\r\n\
+             s={session}\r\n\
+             {timing}\
+             {bandwidth}\
+             {connection}\
+             {session_attributes}\
+             {media_sections}",
+            version = self.version,
+            origin = self.origin,
+            session = self.session,
+            timing = option_to_string!("t={}\r\n", self.timing),
+            bandwidth = maybe_vector_to_string!("b={}\r\n", self.bandwidth, "\r\nb="),
+            connection = option_to_string!("c={}\r\n", self.connection),
+            session_attributes = maybe_vector_to_string!("a={}\r\n", self.attribute, "\r\na="),
+            media_sections = maybe_vector_to_string!("{}", self.media, "\r\n")
         )
     }
 }

@@ -20,12 +20,12 @@ impl fmt::Display for SdpMediaLine {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{} {}{} {} {}",
-            self.media,
-            self.port,
-            maybe_print_param("/", self.port_count, 0),
-            self.proto,
-            self.formats
+            "{media} {port}{pcount} {proto} {formats}",
+            media = self.media,
+            port = self.port,
+            pcount = maybe_print_param("/", self.port_count, 0),
+            proto = self.proto,
+            formats = self.formats
         )
     }
 }
@@ -119,11 +119,11 @@ impl fmt::Display for SdpMedia {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "m={}\r\n{}{}{}",
-            self.media,
-            maybe_vector_to_string!("b={}\r\n", self.bandwidth, "\r\nb="),
-            option_to_string!("c={}\r\n", self.connection),
-            maybe_vector_to_string!("a={}\r\n", self.attribute, "\r\na=")
+            "m={mline}\r\n{bw}{connection}{attributes}",
+            mline = self.media,
+            bw = maybe_vector_to_string!("b={}\r\n", self.bandwidth, "\r\nb="),
+            connection = option_to_string!("c={}\r\n", self.connection),
+            attributes = maybe_vector_to_string!("a={}\r\n", self.attribute, "\r\na=")
         )
     }
 }

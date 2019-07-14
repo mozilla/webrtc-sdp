@@ -202,21 +202,25 @@ impl fmt::Display for SdpAttributeCandidate {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{} {} {} {} {} {} typ {}{}{}{}{}{}{}{}",
-            self.foundation,
-            self.component,
-            self.transport,
-            self.priority,
-            self.address,
-            self.port,
-            self.c_type,
-            option_to_string!(" raddr {}", self.raddr),
-            option_to_string!(" rport {}", self.rport),
-            option_to_string!(" tcptype {}", self.tcp_type),
-            option_to_string!(" generation {}", self.generation),
-            option_to_string!(" ufrag {}", self.ufrag),
-            option_to_string!(" network-cost {}", self.networkcost),
-            self.unknown_extensions
+            "{foundation} {component} {transport} {priority} \
+             {address} {port} typ {ctype}\
+             {raddr}{rport}{tcp_type}{generation}{ufrag}{cost}\
+             {unknown}",
+            foundation = self.foundation,
+            component = self.component,
+            transport = self.transport,
+            priority = self.priority,
+            address = self.address,
+            port = self.port,
+            ctype = self.c_type,
+            raddr = option_to_string!(" raddr {}", self.raddr),
+            rport = option_to_string!(" rport {}", self.rport),
+            tcp_type = option_to_string!(" tcptype {}", self.tcp_type),
+            generation = option_to_string!(" generation {}", self.generation),
+            ufrag = option_to_string!(" ufrag {}", self.ufrag),
+            cost = option_to_string!(" network-cost {}", self.networkcost),
+            unknown = self
+                .unknown_extensions
                 .iter()
                 .map(|&(ref name, ref value)| format!(" {} {}", name, value))
                 .collect::<String>()
@@ -325,7 +329,8 @@ pub struct SdpAttributeRemoteCandidate {
 
 impl fmt::Display for SdpAttributeRemoteCandidate {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f,
+        write!(
+            f,
             "{component} {addr} {port}",
             component = self.component,
             addr = self.address,
@@ -548,11 +553,11 @@ impl fmt::Display for SdpAttributeExtmap {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{}{} {}{}",
-            self.id,
-            option_to_string!("/{}", self.direction),
-            self.url,
-            option_to_string!(" {}", self.extension_attributes)
+            "{id}{direction} {url}{ext}",
+            id = self.id,
+            direction = option_to_string!("/{}", self.direction),
+            url = self.url,
+            ext = option_to_string!(" {}", self.extension_attributes)
         )
     }
 }
@@ -598,8 +603,8 @@ impl fmt::Display for SdpAttributeFmtpParameters {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{}{}{}{}",
-            non_empty_string_vec![
+            "{parameters}{red}{dtmf}{unknown}",
+            parameters = non_empty_string_vec![
                 maybe_print_param("packetization-mode=", self.packetization_mode, 0),
                 maybe_print_bool_param(
                     "level-asymmetry-allowed",
@@ -620,9 +625,9 @@ impl fmt::Display for SdpAttributeFmtpParameters {
                 maybe_print_bool_param("cbr", self.cbr, false)
             ]
             .join(";"),
-            maybe_vector_to_string!("{}", self.encodings, "/"),
-            maybe_print_param("", self.dtmf_tones.clone(), "".to_string()),
-            maybe_vector_to_string!("{}", self.unknown_tokens, ",")
+            red = maybe_vector_to_string!("{}", self.encodings, "/"),
+            dtmf = maybe_print_param("", self.dtmf_tones.clone(), "".to_string()),
+            unknown = maybe_vector_to_string!("{}", self.unknown_tokens, ",")
         )
     }
 }
@@ -636,7 +641,12 @@ pub struct SdpAttributeFmtp {
 
 impl fmt::Display for SdpAttributeFmtp {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} {}", self.payload_type, self.parameters.to_string())
+        write!(
+            f,
+            "{pt} {parameter}",
+            pt = self.payload_type,
+            parameter = self.parameters.to_string()
+        )
     }
 }
 
@@ -677,9 +687,10 @@ impl fmt::Display for SdpAttributeFingerprint {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{} {}",
-            self.hash_algorithm,
-            self.fingerprint
+            "{hash} {fp}",
+            hash = self.hash_algorithm,
+            fp = self
+                .fingerprint
                 .iter()
                 .map(|byte| format!("{:02X}", byte))
                 .collect::<Vec<String>>()
@@ -783,12 +794,12 @@ impl fmt::Display for SdpAttributeImageAttrSet {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "[x={},y={}{}{}{}]",
-            self.x,
-            self.y,
-            option_to_string!(",sar={}", self.sar),
-            option_to_string!(",par={}", self.par),
-            option_to_string!(",q={}", self.q)
+            "[x={x},y={y}{sar}{par}{q}]",
+            x = self.x,
+            y = self.y,
+            sar = option_to_string!(",sar={}", self.sar),
+            par = option_to_string!(",par={}", self.par),
+            q = option_to_string!(",q={}", self.q)
         )
     }
 }
@@ -836,10 +847,10 @@ impl fmt::Display for SdpAttributeImageAttr {
         };
         write!(
             f,
-            "{}{}{}",
-            self.pt,
-            option_to_string!(" send {}", maybe_sets_to_string(self.send.clone())),
-            option_to_string!(" recv {}", maybe_sets_to_string(self.recv.clone()))
+            "{pt}{send}{recv}",
+            pt = self.pt,
+            send = option_to_string!(" send {}", maybe_sets_to_string(self.send.clone())),
+            recv = option_to_string!(" recv {}", maybe_sets_to_string(self.recv.clone()))
         )
     }
 }
@@ -853,7 +864,12 @@ pub struct SdpAttributeSctpmap {
 
 impl fmt::Display for SdpAttributeSctpmap {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} webrtc-datachannel {}", self.port, self.channels)
+        write!(
+            f,
+            "{port} webrtc-datachannel {channels}",
+            port = self.port,
+            channels = self.channels
+        )
     }
 }
 
@@ -985,10 +1001,10 @@ impl fmt::Display for SdpAttributeRid {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{} {}{}",
-            self.id,
-            self.direction,
-            match non_empty_string_vec![
+            "{id} {direction}{format}",
+            id = self.id,
+            direction = self.direction,
+            format = match non_empty_string_vec![
                 maybe_vector_to_string!("pt={}", self.formats, ","),
                 self.params.to_string(),
                 maybe_vector_to_string!("depends={}", self.depends, ",")
@@ -1031,11 +1047,11 @@ impl fmt::Display for SdpAttributeRtpmap {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{} {}/{}{}",
-            self.payload_type,
-            self.codec_name,
-            self.frequency,
-            option_to_string!("/{}", self.channels)
+            "{pt} {name}/{freq}{channels}",
+            pt = self.payload_type,
+            name = self.codec_name,
+            freq = self.frequency,
+            channels = option_to_string!("/{}", self.channels)
         )
     }
 }
