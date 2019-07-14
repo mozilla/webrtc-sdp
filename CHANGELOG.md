@@ -1,6 +1,7 @@
 # Changelog
 
 ## [Unreleased]
+- Added support for FQDN addresses
 
 ## [0.2.2] - 2019-06-21
 ### Changed
