@@ -1550,9 +1550,10 @@ fn parse_single_direction(to_parse: &str) -> Result<SdpSingleDirection, SdpParse
     match to_parse {
         "send" => Ok(SdpSingleDirection::Send),
         "recv" => Ok(SdpSingleDirection::Recv),
-        x => Err(SdpParserInternalError::Generic(
-            format!("Unknown direction description found: '{:}'", x),
-        )),
+        x => Err(SdpParserInternalError::Generic(format!(
+            "Unknown direction description found: '{:}'",
+            x
+        ))),
     }
 }
 
@@ -1697,9 +1698,10 @@ fn parse_dtls_message(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalE
         "client" => SdpAttributeDtlsMessage::Client(tokens[1].to_string()),
         "server" => SdpAttributeDtlsMessage::Server(tokens[1].to_string()),
         e => {
-            return Err(SdpParserInternalError::Generic(
-                format!("dtls-message has unknown role token '{}'", e),
-            ));
+            return Err(SdpParserInternalError::Generic(format!(
+                "dtls-message has unknown role token '{}'",
+                e
+            )));
         }
     }))
 }
@@ -1865,17 +1867,17 @@ fn parse_fmtp(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
                 ));
             }
 
-            let parse_bool = |val: &str,
-                              param_name: &str|
-             -> Result<bool, SdpParserInternalError> {
-                match val.parse::<u8>()? {
-                    0 => Ok(false),
-                    1 => Ok(true),
-                    _ => Err(SdpParserInternalError::Generic(
-                        format!("The fmtp parameter '{:}' must be 0 or 1", param_name),
-                    )),
-                }
-            };
+            let parse_bool =
+                |val: &str, param_name: &str| -> Result<bool, SdpParserInternalError> {
+                    match val.parse::<u8>()? {
+                        0 => Ok(false),
+                        1 => Ok(true),
+                        _ => Err(SdpParserInternalError::Generic(format!(
+                            "The fmtp parameter '{:}' must be 0 or 1",
+                            param_name
+                        ))),
+                    }
+                };
 
             let parameter_name = name_value_pair[0];
             let parameter_val = name_value_pair[1];
@@ -2746,12 +2748,10 @@ fn parse_simulcast_version_list(
             "rid" => Ok(make_version_list(
                 descriptor_versionlist_pair.next().unwrap(),
             )),
-            descriptor => Err(SdpParserInternalError::Generic(
-                format!(
-                    "Simulcast attribute has unknown list descriptor '{:?}'",
-                    descriptor
-                ),
-            )),
+            descriptor => Err(SdpParserInternalError::Generic(format!(
+                "Simulcast attribute has unknown list descriptor '{:?}'",
+                descriptor
+            ))),
         }
     } else {
         Ok(make_version_list(to_parse))
@@ -2791,13 +2791,11 @@ fn parse_simulcast(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalErro
         second_version_list = match tokens.next() {
             Some(x) => parse_simulcast_version_list(x)?,
             None => {
-                return Err(SdpParserInternalError::Generic(
-                    format!(
-                        "{:?}{:?}",
-                        "Simulcast has defined a second direction but",
-                        "no second list of simulcast stream versions"
-                    ),
-                ));
+                return Err(SdpParserInternalError::Generic(format!(
+                    "{:?}{:?}",
+                    "Simulcast has defined a second direction but",
+                    "no second list of simulcast stream versions"
+                )));
             }
         }
     }
