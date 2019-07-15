@@ -239,7 +239,7 @@ impl SdpSession {
         if !a.allowed_at_session_level() {
             return Err(SdpParserInternalError::Generic(format!(
                 "{} not allowed at session level",
-                a.to_string()
+                a
             )));
         };
         self.attribute.push(a);
@@ -422,7 +422,7 @@ fn parse_origin(value: &str) -> Result<SdpType, SdpParserInternalError> {
         session_version,
         unicast_addr,
     };
-    trace!("origin: {}", o.to_string());
+    trace!("origin: {}", o);
     Ok(SdpType::Origin(o))
 }
 
@@ -452,7 +452,7 @@ fn parse_connection(value: &str) -> Result<SdpType, SdpParserInternalError> {
         ttl,
         amount,
     };
-    trace!("connection: {}", c.address);
+    trace!("connection: {}", c);
     Ok(SdpType::Connection(c))
 }
 
@@ -470,7 +470,7 @@ fn parse_bandwidth(value: &str) -> Result<SdpType, SdpParserInternalError> {
         "TIAS" => SdpBandwidth::Tias(bandwidth),
         _ => SdpBandwidth::Unknown(String::from(bv[0]), bandwidth),
     };
-    trace!("bandwidth: {}, {}", bv[0], bandwidth);
+    trace!("bandwidth: {}", bw);
     Ok(SdpType::Bandwidth(bw))
 }
 
@@ -484,7 +484,7 @@ fn parse_timing(value: &str) -> Result<SdpType, SdpParserInternalError> {
     let start = tv[0].parse::<u64>()?;
     let stop = tv[1].parse::<u64>()?;
     let t = SdpTiming { start, stop };
-    trace!("timing: {}, {}", t.start, t.stop);
+    trace!("timing: {}", t);
     Ok(SdpType::Timing(t))
 }
 

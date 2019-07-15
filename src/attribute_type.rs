@@ -430,7 +430,6 @@ impl fmt::Display for SdpAttributeSimulcast {
                 maybe_vector_to_string!("recv {}", self.receive, ";")
             ]
             .join(" ")
-            .to_string()
         )
     }
 }
@@ -645,7 +644,7 @@ impl fmt::Display for SdpAttributeFmtp {
             f,
             "{pt} {parameter}",
             pt = self.payload_type,
-            parameter = self.parameters.to_string()
+            parameter = self.parameters
         )
     }
 }
@@ -1552,7 +1551,7 @@ fn parse_single_direction(to_parse: &str) -> Result<SdpSingleDirection, SdpParse
         "send" => Ok(SdpSingleDirection::Send),
         "recv" => Ok(SdpSingleDirection::Recv),
         x => Err(SdpParserInternalError::Generic(
-            format!("Unknown direction description found: '{:}'", x).to_string(),
+            format!("Unknown direction description found: '{:}'", x),
         )),
     }
 }
@@ -1699,7 +1698,7 @@ fn parse_dtls_message(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalE
         "server" => SdpAttributeDtlsMessage::Server(tokens[1].to_string()),
         e => {
             return Err(SdpParserInternalError::Generic(
-                format!("dtls-message has unknown role token '{}'", e).to_string(),
+                format!("dtls-message has unknown role token '{}'", e),
             ));
         }
     }))
@@ -1873,7 +1872,7 @@ fn parse_fmtp(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
                     0 => Ok(false),
                     1 => Ok(true),
                     _ => Err(SdpParserInternalError::Generic(
-                        format!("The fmtp parameter '{:}' must be 0 or 1", param_name).to_string(),
+                        format!("The fmtp parameter '{:}' must be 0 or 1", param_name),
                     )),
                 }
             };
@@ -2751,8 +2750,7 @@ fn parse_simulcast_version_list(
                 format!(
                     "Simulcast attribute has unknown list descriptor '{:?}'",
                     descriptor
-                )
-                .to_string(),
+                ),
             )),
         }
     } else {
@@ -2798,8 +2796,7 @@ fn parse_simulcast(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalErro
                         "{:?}{:?}",
                         "Simulcast has defined a second direction but",
                         "no second list of simulcast stream versions"
-                    )
-                    .to_string(),
+                    ),
                 ));
             }
         }

@@ -178,7 +178,7 @@ impl SdpMedia {
         if !attr.allowed_at_media_level() {
             return Err(SdpParserInternalError::Generic(format!(
                 "{} not allowed at media level",
-                attr.to_string()
+                attr
             )));
         }
         self.attribute.push(attr);
@@ -396,13 +396,7 @@ pub fn parse_media(value: &str) -> Result<SdpType, SdpParserInternalError> {
         proto,
         formats,
     };
-    trace!(
-        "media: {}, {}, {}, {}",
-        m.media.to_string(),
-        m.port.to_string(),
-        m.proto.to_string(),
-        m.formats.to_string()
-    );
+    trace!("media: {}, {}, {}, {}", m.media, m.port, m.proto, m.formats);
     Ok(SdpType::Media(m))
 }
 
