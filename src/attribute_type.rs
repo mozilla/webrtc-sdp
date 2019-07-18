@@ -82,14 +82,11 @@ pub enum SdpSingleDirection {
 
 impl fmt::Display for SdpSingleDirection {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            match *self {
-                SdpSingleDirection::Send => "send",
-                SdpSingleDirection::Recv => "recv",
-            }
-        )
+        match *self {
+            SdpSingleDirection::Send => "send",
+            SdpSingleDirection::Recv => "recv",
+        }
+        .fmt(f)
     }
 }
 
@@ -102,14 +99,11 @@ pub enum SdpAttributePayloadType {
 
 impl fmt::Display for SdpAttributePayloadType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            match *self {
-                SdpAttributePayloadType::PayloadType(pt) => pt.to_string(),
-                SdpAttributePayloadType::Wildcard => "*".to_string(),
-            }
-        )
+        match *self {
+            SdpAttributePayloadType::PayloadType(pt) => pt.to_string(),
+            SdpAttributePayloadType::Wildcard => "*".to_string(),
+        }
+        .fmt(f)
     }
 }
 
@@ -122,14 +116,11 @@ pub enum SdpAttributeCandidateTransport {
 
 impl fmt::Display for SdpAttributeCandidateTransport {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            match *self {
-                SdpAttributeCandidateTransport::Udp => "UDP",
-                SdpAttributeCandidateTransport::Tcp => "TCP",
-            }
-        )
+        match *self {
+            SdpAttributeCandidateTransport::Udp => "UDP",
+            SdpAttributeCandidateTransport::Tcp => "TCP",
+        }
+        .fmt(f)
     }
 }
 
@@ -144,16 +135,13 @@ pub enum SdpAttributeCandidateType {
 
 impl fmt::Display for SdpAttributeCandidateType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            match *self {
-                SdpAttributeCandidateType::Host => "host",
-                SdpAttributeCandidateType::Srflx => "srflx",
-                SdpAttributeCandidateType::Prflx => "prflx",
-                SdpAttributeCandidateType::Relay => "relay",
-            }
-        )
+        match *self {
+            SdpAttributeCandidateType::Host => "host",
+            SdpAttributeCandidateType::Srflx => "srflx",
+            SdpAttributeCandidateType::Prflx => "prflx",
+            SdpAttributeCandidateType::Relay => "relay",
+        }
+        .fmt(f)
     }
 }
 
@@ -167,15 +155,12 @@ pub enum SdpAttributeCandidateTcpType {
 
 impl fmt::Display for SdpAttributeCandidateTcpType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            match *self {
-                SdpAttributeCandidateTcpType::Active => "active",
-                SdpAttributeCandidateTcpType::Passive => "passive",
-                SdpAttributeCandidateTcpType::Simultaneous => "so",
-            }
-        )
+        match *self {
+            SdpAttributeCandidateTcpType::Active => "active",
+            SdpAttributeCandidateTcpType::Passive => "passive",
+            SdpAttributeCandidateTcpType::Simultaneous => "so",
+        }
+        .fmt(f)
     }
 }
 
@@ -308,14 +293,11 @@ pub enum SdpAttributeDtlsMessage {
 
 impl fmt::Display for SdpAttributeDtlsMessage {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            match *self {
-                SdpAttributeDtlsMessage::Client(ref msg) => format!("client {}", msg),
-                SdpAttributeDtlsMessage::Server(ref msg) => format!("server {}", msg),
-            }
-        )
+        match *self {
+            SdpAttributeDtlsMessage::Client(ref msg) => format!("client {}", msg),
+            SdpAttributeDtlsMessage::Server(ref msg) => format!("server {}", msg),
+        }
+        .fmt(f)
     }
 }
 
@@ -401,15 +383,12 @@ impl SdpAttributeSimulcastVersion {
 
 impl fmt::Display for SdpAttributeSimulcastVersion {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            self.ids
-                .iter()
-                .map(ToString::to_string)
-                .collect::<Vec<String>>()
-                .join(",")
-        )
+        self.ids
+            .iter()
+            .map(ToString::to_string)
+            .collect::<Vec<String>>()
+            .join(",")
+            .fmt(f)
     }
 }
 
@@ -422,15 +401,12 @@ pub struct SdpAttributeSimulcast {
 
 impl fmt::Display for SdpAttributeSimulcast {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            non_empty_string_vec![
-                maybe_vector_to_string!("send {}", self.send, ";"),
-                maybe_vector_to_string!("recv {}", self.receive, ";")
-            ]
-            .join(" ")
-        )
+        non_empty_string_vec![
+            maybe_vector_to_string!("send {}", self.send, ";"),
+            maybe_vector_to_string!("recv {}", self.receive, ";")
+        ]
+        .join(" ")
+        .fmt(f)
     }
 }
 
@@ -478,18 +454,15 @@ pub enum SdpAttributeRtcpFbType {
 
 impl fmt::Display for SdpAttributeRtcpFbType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            match *self {
-                SdpAttributeRtcpFbType::Ack => "ack",
-                SdpAttributeRtcpFbType::Ccm => "ccm",
-                SdpAttributeRtcpFbType::Nack => "nack",
-                SdpAttributeRtcpFbType::TrrInt => "trr-int",
-                SdpAttributeRtcpFbType::Remb => "goog-remb",
-                SdpAttributeRtcpFbType::TransCC => "transport-cc",
-            }
-        )
+        match *self {
+            SdpAttributeRtcpFbType::Ack => "ack",
+            SdpAttributeRtcpFbType::Ccm => "ccm",
+            SdpAttributeRtcpFbType::Nack => "nack",
+            SdpAttributeRtcpFbType::TrrInt => "trr-int",
+            SdpAttributeRtcpFbType::Remb => "goog-remb",
+            SdpAttributeRtcpFbType::TransCC => "transport-cc",
+        }
+        .fmt(f)
     }
 }
 
@@ -527,15 +500,12 @@ pub enum SdpAttributeDirection {
 
 impl fmt::Display for SdpAttributeDirection {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            match *self {
-                SdpAttributeDirection::Recvonly => "recvonly",
-                SdpAttributeDirection::Sendonly => "sendonly",
-                SdpAttributeDirection::Sendrecv => "sendrecv",
-            }
-        )
+        match *self {
+            SdpAttributeDirection::Recvonly => "recvonly",
+            SdpAttributeDirection::Sendonly => "sendonly",
+            SdpAttributeDirection::Sendrecv => "sendrecv",
+        }
+        .fmt(f)
     }
 }
 
@@ -661,17 +631,14 @@ pub enum SdpAttributeFingerprintHashType {
 
 impl fmt::Display for SdpAttributeFingerprintHashType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            match *self {
-                SdpAttributeFingerprintHashType::Sha1 => "sha-1",
-                SdpAttributeFingerprintHashType::Sha224 => "sha-224",
-                SdpAttributeFingerprintHashType::Sha256 => "sha-256",
-                SdpAttributeFingerprintHashType::Sha384 => "sha-384",
-                SdpAttributeFingerprintHashType::Sha512 => "sha-512",
-            }
-        )
+        match *self {
+            SdpAttributeFingerprintHashType::Sha1 => "sha-1",
+            SdpAttributeFingerprintHashType::Sha224 => "sha-224",
+            SdpAttributeFingerprintHashType::Sha256 => "sha-256",
+            SdpAttributeFingerprintHashType::Sha384 => "sha-384",
+            SdpAttributeFingerprintHashType::Sha512 => "sha-512",
+        }
+        .fmt(f)
     }
 }
 
@@ -812,18 +779,15 @@ pub enum SdpAttributeImageAttrSetList {
 
 impl fmt::Display for SdpAttributeImageAttrSetList {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            match *self {
-                SdpAttributeImageAttrSetList::Sets(ref sets) => sets
-                    .iter()
-                    .map(ToString::to_string)
-                    .collect::<Vec<String>>()
-                    .join(" "),
-                SdpAttributeImageAttrSetList::Wildcard => "*".to_string(),
-            }
-        )
+        match *self {
+            SdpAttributeImageAttrSetList::Sets(ref sets) => sets
+                .iter()
+                .map(ToString::to_string)
+                .collect::<Vec<String>>()
+                .join(" "),
+            SdpAttributeImageAttrSetList::Wildcard => "*".to_string(),
+        }
+        .fmt(f)
     }
 }
 
@@ -886,19 +850,16 @@ pub enum SdpAttributeGroupSemantic {
 
 impl fmt::Display for SdpAttributeGroupSemantic {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            match *self {
-                SdpAttributeGroupSemantic::LipSynchronization => "LS",
-                SdpAttributeGroupSemantic::FlowIdentification => "FID",
-                SdpAttributeGroupSemantic::SingleReservationFlow => "SRF",
-                SdpAttributeGroupSemantic::AlternateNetworkAddressType => "ANAT",
-                SdpAttributeGroupSemantic::ForwardErrorCorrection => "FEC",
-                SdpAttributeGroupSemantic::DecodingDependency => "DDP",
-                SdpAttributeGroupSemantic::Bundle => "BUNDLE",
-            }
-        )
+        match *self {
+            SdpAttributeGroupSemantic::LipSynchronization => "LS",
+            SdpAttributeGroupSemantic::FlowIdentification => "FID",
+            SdpAttributeGroupSemantic::SingleReservationFlow => "SRF",
+            SdpAttributeGroupSemantic::AlternateNetworkAddressType => "ANAT",
+            SdpAttributeGroupSemantic::ForwardErrorCorrection => "FEC",
+            SdpAttributeGroupSemantic::DecodingDependency => "DDP",
+            SdpAttributeGroupSemantic::Bundle => "BUNDLE",
+        }
+        .fmt(f)
     }
 }
 
@@ -969,20 +930,17 @@ pub struct SdpAttributeRidParameters {
 
 impl fmt::Display for SdpAttributeRidParameters {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            non_empty_string_vec![
-                maybe_print_param("max-width=", self.max_width, 0),
-                maybe_print_param("max-height=", self.max_height, 0),
-                maybe_print_param("max-fps=", self.max_fps, 0),
-                maybe_print_param("max-fs=", self.max_fs, 0),
-                maybe_print_param("max-br=", self.max_br, 0),
-                maybe_print_param("max-pps=", self.max_pps, 0),
-                maybe_vector_to_string!("{}", self.unknown, ";")
-            ]
-            .join(";")
-        )
+        non_empty_string_vec![
+            maybe_print_param("max-width=", self.max_width, 0),
+            maybe_print_param("max-height=", self.max_height, 0),
+            maybe_print_param("max-fps=", self.max_fps, 0),
+            maybe_print_param("max-fs=", self.max_fs, 0),
+            maybe_print_param("max-br=", self.max_br, 0),
+            maybe_print_param("max-pps=", self.max_pps, 0),
+            maybe_vector_to_string!("{}", self.unknown, ";")
+        ]
+        .join(";")
+        .fmt(f)
     }
 }
 
@@ -1066,16 +1024,13 @@ pub enum SdpAttributeSetup {
 
 impl fmt::Display for SdpAttributeSetup {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            match *self {
-                SdpAttributeSetup::Active => "active",
-                SdpAttributeSetup::Actpass => "actpass",
-                SdpAttributeSetup::Holdconn => "holdconn",
-                SdpAttributeSetup::Passive => "passive",
-            }
-        )
+        match *self {
+            SdpAttributeSetup::Active => "active",
+            SdpAttributeSetup::Actpass => "actpass",
+            SdpAttributeSetup::Holdconn => "holdconn",
+            SdpAttributeSetup::Passive => "passive",
+        }
+        .fmt(f)
     }
 }
 
@@ -1329,51 +1284,48 @@ impl fmt::Display for SdpAttribute {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let attr_type_name = SdpAttributeType::from(self).to_string();
         let attr_to_string = |attr_str: String| attr_type_name + ":" + &attr_str;
-        write!(
-            f,
-            "{}",
-            match *self {
-                SdpAttribute::BundleOnly => SdpAttributeType::BundleOnly.to_string(),
-                SdpAttribute::Candidate(ref a) => attr_to_string(a.to_string()),
-                SdpAttribute::DtlsMessage(ref a) => attr_to_string(a.to_string()),
-                SdpAttribute::EndOfCandidates => SdpAttributeType::EndOfCandidates.to_string(),
-                SdpAttribute::Extmap(ref a) => attr_to_string(a.to_string()),
-                SdpAttribute::Fingerprint(ref a) => attr_to_string(a.to_string()),
-                SdpAttribute::Fmtp(ref a) => attr_to_string(a.to_string()),
-                SdpAttribute::Group(ref a) => attr_to_string(a.to_string()),
-                SdpAttribute::IceLite => SdpAttributeType::IceLite.to_string(),
-                SdpAttribute::IceMismatch => SdpAttributeType::IceMismatch.to_string(),
-                SdpAttribute::IceOptions(ref a) => attr_to_string(a.join(" ")),
-                SdpAttribute::IcePwd(ref a) => attr_to_string(a.to_string()),
-                SdpAttribute::IceUfrag(ref a) => attr_to_string(a.to_string()),
-                SdpAttribute::Identity(ref a) => attr_to_string(a.to_string()),
-                SdpAttribute::ImageAttr(ref a) => attr_to_string(a.to_string()),
-                SdpAttribute::Inactive => SdpAttributeType::Inactive.to_string(),
-                SdpAttribute::Label(ref a) => attr_to_string(a.to_string()),
-                SdpAttribute::MaxMessageSize(ref a) => attr_to_string(a.to_string()),
-                SdpAttribute::MaxPtime(ref a) => attr_to_string(a.to_string()),
-                SdpAttribute::Mid(ref a) => attr_to_string(a.to_string()),
-                SdpAttribute::Msid(ref a) => attr_to_string(a.to_string()),
-                SdpAttribute::MsidSemantic(ref a) => attr_to_string(a.to_string()),
-                SdpAttribute::Ptime(ref a) => attr_to_string(a.to_string()),
-                SdpAttribute::Rid(ref a) => attr_to_string(a.to_string()),
-                SdpAttribute::Recvonly => SdpAttributeType::Recvonly.to_string(),
-                SdpAttribute::RemoteCandidate(ref a) => attr_to_string(a.to_string()),
-                SdpAttribute::Rtpmap(ref a) => attr_to_string(a.to_string()),
-                SdpAttribute::Rtcp(ref a) => attr_to_string(a.to_string()),
-                SdpAttribute::Rtcpfb(ref a) => attr_to_string(a.to_string()),
-                SdpAttribute::RtcpMux => SdpAttributeType::RtcpMux.to_string(),
-                SdpAttribute::RtcpRsize => SdpAttributeType::RtcpRsize.to_string(),
-                SdpAttribute::Sctpmap(ref a) => attr_to_string(a.to_string()),
-                SdpAttribute::SctpPort(ref a) => attr_to_string(a.to_string()),
-                SdpAttribute::Sendonly => SdpAttributeType::Sendonly.to_string(),
-                SdpAttribute::Sendrecv => SdpAttributeType::Sendrecv.to_string(),
-                SdpAttribute::Setup(ref a) => attr_to_string(a.to_string()),
-                SdpAttribute::Simulcast(ref a) => attr_to_string(a.to_string()),
-                SdpAttribute::Ssrc(ref a) => attr_to_string(a.to_string()),
-                SdpAttribute::SsrcGroup(ref a) => attr_to_string(a.to_string()),
-            }
-        )
+        match *self {
+            SdpAttribute::BundleOnly => SdpAttributeType::BundleOnly.to_string(),
+            SdpAttribute::Candidate(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::DtlsMessage(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::EndOfCandidates => SdpAttributeType::EndOfCandidates.to_string(),
+            SdpAttribute::Extmap(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::Fingerprint(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::Fmtp(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::Group(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::IceLite => SdpAttributeType::IceLite.to_string(),
+            SdpAttribute::IceMismatch => SdpAttributeType::IceMismatch.to_string(),
+            SdpAttribute::IceOptions(ref a) => attr_to_string(a.join(" ")),
+            SdpAttribute::IcePwd(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::IceUfrag(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::Identity(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::ImageAttr(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::Inactive => SdpAttributeType::Inactive.to_string(),
+            SdpAttribute::Label(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::MaxMessageSize(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::MaxPtime(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::Mid(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::Msid(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::MsidSemantic(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::Ptime(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::Rid(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::Recvonly => SdpAttributeType::Recvonly.to_string(),
+            SdpAttribute::RemoteCandidate(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::Rtpmap(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::Rtcp(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::Rtcpfb(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::RtcpMux => SdpAttributeType::RtcpMux.to_string(),
+            SdpAttribute::RtcpRsize => SdpAttributeType::RtcpRsize.to_string(),
+            SdpAttribute::Sctpmap(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::SctpPort(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::Sendonly => SdpAttributeType::Sendonly.to_string(),
+            SdpAttribute::Sendrecv => SdpAttributeType::Sendrecv.to_string(),
+            SdpAttribute::Setup(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::Simulcast(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::Ssrc(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::SsrcGroup(ref a) => attr_to_string(a.to_string()),
+        }
+        .fmt(f)
     }
 }
 
@@ -1481,51 +1433,48 @@ impl<'a> From<&'a SdpAttribute> for SdpAttributeType {
 
 impl fmt::Display for SdpAttributeType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            match *self {
-                SdpAttributeType::BundleOnly => "bundle-only",
-                SdpAttributeType::Candidate => "candidate",
-                SdpAttributeType::DtlsMessage => "dtls-message",
-                SdpAttributeType::EndOfCandidates => "end-of-candidates",
-                SdpAttributeType::Extmap => "extmap",
-                SdpAttributeType::Fingerprint => "fingerprint",
-                SdpAttributeType::Fmtp => "fmtp",
-                SdpAttributeType::Group => "group",
-                SdpAttributeType::IceLite => "ice-lite",
-                SdpAttributeType::IceMismatch => "ice-mismatch",
-                SdpAttributeType::IceOptions => "ice-options",
-                SdpAttributeType::IcePwd => "ice-pwd",
-                SdpAttributeType::IceUfrag => "ice-ufrag",
-                SdpAttributeType::Identity => "identity",
-                SdpAttributeType::ImageAttr => "imageattr",
-                SdpAttributeType::Inactive => "inactive",
-                SdpAttributeType::Label => "label",
-                SdpAttributeType::MaxMessageSize => "max-message-size",
-                SdpAttributeType::MaxPtime => "maxptime",
-                SdpAttributeType::Mid => "mid",
-                SdpAttributeType::Msid => "msid",
-                SdpAttributeType::MsidSemantic => "msid-semantic",
-                SdpAttributeType::Ptime => "ptime",
-                SdpAttributeType::Rid => "rid",
-                SdpAttributeType::Recvonly => "recvonly",
-                SdpAttributeType::RemoteCandidate => "remote-candidates",
-                SdpAttributeType::Rtpmap => "rtpmap",
-                SdpAttributeType::Rtcp => "rtcp",
-                SdpAttributeType::Rtcpfb => "rtcp-fb",
-                SdpAttributeType::RtcpMux => "rtcp-mux",
-                SdpAttributeType::RtcpRsize => "rtcp-rsize",
-                SdpAttributeType::Sctpmap => "sctpmap",
-                SdpAttributeType::SctpPort => "sctp-port",
-                SdpAttributeType::Sendonly => "sendonly",
-                SdpAttributeType::Sendrecv => "sendrecv",
-                SdpAttributeType::Setup => "setup",
-                SdpAttributeType::Simulcast => "simulcast",
-                SdpAttributeType::Ssrc => "ssrc",
-                SdpAttributeType::SsrcGroup => "ssrc-group",
-            }
-        )
+        match *self {
+            SdpAttributeType::BundleOnly => "bundle-only",
+            SdpAttributeType::Candidate => "candidate",
+            SdpAttributeType::DtlsMessage => "dtls-message",
+            SdpAttributeType::EndOfCandidates => "end-of-candidates",
+            SdpAttributeType::Extmap => "extmap",
+            SdpAttributeType::Fingerprint => "fingerprint",
+            SdpAttributeType::Fmtp => "fmtp",
+            SdpAttributeType::Group => "group",
+            SdpAttributeType::IceLite => "ice-lite",
+            SdpAttributeType::IceMismatch => "ice-mismatch",
+            SdpAttributeType::IceOptions => "ice-options",
+            SdpAttributeType::IcePwd => "ice-pwd",
+            SdpAttributeType::IceUfrag => "ice-ufrag",
+            SdpAttributeType::Identity => "identity",
+            SdpAttributeType::ImageAttr => "imageattr",
+            SdpAttributeType::Inactive => "inactive",
+            SdpAttributeType::Label => "label",
+            SdpAttributeType::MaxMessageSize => "max-message-size",
+            SdpAttributeType::MaxPtime => "maxptime",
+            SdpAttributeType::Mid => "mid",
+            SdpAttributeType::Msid => "msid",
+            SdpAttributeType::MsidSemantic => "msid-semantic",
+            SdpAttributeType::Ptime => "ptime",
+            SdpAttributeType::Rid => "rid",
+            SdpAttributeType::Recvonly => "recvonly",
+            SdpAttributeType::RemoteCandidate => "remote-candidates",
+            SdpAttributeType::Rtpmap => "rtpmap",
+            SdpAttributeType::Rtcp => "rtcp",
+            SdpAttributeType::Rtcpfb => "rtcp-fb",
+            SdpAttributeType::RtcpMux => "rtcp-mux",
+            SdpAttributeType::RtcpRsize => "rtcp-rsize",
+            SdpAttributeType::Sctpmap => "sctpmap",
+            SdpAttributeType::SctpPort => "sctp-port",
+            SdpAttributeType::Sendonly => "sendonly",
+            SdpAttributeType::Sendrecv => "sendrecv",
+            SdpAttributeType::Setup => "setup",
+            SdpAttributeType::Simulcast => "simulcast",
+            SdpAttributeType::Ssrc => "ssrc",
+            SdpAttributeType::SsrcGroup => "ssrc-group",
+        }
+        .fmt(f)
     }
 }
 

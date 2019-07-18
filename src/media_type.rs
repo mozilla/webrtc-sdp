@@ -40,12 +40,12 @@ pub enum SdpMediaValue {
 
 impl fmt::Display for SdpMediaValue {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let value_string = match *self {
+        match *self {
             SdpMediaValue::Audio => "audio",
             SdpMediaValue::Video => "video",
             SdpMediaValue::Application => "application",
-        };
-        write!(f, "{}", value_string)
+        }
+        .fmt(f)
     }
 }
 
@@ -68,7 +68,7 @@ pub enum SdpProtocolValue {
 
 impl fmt::Display for SdpProtocolValue {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let proto_string = match *self {
+        match *self {
             SdpProtocolValue::RtpAvp => "RTP/AVP",
             SdpProtocolValue::RtpAvpf => "RTP/AVPF",
             SdpProtocolValue::RtpSavp => "RTP/SAVP",
@@ -81,8 +81,8 @@ impl fmt::Display for SdpProtocolValue {
             SdpProtocolValue::UdpDtlsSctp => "UDP/DTLS/SCTP",
             SdpProtocolValue::TcpDtlsSctp => "TCP/DTLS/SCTP",
             SdpProtocolValue::TcpTlsRtpSavpf => "TCP/TLS/RTP/SAVPF",
-        };
-        write!(f, "{}", proto_string)
+        }
+        .fmt(f)
     }
 }
 
@@ -95,11 +95,11 @@ pub enum SdpFormatList {
 
 impl fmt::Display for SdpFormatList {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let format_string = match *self {
+        match *self {
             SdpFormatList::Integers(ref x) => maybe_vector_to_string!("{}", x, " "),
             SdpFormatList::Strings(ref x) => x.join(" "),
-        };
-        write!(f, "{}", format_string)
+        }
+        .fmt(f)
     }
 }
 
