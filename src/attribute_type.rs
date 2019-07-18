@@ -100,10 +100,9 @@ pub enum SdpAttributePayloadType {
 impl fmt::Display for SdpAttributePayloadType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            SdpAttributePayloadType::PayloadType(pt) => pt.to_string(),
-            SdpAttributePayloadType::Wildcard => "*".to_string(),
+            SdpAttributePayloadType::PayloadType(pt) => pt.fmt(f),
+            SdpAttributePayloadType::Wildcard => "*".fmt(f),
         }
-        .fmt(f)
     }
 }
 
@@ -359,7 +358,7 @@ impl fmt::Display for SdpAttributeSimulcastId {
         if self.paused {
             write!(f, "~")?;
         }
-        write!(f, "{}", self.id)
+        self.id.fmt(f)
     }
 }
 
@@ -784,10 +783,10 @@ impl fmt::Display for SdpAttributeImageAttrSetList {
                 .iter()
                 .map(ToString::to_string)
                 .collect::<Vec<String>>()
-                .join(" "),
-            SdpAttributeImageAttrSetList::Wildcard => "*".to_string(),
+                .join(" ")
+                .fmt(f),
+            SdpAttributeImageAttrSetList::Wildcard => "*".fmt(f),
         }
-        .fmt(f)
     }
 }
 
@@ -903,15 +902,11 @@ pub struct SdpAttributeMsidSemantic {
 
 impl fmt::Display for SdpAttributeMsidSemantic {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "{} {}",
-            self.semantic,
-            match self.msids.len() {
-                0 => "*".to_string(),
-                _ => self.msids.join(" "),
-            }
-        )
+        write!(f, "{} ", self.semantic)?;
+        match self.msids.len() {
+            0 => "*".fmt(f),
+            _ => self.msids.join(" ").fmt(f),
+        }
     }
 }
 
