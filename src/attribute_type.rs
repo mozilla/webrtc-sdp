@@ -16,8 +16,18 @@ use anonymizer::{AnonymizingClone, StatefulSdpAnonymizer};
 macro_rules! option_to_string {
     ($fmt_str:expr, $opt:expr) => {
         match $opt {
-            Some(ref x) => format!($fmt_str, x.to_string()),
+            Some(ref x) => format!($fmt_str, x),
             None => "".to_string(),
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! write_option_string {
+    ($f:expr, $fmt_str:expr, $opt:expr) => {
+        match $opt {
+            Some(ref x) => write!($f, $fmt_str, x),
+            None => Ok(()),
         }
     };
 }
@@ -757,15 +767,11 @@ pub struct SdpAttributeImageAttrSet {
 
 impl fmt::Display for SdpAttributeImageAttrSet {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "[x={x},y={y}{sar}{par}{q}]",
-            x = self.x,
-            y = self.y,
-            sar = option_to_string!(",sar={}", self.sar),
-            par = option_to_string!(",par={}", self.par),
-            q = option_to_string!(",q={}", self.q)
-        )
+        write!(f, "[x={x},y={y}", x = self.x, y = self.y)?;
+        write_option_string!(f, ",sar={}", self.sar)?;
+        write_option_string!(f, ",par={}", self.par)?;
+        write_option_string!(f, ",q={}", self.q)?;
+        write!(f, "]")
     }
 }
 
@@ -807,13 +813,9 @@ impl fmt::Display for SdpAttributeImageAttr {
             },
             x => Some(x),
         };
-        write!(
-            f,
-            "{pt}{send}{recv}",
-            pt = self.pt,
-            send = option_to_string!(" send {}", maybe_sets_to_string(self.send.clone())),
-            recv = option_to_string!(" recv {}", maybe_sets_to_string(self.recv.clone()))
-        )
+        self.pt.fmt(f)?;
+        write_option_string!(f, " send {}", maybe_sets_to_string(self.send.clone()))?;
+        write_option_string!(f, " recv {}", maybe_sets_to_string(self.recv.clone()))
     }
 }
 
@@ -889,7 +891,8 @@ pub struct SdpAttributeMsid {
 
 impl fmt::Display for SdpAttributeMsid {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}{}", self.id, option_to_string!(" {}", self.appdata))
+        self.id.fmt(f)?;
+        write_option_string!(f, " {}", self.appdata)
     }
 }
 
@@ -999,12 +1002,12 @@ impl fmt::Display for SdpAttributeRtpmap {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{pt} {name}/{freq}{channels}",
+            "{pt} {name}/{freq}",
             pt = self.payload_type,
             name = self.codec_name,
-            freq = self.frequency,
-            channels = option_to_string!("/{}", self.channels)
-        )
+            freq = self.frequency
+        )?;
+        write_option_string!(f, "/{}", self.channels)
     }
 }
 
@@ -1059,13 +1062,9 @@ impl SdpAttributeSsrc {
 
 impl fmt::Display for SdpAttributeSsrc {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "{}{}{}",
-            self.id,
-            option_to_string!(" {}", self.attribute.clone()),
-            option_to_string!(":{}", self.value.clone())
-        )
+        self.id.fmt(f)?;
+        write_option_string!(f, " {}", self.attribute)?;
+        write_option_string!(f, ":{}", self.value)
     }
 }
 

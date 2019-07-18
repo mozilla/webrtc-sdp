@@ -65,13 +65,9 @@ pub struct SdpConnection {
 
 impl fmt::Display for SdpConnection {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "{address}{ttl}{amount}",
-            address = self.address,
-            ttl = option_to_string!("/{}", self.ttl),
-            amount = option_to_string!("/{}", self.amount)
-        )
+        self.address.fmt(f)?;
+        write_option_string!(f, "/{}", self.ttl)?;
+        write_option_string!(f, "/{}", self.amount)
     }
 }
 
