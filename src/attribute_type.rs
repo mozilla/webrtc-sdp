@@ -1246,7 +1246,7 @@ impl FromStr for SdpAttribute {
             "mid" => Ok(SdpAttribute::Mid(string_or_empty(val)?)),
             "msid-semantic" => parse_msid_semantic(val),
             "ptime" => Ok(SdpAttribute::Ptime(val.parse()?)),
-            "ice-pacing" => Ok(SdpAttribute::IcePacing(val.parse()?)),
+            "ice-pacing" => parse_ice_pacing(val),
             "rid" => parse_rid(val),
             "recvonly" => Ok(SdpAttribute::Recvonly),
             "rtcp-mux" => Ok(SdpAttribute::RtcpMux),
@@ -1992,6 +1992,16 @@ fn parse_ice_options(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalEr
             .map(ToString::to_string)
             .collect(),
     ))
+}
+
+fn parse_ice_pacing(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
+    let parsed = to_parse.parse::<u64>()?;
+    if parsed >= 1_00_00_00_00_00 {
+        return Err(SdpParserInternalError::Generic(
+            "ice-pacing value is not a 10 digit integer".to_string(),
+        ));
+    }
+    Ok(SdpAttribute::IcePacing(parsed))
 }
 
 fn parse_imageattr_tokens(to_parse: &str, separator: char) -> Vec<String> {
@@ -3244,6 +3254,7 @@ mod tests {
         check_parse_and_serialize("ice-pacing:50");
 
         assert!(parse_attribute("ice-pacing:").is_err());
+        assert!(parse_attribute("ice-pacing:10000000000").is_err());
         assert!(parse_attribute("ice-pacing:50 100").is_err());
         assert!(parse_attribute("ice-pacing:foobar").is_err());
     }
