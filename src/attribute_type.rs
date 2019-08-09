@@ -1068,6 +1068,22 @@ impl fmt::Display for SdpAttributeSsrc {
     }
 }
 
+impl AnonymizingClone for SdpAttributeSsrc {
+    fn masked_clone(&self, anon: &mut StatefulSdpAnonymizer) -> Self {
+        Self {
+            id: self.id,
+            attribute: self.attribute.clone(),
+            value: self.attribute.as_ref().and_then(|attribute| {
+                match (attribute.to_lowercase().as_str(), &self.value) {
+                    ("cname", Some(ref cname)) => Some(anon.mask_cname(cname.as_str())),
+                    (_, Some(_)) => self.value.clone(),
+                    (_, None) => None,
+                }
+            }),
+        }
+    }
+}
+
 #[derive(Clone)]
 #[cfg_attr(feature = "serialize", derive(Serialize))]
 pub enum SdpAttribute {
@@ -1082,6 +1098,7 @@ pub enum SdpAttribute {
     IceLite,
     IceMismatch,
     IceOptions(Vec<String>),
+    IcePacing(u64),
     IcePwd(String),
     IceUfrag(String),
     Identity(String),
@@ -1146,6 +1163,7 @@ impl SdpAttribute {
             | SdpAttribute::Group(..)
             | SdpAttribute::IceLite
             | SdpAttribute::IceOptions(..)
+            | SdpAttribute::IcePacing(..)
             | SdpAttribute::IcePwd(..)
             | SdpAttribute::IceUfrag(..)
             | SdpAttribute::Identity(..)
@@ -1163,6 +1181,7 @@ impl SdpAttribute {
             SdpAttribute::DtlsMessage { .. }
             | SdpAttribute::Group(..)
             | SdpAttribute::IceLite
+            | SdpAttribute::IcePacing(..)
             | SdpAttribute::Identity(..)
             | SdpAttribute::MsidSemantic(..) => false,
 
@@ -1243,6 +1262,7 @@ impl FromStr for SdpAttribute {
             "mid" => Ok(SdpAttribute::Mid(string_or_empty(val)?)),
             "msid-semantic" => parse_msid_semantic(val),
             "ptime" => Ok(SdpAttribute::Ptime(val.parse()?)),
+            "ice-pacing" => parse_ice_pacing(val),
             "rid" => parse_rid(val),
             "recvonly" => Ok(SdpAttribute::Recvonly),
             "rtcp-mux" => Ok(SdpAttribute::RtcpMux),
@@ -1290,6 +1310,7 @@ impl fmt::Display for SdpAttribute {
             SdpAttribute::IceLite => SdpAttributeType::IceLite.to_string(),
             SdpAttribute::IceMismatch => SdpAttributeType::IceMismatch.to_string(),
             SdpAttribute::IceOptions(ref a) => attr_to_string(a.join(" ")),
+            SdpAttribute::IcePacing(ref a) => attr_to_string(a.to_string()),
             SdpAttribute::IcePwd(ref a) => attr_to_string(a.to_string()),
             SdpAttribute::IceUfrag(ref a) => attr_to_string(a.to_string()),
             SdpAttribute::Identity(ref a) => attr_to_string(a.to_string()),
@@ -1331,6 +1352,7 @@ impl AnonymizingClone for SdpAttribute {
             SdpAttribute::IcePwd(i) => SdpAttribute::IcePwd(anon.mask_ice_password(i)),
             SdpAttribute::IceUfrag(i) => SdpAttribute::IceUfrag(anon.mask_ice_user(i)),
             SdpAttribute::RemoteCandidate(i) => SdpAttribute::RemoteCandidate(i.masked_clone(anon)),
+            SdpAttribute::Ssrc(i) => SdpAttribute::Ssrc(i.masked_clone(anon)),
             _ => self.clone(),
         }
     }
@@ -1349,6 +1371,7 @@ pub enum SdpAttributeType {
     IceLite,
     IceMismatch,
     IceOptions,
+    IcePacing,
     IcePwd,
     IceUfrag,
     Identity,
@@ -1393,6 +1416,7 @@ impl<'a> From<&'a SdpAttribute> for SdpAttributeType {
             SdpAttribute::IceLite { .. } => SdpAttributeType::IceLite,
             SdpAttribute::IceMismatch { .. } => SdpAttributeType::IceMismatch,
             SdpAttribute::IceOptions { .. } => SdpAttributeType::IceOptions,
+            SdpAttribute::IcePacing { .. } => SdpAttributeType::IcePacing,
             SdpAttribute::IcePwd { .. } => SdpAttributeType::IcePwd,
             SdpAttribute::IceUfrag { .. } => SdpAttributeType::IceUfrag,
             SdpAttribute::Identity { .. } => SdpAttributeType::Identity,
@@ -1439,6 +1463,7 @@ impl fmt::Display for SdpAttributeType {
             SdpAttributeType::IceLite => "ice-lite",
             SdpAttributeType::IceMismatch => "ice-mismatch",
             SdpAttributeType::IceOptions => "ice-options",
+            SdpAttributeType::IcePacing => "ice-pacing",
             SdpAttributeType::IcePwd => "ice-pwd",
             SdpAttributeType::IceUfrag => "ice-ufrag",
             SdpAttributeType::Identity => "identity",
@@ -1984,6 +2009,16 @@ fn parse_ice_options(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalEr
             .map(ToString::to_string)
             .collect(),
     ))
+}
+
+fn parse_ice_pacing(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
+    let parsed = to_parse.parse::<u64>()?;
+    if parsed >= 1_00_00_00_00_00 {
+        return Err(SdpParserInternalError::Generic(
+            "ice-pacing value is not a 10 digit integer".to_string(),
+        ));
+    }
+    Ok(SdpAttribute::IcePacing(parsed))
 }
 
 fn parse_imageattr_tokens(to_parse: &str, separator: char) -> Vec<String> {
@@ -3228,6 +3263,20 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_attribute_ice_pacing() {
+        let check_parse = make_check_parse!(u64, SdpAttribute::IcePacing);
+        let check_parse_and_serialize =
+            make_check_parse_and_serialize!(check_parse, SdpAttribute::IcePacing);
+
+        check_parse_and_serialize("ice-pacing:50");
+
+        assert!(parse_attribute("ice-pacing:").is_err());
+        assert!(parse_attribute("ice-pacing:10000000000").is_err());
+        assert!(parse_attribute("ice-pacing:50 100").is_err());
+        assert!(parse_attribute("ice-pacing:foobar").is_err());
+    }
+
+    #[test]
     fn test_parse_attribute_ice_pwd() {
         let check_parse = make_check_parse!(String, SdpAttribute::IcePwd);
         let check_parse_and_serialize =
@@ -3435,6 +3484,8 @@ mod tests {
         check_parse_and_serialize("maxptime:60");
 
         assert!(parse_attribute("maxptime:").is_err());
+        assert!(parse_attribute("maxptime:60 100").is_err());
+        assert!(parse_attribute("maxptime:foobar").is_err());
     }
 
     #[test]
@@ -3785,6 +3836,36 @@ mod tests {
 
         assert!(parse_attribute("ssrc:").is_err());
         assert!(parse_attribute("ssrc:foo").is_err());
+    }
+
+    #[test]
+    fn test_anonymize_attribute_ssrc() -> Result<(), SdpParserInternalError> {
+        let mut anon = StatefulSdpAnonymizer::new();
+        let parsed =
+            parse_attribute("ssrc:2655508255 cname:{735484ea-4f6c-f74a-bd66-7425f8476c2e}")?;
+        let (ssrc1, masked) = if let SdpType::Attribute(a) = parsed {
+            let masked = a.masked_clone(&mut anon);
+            match (a, masked) {
+                (SdpAttribute::Ssrc(ssrc), SdpAttribute::Ssrc(masked)) => (ssrc, masked),
+                (_, _) => unreachable!(),
+            }
+        } else {
+            unreachable!()
+        };
+        assert_eq!(ssrc1.id, masked.id);
+        assert_eq!(ssrc1.attribute, masked.attribute);
+        assert_eq!("cname-00000001", masked.value.unwrap());
+
+        let ssrc2 = parse_attribute("ssrc:2082260239 msid:1d0cdb4e-5934-4f0f-9f88-40392cb60d31 315b086a-5cb6-4221-89de-caf0b038c79d")?;
+        if let SdpType::Attribute(SdpAttribute::Ssrc(ssrc2)) = ssrc2 {
+            let masked = ssrc2.masked_clone(&mut anon);
+            assert_eq!(ssrc2.id, masked.id);
+            assert_eq!(ssrc2.attribute, masked.attribute);
+            assert_eq!(ssrc2.value, masked.value);
+        } else {
+            unreachable!()
+        }
+        Ok(())
     }
 
     #[test]
