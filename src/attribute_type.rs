@@ -1082,6 +1082,7 @@ pub enum SdpAttribute {
     IceLite,
     IceMismatch,
     IceOptions(Vec<String>),
+    IcePacing(u64),
     IcePwd(String),
     IceUfrag(String),
     Identity(String),
@@ -1146,6 +1147,7 @@ impl SdpAttribute {
             | SdpAttribute::Group(..)
             | SdpAttribute::IceLite
             | SdpAttribute::IceOptions(..)
+            | SdpAttribute::IcePacing(..)
             | SdpAttribute::IcePwd(..)
             | SdpAttribute::IceUfrag(..)
             | SdpAttribute::Identity(..)
@@ -1163,6 +1165,7 @@ impl SdpAttribute {
             SdpAttribute::DtlsMessage { .. }
             | SdpAttribute::Group(..)
             | SdpAttribute::IceLite
+            | SdpAttribute::IcePacing(..)
             | SdpAttribute::Identity(..)
             | SdpAttribute::MsidSemantic(..) => false,
 
@@ -1243,6 +1246,7 @@ impl FromStr for SdpAttribute {
             "mid" => Ok(SdpAttribute::Mid(string_or_empty(val)?)),
             "msid-semantic" => parse_msid_semantic(val),
             "ptime" => Ok(SdpAttribute::Ptime(val.parse()?)),
+            "ice-pacing" => parse_ice_pacing(val),
             "rid" => parse_rid(val),
             "recvonly" => Ok(SdpAttribute::Recvonly),
             "rtcp-mux" => Ok(SdpAttribute::RtcpMux),
@@ -1290,6 +1294,7 @@ impl fmt::Display for SdpAttribute {
             SdpAttribute::IceLite => SdpAttributeType::IceLite.to_string(),
             SdpAttribute::IceMismatch => SdpAttributeType::IceMismatch.to_string(),
             SdpAttribute::IceOptions(ref a) => attr_to_string(a.join(" ")),
+            SdpAttribute::IcePacing(ref a) => attr_to_string(a.to_string()),
             SdpAttribute::IcePwd(ref a) => attr_to_string(a.to_string()),
             SdpAttribute::IceUfrag(ref a) => attr_to_string(a.to_string()),
             SdpAttribute::Identity(ref a) => attr_to_string(a.to_string()),
@@ -1349,6 +1354,7 @@ pub enum SdpAttributeType {
     IceLite,
     IceMismatch,
     IceOptions,
+    IcePacing,
     IcePwd,
     IceUfrag,
     Identity,
@@ -1393,6 +1399,7 @@ impl<'a> From<&'a SdpAttribute> for SdpAttributeType {
             SdpAttribute::IceLite { .. } => SdpAttributeType::IceLite,
             SdpAttribute::IceMismatch { .. } => SdpAttributeType::IceMismatch,
             SdpAttribute::IceOptions { .. } => SdpAttributeType::IceOptions,
+            SdpAttribute::IcePacing { .. } => SdpAttributeType::IcePacing,
             SdpAttribute::IcePwd { .. } => SdpAttributeType::IcePwd,
             SdpAttribute::IceUfrag { .. } => SdpAttributeType::IceUfrag,
             SdpAttribute::Identity { .. } => SdpAttributeType::Identity,
@@ -1439,6 +1446,7 @@ impl fmt::Display for SdpAttributeType {
             SdpAttributeType::IceLite => "ice-lite",
             SdpAttributeType::IceMismatch => "ice-mismatch",
             SdpAttributeType::IceOptions => "ice-options",
+            SdpAttributeType::IcePacing => "ice-pacing",
             SdpAttributeType::IcePwd => "ice-pwd",
             SdpAttributeType::IceUfrag => "ice-ufrag",
             SdpAttributeType::Identity => "identity",
@@ -1984,6 +1992,16 @@ fn parse_ice_options(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalEr
             .map(ToString::to_string)
             .collect(),
     ))
+}
+
+fn parse_ice_pacing(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
+    let parsed = to_parse.parse::<u64>()?;
+    if parsed >= 1_00_00_00_00_00 {
+        return Err(SdpParserInternalError::Generic(
+            "ice-pacing value is not a 10 digit integer".to_string(),
+        ));
+    }
+    Ok(SdpAttribute::IcePacing(parsed))
 }
 
 fn parse_imageattr_tokens(to_parse: &str, separator: char) -> Vec<String> {
@@ -3228,6 +3246,20 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_attribute_ice_pacing() {
+        let check_parse = make_check_parse!(u64, SdpAttribute::IcePacing);
+        let check_parse_and_serialize =
+            make_check_parse_and_serialize!(check_parse, SdpAttribute::IcePacing);
+
+        check_parse_and_serialize("ice-pacing:50");
+
+        assert!(parse_attribute("ice-pacing:").is_err());
+        assert!(parse_attribute("ice-pacing:10000000000").is_err());
+        assert!(parse_attribute("ice-pacing:50 100").is_err());
+        assert!(parse_attribute("ice-pacing:foobar").is_err());
+    }
+
+    #[test]
     fn test_parse_attribute_ice_pwd() {
         let check_parse = make_check_parse!(String, SdpAttribute::IcePwd);
         let check_parse_and_serialize =
@@ -3435,6 +3467,8 @@ mod tests {
         check_parse_and_serialize("maxptime:60");
 
         assert!(parse_attribute("maxptime:").is_err());
+        assert!(parse_attribute("maxptime:60 100").is_err());
+        assert!(parse_attribute("maxptime:foobar").is_err());
     }
 
     #[test]
