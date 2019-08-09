@@ -1068,6 +1068,22 @@ impl fmt::Display for SdpAttributeSsrc {
     }
 }
 
+impl AnonymizingClone for SdpAttributeSsrc {
+    fn masked_clone(&self, anon: &mut StatefulSdpAnonymizer) -> Self {
+        Self {
+            id: self.id,
+            attribute: self.attribute.clone(),
+            value: self.attribute.as_ref().and_then(|attribute| {
+                match (attribute.to_lowercase().as_str(), &self.value) {
+                    ("cname", Some(ref cname)) => Some(anon.mask_cname(cname.as_str())),
+                    (_, Some(_)) => self.value.clone(),
+                    (_, None) => None,
+                }
+            }),
+        }
+    }
+}
+
 #[derive(Clone)]
 #[cfg_attr(feature = "serialize", derive(Serialize))]
 pub enum SdpAttribute {
@@ -1336,6 +1352,7 @@ impl AnonymizingClone for SdpAttribute {
             SdpAttribute::IcePwd(i) => SdpAttribute::IcePwd(anon.mask_ice_password(i)),
             SdpAttribute::IceUfrag(i) => SdpAttribute::IceUfrag(anon.mask_ice_user(i)),
             SdpAttribute::RemoteCandidate(i) => SdpAttribute::RemoteCandidate(i.masked_clone(anon)),
+            SdpAttribute::Ssrc(i) => SdpAttribute::Ssrc(i.masked_clone(anon)),
             _ => self.clone(),
         }
     }
@@ -3819,6 +3836,36 @@ mod tests {
 
         assert!(parse_attribute("ssrc:").is_err());
         assert!(parse_attribute("ssrc:foo").is_err());
+    }
+
+    #[test]
+    fn test_anonymize_attribute_ssrc() -> Result<(), SdpParserInternalError> {
+        let mut anon = StatefulSdpAnonymizer::new();
+        let parsed =
+            parse_attribute("ssrc:2655508255 cname:{735484ea-4f6c-f74a-bd66-7425f8476c2e}")?;
+        let (ssrc1, masked) = if let SdpType::Attribute(a) = parsed {
+            let masked = a.masked_clone(&mut anon);
+            match (a, masked) {
+                (SdpAttribute::Ssrc(ssrc), SdpAttribute::Ssrc(masked)) => (ssrc, masked),
+                (_, _) => unreachable!(),
+            }
+        } else {
+            unreachable!()
+        };
+        assert_eq!(ssrc1.id, masked.id);
+        assert_eq!(ssrc1.attribute, masked.attribute);
+        assert_eq!("cname-00000001", masked.value.unwrap());
+
+        let ssrc2 = parse_attribute("ssrc:2082260239 msid:1d0cdb4e-5934-4f0f-9f88-40392cb60d31 315b086a-5cb6-4221-89de-caf0b038c79d")?;
+        if let SdpType::Attribute(SdpAttribute::Ssrc(ssrc2)) = ssrc2 {
+            let masked = ssrc2.masked_clone(&mut anon);
+            assert_eq!(ssrc2.id, masked.id);
+            assert_eq!(ssrc2.attribute, masked.attribute);
+            assert_eq!(ssrc2.value, masked.value);
+        } else {
+            unreachable!()
+        }
+        Ok(())
     }
 
     #[test]
