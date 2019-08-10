@@ -34,6 +34,10 @@ use media_type::{
 };
 use network::{parse_address_type, parse_network_type};
 
+/*
+ * RFC4566
+ * bandwidth-fields =    *(%x62 "=" bwtype ":" bandwidth CRLF)
+ */
 #[derive(Clone)]
 #[cfg_attr(feature = "serialize", derive(Serialize))]
 pub enum SdpBandwidth {
@@ -55,6 +59,11 @@ impl fmt::Display for SdpBandwidth {
     }
 }
 
+/*
+ * RFC4566
+ * connection-field =    [%x63 "=" nettype SP addrtype SP
+ *                       connection-address CRLF]
+ */
 #[derive(Clone)]
 #[cfg_attr(feature = "serialize", derive(Serialize))]
 pub struct SdpConnection {
@@ -79,6 +88,11 @@ impl AnonymizingClone for SdpConnection {
     }
 }
 
+/*
+ * RFC4566
+ * origin-field =        %x6f "=" username SP sess-id SP sess-version SP
+ *                       nettype SP addrtype SP unicast-address CRLF
+ */
 #[derive(Clone)]
 #[cfg_attr(feature = "serialize", derive(Serialize))]
 pub struct SdpOrigin {
@@ -110,6 +124,12 @@ impl AnonymizingClone for SdpOrigin {
     }
 }
 
+/*
+ * RFC4566
+ * time-fields =         1*( %x74 "=" start-time SP stop-time
+ *                       *(CRLF repeat-fields) CRLF)
+ *                       [zone-adjustments CRLF]
+ */
 #[derive(Clone)]
 #[cfg_attr(feature = "serialize", derive(Serialize))]
 pub struct SdpTiming {
@@ -143,6 +163,23 @@ pub struct SdpLine {
     pub sdp_type: SdpType,
 }
 
+/*
+ * RFC4566
+ * ; SDP Syntax
+ * session-description = proto-version
+ *                       origin-field
+ *                       session-name-field
+ *                       information-field
+ *                       uri-field
+ *                       email-fields
+ *                       phone-fields
+ *                       connection-field
+ *                       bandwidth-fields
+ *                       time-fields
+ *                       key-field
+ *                       attribute-fields
+ *                       media-descriptions
+ */
 #[derive(Clone)]
 #[cfg_attr(feature = "serialize", derive(Serialize))]
 pub struct SdpSession {
