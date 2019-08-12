@@ -57,18 +57,18 @@ impl fmt::Display for SdpMediaValue {
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(feature = "serialize", derive(Serialize))]
 pub enum SdpProtocolValue {
-    RtpAvp, /* RTP/AVP [RFC4566] */
-    RtpAvpf, /* RTP/AVPF [RFC4585] */
-    RtpSavp, /* RTP/SAVP [RFC3711] */
-    RtpSavpf, /* RTP/SAVPF [RFC5124] */
-    TcpDtlsRtpSavp, /* TCP/DTLS/RTP/SAVP [RFC7850] */
+    RtpAvp,          /* RTP/AVP [RFC4566] */
+    RtpAvpf,         /* RTP/AVPF [RFC4585] */
+    RtpSavp,         /* RTP/SAVP [RFC3711] */
+    RtpSavpf,        /* RTP/SAVPF [RFC5124] */
+    TcpDtlsRtpSavp,  /* TCP/DTLS/RTP/SAVP [RFC7850] */
     TcpDtlsRtpSavpf, /* TCP/DTLS/RTP/SAVPF [RFC7850] */
-    UdpTlsRtpSavp, /* UDP/TLS/RTP/SAVP [RFC5764] */
-    UdpTlsRtpSavpf, /* UDP/TLS/RTP/SAVPF [RFC5764] */
-    DtlsSctp, /* DTLS/SCTP [draft-ietf-mmusic-sctp-sdp-07] */
-    UdpDtlsSctp, /* UDP/DTLS/SCTP [draft-ietf-mmusic-sctp-sdp-26] */
-    TcpDtlsSctp, /* TCP/DTLS/SCTP [draft-ietf-mmusic-sctp-sdp-26] */
-    TcpTlsRtpSavpf, /* not standardized - to be removed */
+    UdpTlsRtpSavp,   /* UDP/TLS/RTP/SAVP [RFC5764] */
+    UdpTlsRtpSavpf,  /* UDP/TLS/RTP/SAVPF [RFC5764] */
+    DtlsSctp,        /* DTLS/SCTP [draft-ietf-mmusic-sctp-sdp-07] */
+    UdpDtlsSctp,     /* UDP/DTLS/SCTP [draft-ietf-mmusic-sctp-sdp-26] */
+    TcpDtlsSctp,     /* TCP/DTLS/SCTP [draft-ietf-mmusic-sctp-sdp-26] */
+    TcpTlsRtpSavpf,  /* not standardized - to be removed */
 }
 
 impl fmt::Display for SdpProtocolValue {
