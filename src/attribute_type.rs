@@ -840,13 +840,13 @@ impl fmt::Display for SdpAttributeSctpmap {
 #[derive(Clone)]
 #[cfg_attr(feature = "serialize", derive(Serialize))]
 pub enum SdpAttributeGroupSemantic {
-    LipSynchronization,          // rfc5888
-    FlowIdentification,          // rfc5888
-    SingleReservationFlow,       // rfc3524
-    AlternateNetworkAddressType, // rfc4091
-    ForwardErrorCorrection,      // rfc4756
-    DecodingDependency,          // rfc5583
-    Bundle,                      //
+    LipSynchronization,          // RFC5888
+    FlowIdentification,          // RFC5888
+    SingleReservationFlow,       // RFC3524
+    AlternateNetworkAddressType, // RFC4091
+    ForwardErrorCorrection,      // RFC5956
+    DecodingDependency,          // RFC5583
+    Bundle,                      // draft-ietc-mmusic-bundle
 }
 
 impl fmt::Display for SdpAttributeGroupSemantic {
@@ -1525,6 +1525,10 @@ fn parse_single_direction(to_parse: &str) -> Result<SdpSingleDirection, SdpParse
     }
 }
 
+///////////////////////////////////////////////////////////////////////////
+// a=sctp-port, draft-ietf-mmusic-sctp-sdp-26#section-15.2.1
+//-------------------------------------------------------------------------
+// no ABNF given
 fn parse_sctp_port(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
     let port = to_parse.parse()?;
     if port > 65535 {
@@ -1536,6 +1540,32 @@ fn parse_sctp_port(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalErro
     Ok(SdpAttribute::SctpPort(port))
 }
 
+///////////////////////////////////////////////////////////////////////////
+// a=candidate, RFC5245
+//-------------------------------------------------------------------------
+//
+// candidate-attribute   = "candidate" ":" foundation SP component-id SP
+//                          transport SP
+//                          priority SP
+//                          connection-address SP     ;from RFC 4566
+//                          port         ;port from RFC 4566
+//                          SP cand-type
+//                          [SP rel-addr]
+//                          [SP rel-port]
+//                          *(SP extension-att-name SP
+//                               extension-att-value)
+// foundation            = 1*32ice-char
+// component-id          = 1*5DIGIT
+// transport             = "UDP" / transport-extension
+// transport-extension   = token              ; from RFC 3261
+// priority              = 1*10DIGIT
+// cand-type             = "typ" SP candidate-types
+// candidate-types       = "host" / "srflx" / "prflx" / "relay" / token
+// rel-addr              = "raddr" SP connection-address
+// rel-port              = "rport" SP port
+// extension-att-name    = byte-string    ;from RFC 4566
+// extension-att-value   = byte-string
+// ice-char              = ALPHA / DIGIT / "+" / "/"
 fn parse_candidate(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
     let tokens: Vec<&str> = to_parse.split_whitespace().collect();
     if tokens.len() < 8 {
@@ -1653,6 +1683,17 @@ fn parse_candidate(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalErro
     Ok(SdpAttribute::Candidate(cand))
 }
 
+///////////////////////////////////////////////////////////////////////////
+// a=dtls-message, draft-rescorla-dtls-in-sdp
+//-------------------------------------------------------------------------
+//   attribute               =/   dtls-message-attribute
+//
+//   dtls-message-attribute  =    "dtls-message" ":" role SP value
+//
+//   role                    =    "client" / "server"
+//
+//   value                   =    1*(ALPHA / DIGIT / "+" / "/" / "=" )
+//                                ; base64 encoded message
 fn parse_dtls_message(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
     let tokens: Vec<&str> = to_parse.split(' ').collect();
 
@@ -1680,8 +1721,27 @@ fn valid_byte_string(input: &str) -> bool {
     !(input.contains(0x00 as char) || input.contains(0x0A as char) || input.contains(0x0D as char))
 }
 
-// ABNF for extmap is defined in RFC 5285
-// https://tools.ietf.org/html/rfc5285#section-7
+///////////////////////////////////////////////////////////////////////////
+// a=extmap, RFC5285
+//-------------------------------------------------------------------------
+// RFC5285
+//        extmap = mapentry SP extensionname [SP extensionattributes]
+//
+//        extensionname = URI
+//
+//        direction = "sendonly" / "recvonly" / "sendrecv" / "inactive"
+//
+//        mapentry = "extmap:" 1*5DIGIT ["/" direction]
+//
+//        extensionattributes = byte-string
+//
+//        URI = <Defined in RFC 3986>
+//
+//        byte-string = <Defined in RFC 4566>
+//
+//        SP = <Defined in RFC 5234>
+//
+//        DIGIT = <Defined in RFC 5234>
 fn parse_extmap(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
     let tokens: Vec<&str> = to_parse.split_whitespace().collect();
     if tokens.len() < 2 {
@@ -1727,6 +1787,22 @@ fn parse_extmap(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> 
     }))
 }
 
+///////////////////////////////////////////////////////////////////////////
+// a=fingerprint, RFC4572
+//-------------------------------------------------------------------------
+//   fingerprint-attribute  =  "fingerprint" ":" hash-func SP fingerprint
+//
+//   hash-func              =  "sha-1" / "sha-224" / "sha-256" /
+//                             "sha-384" / "sha-512" /
+//                             "md5" / "md2" / token
+//                             ; Additional hash functions can only come
+//                             ; from updates to RFC 3279
+//
+//   fingerprint            =  2UHEX *(":" 2UHEX)
+//                             ; Each byte in upper-case hex, separated
+//                             ; by colons.
+//
+//   UHEX                   =  DIGIT / %x41-46 ; A-F uppercase
 fn parse_fingerprint(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
     let tokens: Vec<&str> = to_parse.split_whitespace().collect();
     if tokens.len() != 2 {
@@ -1788,6 +1864,10 @@ fn parse_fingerprint(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalEr
     }))
 }
 
+///////////////////////////////////////////////////////////////////////////
+// a=fmtp, RFC4566, RFC5576
+//-------------------------------------------------------------------------
+//       a=fmtp:<format> <format specific parameters>
 fn parse_fmtp(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
     let tokens: Vec<&str> = to_parse.splitn(2, ' ').collect();
 
@@ -1967,6 +2047,14 @@ fn parse_fmtp(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
     }))
 }
 
+///////////////////////////////////////////////////////////////////////////
+// a=group, RFC5888
+//-------------------------------------------------------------------------
+//         group-attribute     = "a=group:" semantics
+//                               *(SP identification-tag)
+//         semantics           = "LS" / "FID" / semantics-extension
+//         semantics-extension = token
+//         identification-tag  = token
 fn parse_group(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
     let mut tokens = to_parse.split_whitespace();
     let semantics = match tokens.next() {
@@ -1997,6 +2085,12 @@ fn parse_group(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
     }))
 }
 
+///////////////////////////////////////////////////////////////////////////
+// a=ice-options, draft-ietf-mmusic-ice-sip-sdp
+//-------------------------------------------------------------------------
+//  ice-options           = "ice-options:" ice-option-tag
+//                           0*(SP ice-option-tag)
+//  ice-option-tag        = 1*ice-char
 fn parse_ice_options(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
     if to_parse.is_empty() {
         return Err(SdpParserInternalError::Generic(
@@ -2011,6 +2105,11 @@ fn parse_ice_options(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalEr
     ))
 }
 
+///////////////////////////////////////////////////////////////////////////
+// a=ice-pacing, draft-ietf-mmusic-ice-sip-sdp
+//-------------------------------------------------------------------------
+//  ice-pacing-att            = "ice-pacing:" pacing-value
+//  pacing-value              = 1*10DIGIT
 fn parse_ice_pacing(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
     let parsed = to_parse.parse::<u64>()?;
     if parsed >= 1_00_00_00_00_00 {
@@ -2273,6 +2372,74 @@ where
     }
 }
 
+///////////////////////////////////////////////////////////////////////////
+// a=imageattr, RFC6236
+//-------------------------------------------------------------------------
+//     image-attr = "imageattr:" PT 1*2( 1*WSP ( "send" / "recv" )
+//                                       1*WSP attr-list )
+//     PT = 1*DIGIT / "*"
+//     attr-list = ( set *(1*WSP set) ) / "*"
+//       ;  WSP and DIGIT defined in [RFC5234]
+//
+//     set= "[" "x=" xyrange "," "y=" xyrange *( "," key-value ) "]"
+//                ; x is the horizontal image size range (pixel count)
+//                ; y is the vertical image size range (pixel count)
+//
+//     key-value = ( "sar=" srange )
+//               / ( "par=" prange )
+//               / ( "q=" qvalue )
+//                ; Key-value MAY be extended with other keyword
+//                ;  parameters.
+//                ; At most, one instance each of sar, par, or q
+//                ;  is allowed in a set.
+//                ;
+//                ; sar (sample aspect ratio) is the sample aspect ratio
+//                ;  associated with the set (optional, MAY be ignored)
+//                ; par (picture aspect ratio) is the allowed
+//                ;  ratio between the display's x and y physical
+//                ;  size (optional)
+//                ; q (optional, range [0.0..1.0], default value 0.5)
+//                ;  is the preference for the given set,
+//                ;  a higher value means a higher preference
+//
+//     onetonine = "1" / "2" / "3" / "4" / "5" / "6" / "7" / "8" / "9"
+//                ; Digit between 1 and 9
+//     xyvalue = onetonine *5DIGIT
+//                ; Digit between 1 and 9 that is
+//                ; followed by 0 to 5 other digits
+//     step = xyvalue
+//     xyrange = ( "[" xyvalue ":" [ step ":" ] xyvalue "]" )
+//                ; Range between a lower and an upper value
+//                ; with an optional step, default step = 1
+//                ; The rightmost occurrence of xyvalue MUST have a
+//                ; higher value than the leftmost occurrence.
+//             / ( "[" xyvalue 1*( "," xyvalue ) "]" )
+//                ; Discrete values separated by ','
+//             / ( xyvalue )
+//                ; A single value
+//     spvalue = ( "0" "." onetonine *3DIGIT )
+//                ; Values between 0.1000 and 0.9999
+//             / ( onetonine "." 1*4DIGIT )
+//                ; Values between 1.0000 and 9.9999
+//     srange =  ( "[" spvalue 1*( "," spvalue ) "]" )
+//                ; Discrete values separated by ','.
+//                ; Each occurrence of spvalue MUST be
+//                ; greater than the previous occurrence.
+//             / ( "[" spvalue "-" spvalue "]" )
+//                ; Range between a lower and an upper level (inclusive)
+//                ; The second occurrence of spvalue MUST have a higher
+//                ; value than the first
+//             / ( spvalue )
+//                ; A single value
+//
+//     prange =  ( "[" spvalue "-" spvalue "]" )
+//                ; Range between a lower and an upper level (inclusive)
+//                ; The second occurrence of spvalue MUST have a higher
+//                ; value than the first
+//
+//     qvalue  = ( "0" "." 1*2DIGIT )
+//             / ( "1" "." 1*2("0") )
+//                ; Values between 0.00 and 1.00
 fn parse_image_attr(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
     let mut tokens = parse_imageattr_tokens(to_parse, ' ').into_iter().peekable();
 
@@ -2331,6 +2498,12 @@ fn parse_image_attr(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalErr
     }))
 }
 
+///////////////////////////////////////////////////////////////////////////
+// a=msid, draft-ietf-mmusic-msid
+//-------------------------------------------------------------------------
+//   msid-attr = "msid:" identifier [ SP appdata ]
+//   identifier = 1*64token-char ; see RFC 4566
+//   appdata = 1*64token-char  ; see RFC 4566
 fn parse_msid(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
     let mut tokens = to_parse.split_whitespace();
     let id = match tokens.next() {
@@ -2348,6 +2521,12 @@ fn parse_msid(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
     Ok(SdpAttribute::Msid(SdpAttributeMsid { id, appdata }))
 }
 
+///////////////////////////////////////////////////////////////////////////
+// a=msid-semantic, draft-ietf-mmusic-msid
+//-------------------------------------------------------------------------
+//   msid-semantic-attr = "msid-semantic:" msid-semantic msid-list
+//   msid-semantic = token ; see RFC 4566
+//   msid-list = *(" " msid-id) / " *"
 fn parse_msid_semantic(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
     let tokens: Vec<_> = to_parse.split_whitespace().collect();
     if tokens.is_empty() {
@@ -2363,6 +2542,41 @@ fn parse_msid_semantic(to_parse: &str) -> Result<SdpAttribute, SdpParserInternal
     Ok(SdpAttribute::MsidSemantic(semantic))
 }
 
+///////////////////////////////////////////////////////////////////////////
+// a=rid, draft-ietf-mmusic-rid
+//-------------------------------------------------------------------------
+// rid-syntax        = %s"a=rid:" rid-id SP rid-dir
+//                     [ rid-pt-param-list / rid-param-list ]
+// rid-id            = 1*(alpha-numeric / "-" / "_")
+// alpha-numeric     = < as defined in {{RFC4566}} >
+// rid-dir           = %s"send" / %s"recv"
+// rid-pt-param-list = SP rid-fmt-list *(";" rid-param)
+// rid-param-list    = SP rid-param *(";" rid-param)
+// rid-fmt-list      = %s"pt=" fmt *( "," fmt )
+// fmt               = < as defined in {{RFC4566}} >
+// rid-param         = rid-width-param
+//                     / rid-height-param
+//                     / rid-fps-param
+//                     / rid-fs-param
+//                     / rid-br-param
+//                     / rid-pps-param
+//                     / rid-bpp-param
+//                     / rid-depend-param
+//                     / rid-param-other
+// rid-width-param   = %s"max-width" [ "=" int-param-val ]
+// rid-height-param  = %s"max-height" [ "=" int-param-val ]
+// rid-fps-param     = %s"max-fps" [ "=" int-param-val ]
+// rid-fs-param      = %s"max-fs" [ "=" int-param-val ]
+// rid-br-param      = %s"max-br" [ "=" int-param-val ]
+// rid-pps-param     = %s"max-pps" [ "=" int-param-val ]
+// rid-bpp-param     = %s"max-bpp" [ "=" float-param-val ]
+// rid-depend-param  = %s"depend=" rid-list
+// rid-param-other   = 1*(alpha-numeric / "-") [ "=" param-val ]
+// rid-list          = rid-id *( "," rid-id )
+// int-param-val     = 1*DIGIT
+// float-param-val   = 1*DIGIT "." 1*DIGIT
+// param-val         = *( %x20-58 / %x60-7E )
+//                     ; Any printable character except semicolon
 fn parse_rid(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
     let tokens: Vec<&str> = to_parse.splitn(3, ' ').collect();
 
@@ -2434,6 +2648,12 @@ fn parse_rid(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
     }))
 }
 
+///////////////////////////////////////////////////////////////////////////
+// a=remote-candiate, RFC5245
+//-------------------------------------------------------------------------
+//   remote-candidate-att = "remote-candidates" ":" remote-candidate
+//                           0*(SP remote-candidate)
+//   remote-candidate = component-ID SP connection-address SP port
 fn parse_remote_candidates(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
     let mut tokens = to_parse.split_whitespace();
     let component = match tokens.next() {
@@ -2472,6 +2692,10 @@ fn parse_remote_candidates(to_parse: &str) -> Result<SdpAttribute, SdpParserInte
     }))
 }
 
+///////////////////////////////////////////////////////////////////////////
+// a=rtpmap, RFC4566
+//-------------------------------------------------------------------------
+// a=rtpmap:<payload type> <encoding name>/<clock rate> [/<encoding parameters>]
 fn parse_rtpmap(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
     let mut tokens = to_parse.split_whitespace();
     let payload_type: u8 = match tokens.next() {
@@ -2521,6 +2745,11 @@ fn parse_rtpmap(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> 
     Ok(SdpAttribute::Rtpmap(rtpmap))
 }
 
+///////////////////////////////////////////////////////////////////////////
+// a=rtcp, RFC3605
+//-------------------------------------------------------------------------
+//   rtcp-attribute =  "a=rtcp:" port  [nettype space addrtype space
+//                         connection-address] CRLF
 fn parse_rtcp(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
     let mut tokens = to_parse.split_whitespace();
     let port = match tokens.next() {
@@ -2563,6 +2792,36 @@ fn parse_rtcp(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
     Ok(SdpAttribute::Rtcp(rtcp))
 }
 
+///////////////////////////////////////////////////////////////////////////
+// a=rtcp-fb, RFC4585
+//-------------------------------------------------------------------------
+//    rtcp-fb-syntax = "a=rtcp-fb:" rtcp-fb-pt SP rtcp-fb-val CRLF
+//
+//    rtcp-fb-pt         = "*"   ; wildcard: applies to all formats
+//                       / fmt   ; as defined in SDP spec
+//
+//    rtcp-fb-val        = "ack" rtcp-fb-ack-param
+//                       / "nack" rtcp-fb-nack-param
+//                       / "trr-int" SP 1*DIGIT
+//                       / rtcp-fb-id rtcp-fb-param
+//
+//    rtcp-fb-id         = 1*(alpha-numeric / "-" / "_")
+//
+//    rtcp-fb-param      = SP "app" [SP byte-string]
+//                       / SP token [SP byte-string]
+//                       / ; empty
+//
+//    rtcp-fb-ack-param  = SP "rpsi"
+//                       / SP "app" [SP byte-string]
+//                       / SP token [SP byte-string]
+//                       / ; empty
+//
+//    rtcp-fb-nack-param = SP "pli"
+//                       / SP "sli"
+//                       / SP "rpsi"
+//                       / SP "app" [SP byte-string]
+//                       / SP token [SP byte-string]
+//                       / ; empty
 fn parse_rtcp_fb(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
     let tokens: Vec<&str> = to_parse.splitn(4, ' ').collect();
 
@@ -2675,6 +2934,18 @@ fn parse_rtcp_fb(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError>
     }))
 }
 
+///////////////////////////////////////////////////////////////////////////
+// a=sctpmap, draft-ietf-mmusic-sctp-sdp-05
+//-------------------------------------------------------------------------
+//      sctpmap-attr        =  "a=sctpmap:" sctpmap-number media-subtypes
+// [streams]
+//      sctpmap-number      =  1*DIGIT
+//      protocol            =  labelstring
+//        labelstring         =  text
+//        text                =  byte-string
+//      streams      =  1*DIGIT
+//
+//  Note: this was replace in later versions of the draft by sctp-port
 fn parse_sctpmap(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
     let tokens: Vec<&str> = to_parse.split_whitespace().collect();
     if tokens.len() != 3 {
@@ -2694,6 +2965,11 @@ fn parse_sctpmap(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError>
     }))
 }
 
+///////////////////////////////////////////////////////////////////////////
+// a=setup, RFC4145
+//-------------------------------------------------------------------------
+//       setup-attr           =  "a=setup:" role
+//       role                 =  "active" / "passive" / "actpass" / "holdconn"
 fn parse_setup(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
     Ok(SdpAttribute::Setup(
         match to_parse.to_lowercase().as_ref() {
@@ -2736,6 +3012,31 @@ fn parse_simulcast_version_list(
     }
 }
 
+///////////////////////////////////////////////////////////////////////////
+// a=simulcast, draft-ietf-mmusic-sdp-simulcast
+//-------------------------------------------------------------------------
+// Old draft-04
+// sc-attr     = "a=simulcast:" 1*2( WSP sc-str-list ) [WSP sc-pause-list]
+// sc-str-list = sc-dir WSP sc-id-type "=" sc-alt-list *( ";" sc-alt-list )
+// sc-pause-list = "paused=" sc-alt-list
+// sc-dir      = "send" / "recv"
+// sc-id-type  = "pt" / "rid" / token
+// sc-alt-list = sc-id *( "," sc-id )
+// sc-id       = fmt / rid-identifier / token
+// ; WSP defined in [RFC5234]
+// ; fmt, token defined in [RFC4566]
+// ; rid-identifier defined in [I-D.pthatcher-mmusic-rid]
+//
+// New draft 14, need to parse this for now, will eventually emit it
+// sc-value     = ( sc-send [SP sc-recv] ) / ( sc-recv [SP sc-send] )
+// sc-send      = %s"send" SP sc-str-list
+// sc-recv      = %s"recv" SP sc-str-list
+// sc-str-list  = sc-alt-list *( ";" sc-alt-list )
+// sc-alt-list  = sc-id *( "," sc-id )
+// sc-id-paused = "~"
+// sc-id        = [sc-id-paused] rid-id
+// ; SP defined in [RFC5234]
+// ; rid-id defined in [I-D.ietf-mmusic-rid]
 fn parse_simulcast(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
     // TODO: Bug 1225877: Stop accepting all kinds of whitespace here, and only accept SP
     let mut tokens = to_parse.trim().split_whitespace();
@@ -2790,6 +3091,14 @@ fn parse_simulcast(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalErro
     }))
 }
 
+///////////////////////////////////////////////////////////////////////////
+// a=ssrc, RFC5576
+//-------------------------------------------------------------------------
+// ssrc-attr = "ssrc:" ssrc-id SP attribute
+// ; The base definition of "attribute" is in RFC 4566.
+// ; (It is the content of "a=" lines.)
+//
+// ssrc-id = integer ; 0 .. 2**32 - 1
 fn parse_ssrc(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
     let mut tokens = to_parse.splitn(2, ' ');
     let ssrc_id = match tokens.next() {
