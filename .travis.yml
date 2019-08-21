@@ -46,12 +46,15 @@ before_script:
     if [[ "$TRAVIS_RUST_VERSION" == "stable" ]]; then
       rustup component add rustfmt-preview
       rustup component add clippy
+      cargo install --force cargo-audit
+      cargo generate-lockfile
     fi
 
 script:
   - echo FEATURES="$FEATURES"
   - |
     if [[ "$TRAVIS_RUST_VERSION" == "stable" ]]; then
+      cargo audit
       cargo fmt --all -- --check
     fi
   - cargo clean
