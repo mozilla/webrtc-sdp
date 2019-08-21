@@ -68,7 +68,6 @@ pub enum SdpProtocolValue {
     DtlsSctp,        /* DTLS/SCTP [draft-ietf-mmusic-sctp-sdp-07] */
     UdpDtlsSctp,     /* UDP/DTLS/SCTP [draft-ietf-mmusic-sctp-sdp-26] */
     TcpDtlsSctp,     /* TCP/DTLS/SCTP [draft-ietf-mmusic-sctp-sdp-26] */
-    TcpTlsRtpSavpf,  /* not standardized - to be removed */
 }
 
 impl fmt::Display for SdpProtocolValue {
@@ -85,7 +84,6 @@ impl fmt::Display for SdpProtocolValue {
             SdpProtocolValue::DtlsSctp => "DTLS/SCTP",
             SdpProtocolValue::UdpDtlsSctp => "UDP/DTLS/SCTP",
             SdpProtocolValue::TcpDtlsSctp => "TCP/DTLS/SCTP",
-            SdpProtocolValue::TcpTlsRtpSavpf => "TCP/TLS/RTP/SAVPF",
         }
         .fmt(f)
     }
@@ -337,8 +335,6 @@ fn parse_protocol_token(value: &str) -> Result<SdpProtocolValue, SdpParserIntern
         "DTLS/SCTP" => SdpProtocolValue::DtlsSctp,
         "UDP/DTLS/SCTP" => SdpProtocolValue::UdpDtlsSctp,
         "TCP/DTLS/SCTP" => SdpProtocolValue::TcpDtlsSctp,
-        /* to be removed */
-        "TCP/TLS/RTP/SAVPF" => SdpProtocolValue::TcpTlsRtpSavpf,
         _ => {
             return Err(SdpParserInternalError::Unsupported(format!(
                 "unsupported protocol value: {}",
@@ -727,7 +723,6 @@ mod tests {
             "tcp/DTLS/rtp/savpf",
             SdpProtocolValue::TcpDtlsRtpSavpf,
         )?;
-        parse_and_serialize_protocol_token("tcp/TLS/rTp/SAVPf", SdpProtocolValue::TcpTlsRtpSavpf)?;
 
         assert!(parse_protocol_token("").is_err());
         assert!(parse_protocol_token("foobar").is_err());
