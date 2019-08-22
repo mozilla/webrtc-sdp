@@ -1128,7 +1128,7 @@ pub enum SdpAttribute {
     Ssrc(SdpAttributeSsrc),
     SsrcGroup(String),
     Control(String),    // RFC7826 - D.1.1
-    Range(String),      // RGC7826 - D.1.6
+    Range(String),      // RFC7826 - D.1.6
 }
 
 impl SdpAttribute {
