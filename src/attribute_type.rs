@@ -1127,7 +1127,8 @@ pub enum SdpAttribute {
     Simulcast(SdpAttributeSimulcast),
     Ssrc(SdpAttributeSsrc),
     SsrcGroup(String),
-    Control(String),    // RFC7826
+    Control(String),    // RFC7826 - D.1.1
+    Range(String),      // RGC7826 - D.1.6
 }
 
 impl SdpAttribute {
@@ -1174,7 +1175,8 @@ impl SdpAttribute {
             | SdpAttribute::Sendonly
             | SdpAttribute::Sendrecv
             | SdpAttribute::Setup(..)
-            | SdpAttribute::Control(..) => true,
+            | SdpAttribute::Control(..)
+            | SdpAttribute::Range(..) => true,
         }
     }
 
@@ -1221,7 +1223,8 @@ impl SdpAttribute {
             | SdpAttribute::Simulcast(..)
             | SdpAttribute::Ssrc(..)
             | SdpAttribute::SsrcGroup(..)
-            | SdpAttribute::Control(..) => true,
+            | SdpAttribute::Control(..)
+            | SdpAttribute::Range(..) => true,
         }
     }
 }
@@ -1290,6 +1293,7 @@ impl FromStr for SdpAttribute {
             "simulcast" => parse_simulcast(val),
             "ssrc" => parse_ssrc(val),
             "control" => parse_control(val),
+            "range" => parse_range(val),
             _ => Err(SdpParserInternalError::Unsupported(format!(
                 "Unknown attribute type {}",
                 name
@@ -1344,6 +1348,7 @@ impl fmt::Display for SdpAttribute {
             SdpAttribute::Ssrc(ref a) => attr_to_string(a.to_string()),
             SdpAttribute::SsrcGroup(ref a) => attr_to_string(a.to_string()),
             SdpAttribute::Control(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::Range(ref a) => attr_to_string(a.to_string()),
         }
         .fmt(f)
     }
@@ -1406,6 +1411,7 @@ pub enum SdpAttributeType {
     Ssrc,
     SsrcGroup,
     Control,    // RTC7826
+    Range,      // RTC7826
 }
 
 impl<'a> From<&'a SdpAttribute> for SdpAttributeType {
@@ -1452,6 +1458,7 @@ impl<'a> From<&'a SdpAttribute> for SdpAttributeType {
             SdpAttribute::Ssrc { .. } => SdpAttributeType::Ssrc,
             SdpAttribute::SsrcGroup { .. } => SdpAttributeType::SsrcGroup,
             SdpAttribute::Control { .. } => SdpAttributeType::Control,
+            SdpAttribute::Range { .. } => SdpAttributeType::Range,
         }
     }
 }
@@ -1500,6 +1507,7 @@ impl fmt::Display for SdpAttributeType {
             SdpAttributeType::Ssrc => "ssrc",
             SdpAttributeType::SsrcGroup => "ssrc-group",
             SdpAttributeType::Control => "control",
+            SdpAttributeType::Range => "range",
         }
         .fmt(f)
     }
@@ -3126,7 +3134,7 @@ fn parse_ssrc(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
 }
 
 ///////////////////////////////////////////////////////////////////////////
-// a=control, RFC7826
+// a=control, RFC7826 - D.1.1
 //-------------------------------------------------------------------------
 // control-attribute   =  "a=control:" *SP RTSP-REQ-Ref CRLF
 fn parse_control(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
@@ -3137,6 +3145,20 @@ fn parse_control(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError>
     }
 
     Ok(SdpAttribute::Control(to_parse.to_string()))
+}
+
+///////////////////////////////////////////////////////////////////////////
+// a=range, RFC7826 - D.1.6
+//-------------------------------------------------------------------------
+// a-range-def         =  "a=range:" ranges-spec CRLF
+fn parse_range(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
+    if to_parse.is_empty() {
+        return Err(SdpParserInternalError::Generic(
+            "Range attribute is missing value".to_string(),
+        ));
+    }
+
+    Ok(SdpAttribute::Range(to_parse.to_string()))
 }
 
 pub fn parse_attribute(value: &str) -> Result<SdpType, SdpParserInternalError> {
@@ -4237,5 +4259,28 @@ mod tests {
 
         assert!(parse_attribute("control:").is_err());
         assert!(parse_attribute("control: ").is_err());
+    }
+
+    #[test]
+    fn test_parse_range_attribute() {
+        let check_parse = make_check_parse!(String, SdpAttribute::Range);
+        let check_parse_and_serialize =
+            make_check_parse_and_serialize!(check_parse, SdpAttribute::Range);
+
+        check_parse_and_serialize("range:npt=00:00:00-00:10:34.10");
+        check_parse_and_serialize("range:npt=0-");
+        check_parse_and_serialize("range:npt=0-34.4368");
+        check_parse_and_serialize("range:clock=19971113T211503Z-19971113T220300Z");
+
+        let range_spec = check_parse("range:npt=now-");
+        assert_eq!(range_spec, "npt=now-");
+
+        let range_spec = check_parse("range:smpte-25=10:07:00-10:07:33:05.01");
+        assert_eq!(range_spec, "smpte-25=10:07:00-10:07:33:05.01");
+
+        let range_spec = check_parse("range:clock=19961108T143720.25Z-19961108T144725.25Z");
+        assert_eq!(range_spec, "clock=19961108T143720.25Z-19961108T144725.25Z");
+
+        assert!(parse_attribute("range:").is_err());
     }
 }
