@@ -6,8 +6,6 @@ extern crate log;
 #[cfg(feature = "serialize")]
 #[macro_use]
 extern crate serde_derive;
-#[cfg(test)]
-extern crate enum_display_derive;
 #[cfg(feature = "serialize")]
 extern crate serde;
 use std::convert::TryFrom;
