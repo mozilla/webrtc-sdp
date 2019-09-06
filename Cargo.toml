@@ -26,4 +26,3 @@ url = {version="1.7.2"}
 
 [dev-dependencies]
 serde_json = {version = "1.0"}
-enum-display-derive = {version = "0.1.0"}
