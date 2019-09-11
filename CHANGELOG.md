@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Unreleased]
+### Removed
+- Removed TcpTlsRtpSavpf protocl token
 
 ## [0.3.0] - 2019-08-08
 ### Changed
