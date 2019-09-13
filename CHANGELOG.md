@@ -6,7 +6,7 @@
 - Updated `urls` dependency to `0.2.1`
 
 ### Removed
-- Removed TcpTlsRtpSavpf protocl token
+- Removed `TcpTlsRtpSavpf` protocl token
 - Removed dependency on `enum-display-derive`
 
 ## [0.3.0] - 2019-08-08
