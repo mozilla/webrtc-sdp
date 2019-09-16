@@ -27,5 +27,10 @@ fn main() {
         Ok(s) => s,
     };
 
-    assert!(webrtc_sdp::parse_sdp(&s, true).is_ok());
+    let res = webrtc_sdp::parse_sdp(&s, true);
+    if res.is_ok() {
+        println!("successfully parsed SDP.");
+    } else {
+        println!("FAILURE: {}", res.err().unwrap());
+    }
 }
