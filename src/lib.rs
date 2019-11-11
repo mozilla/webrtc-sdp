@@ -369,9 +369,7 @@ impl AnonymizingClone for SdpSession {
             warnings: Vec::new(),
         };
         masked.origin = self.origin.masked_clone(anon);
-        masked.connection = masked
-            .connection
-            .and_then(|con| Some(con.masked_clone(anon)));
+        masked.connection = masked.connection.map(|con| con.masked_clone(anon));
         for i in &self.attribute {
             masked.attribute.push(i.masked_clone(anon));
         }

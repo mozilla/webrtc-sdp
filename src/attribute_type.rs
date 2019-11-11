@@ -291,8 +291,8 @@ impl AnonymizingClone for SdpAttributeCandidate {
         masked.raddr = self
             .raddr
             .clone()
-            .and_then(|addr| Some(anonymizer.mask_address(&addr)));
-        masked.rport = self.rport.and_then(|port| Some(anonymizer.mask_port(port)));
+            .map(|addr| anonymizer.mask_address(&addr));
+        masked.rport = self.rport.map(|port| anonymizer.mask_port(port));
         masked
     }
 }
