@@ -66,7 +66,7 @@ script:
   - cargo test --all-targets --all-features --verbose --all
 
 after_success: |
-  - cargo run --example file_parser
+  - cargo run --example file_parser examples/sdps/2.sdp
   - |
     if [[ "$TRAVIS_OS_NAME" == "linux" && "$TRAVIS_RUST_VERSION" == "nightly" && "$FEATURES" == "serialize" ]]; then
       cargo tarpaulin --out Xml &&
