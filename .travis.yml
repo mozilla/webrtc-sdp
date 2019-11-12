@@ -66,7 +66,9 @@ script:
   - cargo test --all-targets --all-features --verbose --all
 
 after_success: |
-  if [[ "$TRAVIS_OS_NAME" == "linux" && "$TRAVIS_RUST_VERSION" == "nightly" && "$FEATURES" == "serialize" ]]; then
-    cargo tarpaulin --out Xml &&
-    bash <(curl -s https://codecov.io/bash)
-  fi
+  - cargo run --example file_parser
+  - |
+    if [[ "$TRAVIS_OS_NAME" == "linux" && "$TRAVIS_RUST_VERSION" == "nightly" && "$FEATURES" == "serialize" ]]; then
+      cargo tarpaulin --out Xml &&
+      bash <(curl -s https://codecov.io/bash)
+    fi
