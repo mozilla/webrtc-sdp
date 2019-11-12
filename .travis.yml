@@ -64,7 +64,7 @@ script:
       cargo clippy --all-targets --all-features -- -D warnings;
     fi
   - cargo test --all-targets --all-features --verbose --all
-  - cargo run --example file_parser examples/sdps/21.sdp
+  - cargo run --example file_parser examples/sdps/2.sdp
 
 after_success: |
   - |
