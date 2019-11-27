@@ -1905,7 +1905,7 @@ fn parse_fmtp(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
         unknown_tokens: Vec::new(),
     };
 
-    for parameter_token in tokens[1..].to_vec() {
+    for parameter_token in tokens[1..].iter() {
         if parameter_token.contains('=') {
             // Permit Leading/Trailing/Inner ';' by filtering out empty splits
             let parameter_tokens: Vec<&str> = parameter_token
@@ -1916,8 +1916,7 @@ fn parse_fmtp(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
                 let name_value_pair: Vec<&str> = parameter_token.splitn(2, '=').collect();
                 if name_value_pair.len() != 2 {
                     return Err(SdpParserInternalError::Generic(
-                        "A fmtp parameter must be either a telephone event, a parameter list or
-                                                                    a red codec list"
+                        "A fmtp parameter must be either a telephone event, a parameter list or a red codec list"
                             .to_string(),
                     ));
                 }
