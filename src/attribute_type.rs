@@ -3507,7 +3507,9 @@ mod tests {
         assert!(parse_attribute("fmtp:8 packetization-mode=2;;maxplaybackrate=48000").is_ok());
         assert!(parse_attribute("fmtp:8 packetization-mode=2; maxplaybackrate=48000").is_ok());
         assert!(parse_attribute("fmtp:8 maxplaybackrate=48000;").is_ok());
-        assert!(parse_attribute("fmtp:8 x-google-start-bitrate=800; maxplaybackrate=48000;").is_ok());
+        assert!(
+            parse_attribute("fmtp:8 x-google-start-bitrate=800; maxplaybackrate=48000;").is_ok()
+        );
     }
 
     #[test]
