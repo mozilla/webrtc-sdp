@@ -10,8 +10,8 @@ categories = ["parsing", "network-programming"]
 license = "MPL-2.0"
 
 [badges]
-travis-ci = { repository = "nils-ohlmeier/rsdparsa", branch = "master" }
-codecov = { repository = "nils-ohlmeier/rsdparsa", branch = "master", service = "github" }
+travis-ci = { repository = "mozilla/webrtc-sdp", branch = "master" }
+codecov = { repository = "mozilla/webrtc-sdp", branch = "master", service = "github" }
 
 [features]
 default = []
