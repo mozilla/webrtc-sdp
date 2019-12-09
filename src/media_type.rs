@@ -448,14 +448,6 @@ pub fn parse_media_vector(lines: &mut Vec<SdpLine>) -> Result<Vec<SdpMedia>, Sdp
                         Ok(())
                     }
                     SdpAttribute::Rtpmap(rtpmap) => {
-                        if rtpmap.channels.is_some() &&
-                           SdpMediaValue::Video == sdp_media.media.media {
-                            return Err(SdpParserError::Unsupported {
-                                error: SdpParserInternalError::Unsupported("Encoding parameters used on video rtpmap lines are not supported".to_owned()),
-                                line_number: line.line_number,
-                                line: media_line.text,
-                            });
-                        }
                         sdp_media.add_attribute(SdpAttribute::Rtpmap(SdpAttributeRtpmap {
                             payload_type: rtpmap.payload_type,
                             codec_name: rtpmap.codec_name.clone(),
@@ -896,43 +888,5 @@ mod tests {
         };
         sdp_lines.push(aline);
         assert!(parse_media_vector(&mut sdp_lines).is_err());
-    }
-
-    #[test]
-    fn parse_video_encoding_parameter_rtpmap() {
-        let mut sdp_lines: Vec<SdpLine> = Vec::new();
-        let media_line = SdpMediaLine {
-            media: SdpMediaValue::Video,
-            port: 9,
-            port_count: 0,
-            proto: SdpProtocolValue::RtpSavpf,
-            formats: SdpFormatList::Integers(Vec::new()),
-        };
-        let media = SdpLine {
-            line_number: 0,
-            sdp_type: SdpType::Media(media_line),
-            text: "".to_owned(),
-        };
-        sdp_lines.push(media);
-        let rtpmap_line = SdpLine {
-            line_number: 0,
-            sdp_type: SdpType::Attribute(SdpAttribute::Rtpmap(SdpAttributeRtpmap {
-                channels: Some(0),
-                frequency: 9000,
-                codec_name: "VP8".to_owned(),
-                payload_type: 42,
-            })),
-            text: "".to_owned(),
-        };
-        sdp_lines.push(rtpmap_line);
-        let result = parse_media_vector(&mut sdp_lines);
-        assert!(result.is_err());
-        match result.err().unwrap() {
-            SdpParserError::Unsupported {
-                error: SdpParserInternalError::Unsupported(e),
-                ..
-            } => assert!(e == "Encoding parameters used on video rtpmap lines are not supported"),
-            e => panic!("Wrong error! Did not expect: {}", e),
-        }
     }
 }
