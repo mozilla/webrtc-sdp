@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.3.3] - 2019-12-10
+### Changed
+- Changed handling of default channel counts
+
 ## [0.3.2] - 2019-12-02
 ### Changed
 - Fixed handling of spaces in fmtp attributes
