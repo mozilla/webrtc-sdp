@@ -1982,7 +1982,9 @@ fn parse_fmtp(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
                         parameters.useinbandfec = parse_bool(parameter_val, "useinbandfec")?
                     }
                     "CBR" => parameters.cbr = parse_bool(parameter_val, "cbr")?,
-                    _ => parameters.unknown_tokens.push((*parameter_token).to_string()),
+                    _ => parameters
+                        .unknown_tokens
+                        .push((*parameter_token).to_string()),
                 }
             }
         } else if parameter_token.contains('/') {
@@ -2845,9 +2847,10 @@ fn parse_rtcp_fb(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError>
             "goog-remb" => SdpAttributeRtcpFbType::Remb,
             "transport-cc" => SdpAttributeRtcpFbType::TransCC,
             _ => {
-                return Err(SdpParserInternalError::Unsupported(
-                    format!("Unknown rtcpfb feedback type: {:?}", x),
-                ));
+                return Err(SdpParserInternalError::Unsupported(format!(
+                    "Unknown rtcpfb feedback type: {:?}",
+                    x
+                )));
             }
         },
         None => {
@@ -2863,9 +2866,10 @@ fn parse_rtcp_fb(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError>
             Some(x) => match *x {
                 "rpsi" | "app" => (*x).to_string(),
                 _ => {
-                    return Err(SdpParserInternalError::Unsupported(
-                        format!("Unknown rtcpfb ack parameter: {:?}", x),
-                    ));
+                    return Err(SdpParserInternalError::Unsupported(format!(
+                        "Unknown rtcpfb ack parameter: {:?}",
+                        x
+                    )));
                 }
             },
             None => {
@@ -2878,9 +2882,10 @@ fn parse_rtcp_fb(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError>
             Some(x) => match *x {
                 "fir" | "tmmbr" | "tstr" | "vbcm" => (*x).to_string(),
                 _ => {
-                    return Err(SdpParserInternalError::Unsupported(
-                        format!("Unknown rtcpfb ccm parameter: {:?}", x),
-                    ));
+                    return Err(SdpParserInternalError::Unsupported(format!(
+                        "Unknown rtcpfb ccm parameter: {:?}",
+                        x
+                    )));
                 }
             },
             None => "".to_string(),
@@ -2889,9 +2894,10 @@ fn parse_rtcp_fb(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError>
             Some(x) => match *x {
                 "sli" | "pli" | "rpsi" | "app" => (*x).to_string(),
                 _ => {
-                    return Err(SdpParserInternalError::Unsupported(
-                        format!("Unknown rtcpfb nack parameter: {:?}", x),
-                    ));
+                    return Err(SdpParserInternalError::Unsupported(format!(
+                        "Unknown rtcpfb nack parameter: {:?}",
+                        x
+                    )));
                 }
             },
             None => "".to_string(),
@@ -2900,9 +2906,10 @@ fn parse_rtcp_fb(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError>
             Some(x) => match x {
                 _ if x.parse::<u32>().is_ok() => (*x).to_string(),
                 _ => {
-                    return Err(SdpParserInternalError::Generic(
-                        format!("Unknown rtcpfb trr-int parameter: {:?}", x),
-                    ));
+                    return Err(SdpParserInternalError::Generic(format!(
+                        "Unknown rtcpfb trr-int parameter: {:?}",
+                        x
+                    )));
                 }
             },
             None => {
@@ -2914,9 +2921,10 @@ fn parse_rtcp_fb(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError>
         SdpAttributeRtcpFbType::Remb => match tokens.get(2) {
             Some(x) => match x {
                 _ => {
-                    return Err(SdpParserInternalError::Unsupported(
-                        format!("Unknown rtcpfb remb parameter: {:?}", x),
-                    ));
+                    return Err(SdpParserInternalError::Unsupported(format!(
+                        "Unknown rtcpfb remb parameter: {:?}",
+                        x
+                    )));
                 }
             },
             None => "".to_string(),
@@ -2924,9 +2932,10 @@ fn parse_rtcp_fb(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError>
         SdpAttributeRtcpFbType::TransCC => match tokens.get(2) {
             Some(x) => match x {
                 _ => {
-                    return Err(SdpParserInternalError::Unsupported(
-                        format!("Unknown rtcpfb transport-cc parameter: {:?}", x),
-                    ));
+                    return Err(SdpParserInternalError::Unsupported(format!(
+                        "Unknown rtcpfb transport-cc parameter: {:?}",
+                        x
+                    )));
                 }
             },
             None => "".to_string(),
