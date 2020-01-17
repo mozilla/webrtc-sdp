@@ -1,5 +1,9 @@
 # Changelog
-
+## [0.3.4] - 2020-01-17
+### Fixed
+- Fixed new clippy warnings in stable
+### Changed
+- Example runner can no be told to expect failure
 ## [0.3.3] - 2019-12-10
 ### Changed
 - Changed handling of default channel counts
