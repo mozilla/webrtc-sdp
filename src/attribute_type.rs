@@ -2918,23 +2918,13 @@ fn parse_rtcp_fb(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError>
                 ));
             }
         },
-        SdpAttributeRtcpFbType::Remb => match tokens.get(2) {
-            Some(x) => match x {
-                _ => {
-                    return Err(SdpParserInternalError::Unsupported(format!(
-                        "Unknown rtcpfb remb parameter: {:?}",
-                        x
-                    )));
-                }
-            },
-            None => "".to_string(),
-        },
+        SdpAttributeRtcpFbType::Remb |
         SdpAttributeRtcpFbType::TransCC => match tokens.get(2) {
             Some(x) => match x {
                 _ => {
                     return Err(SdpParserInternalError::Unsupported(format!(
-                        "Unknown rtcpfb transport-cc parameter: {:?}",
-                        x
+                        "Unknown rtcpfb {} parameter: {:?}",
+                        feedback_type, x
                     )));
                 }
             },
