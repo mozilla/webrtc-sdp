@@ -3149,20 +3149,20 @@ mod tests {
     macro_rules! make_check_parse {
         ($attr_type:ty, $attr_kind:path) => {
             |attr_str: &str| -> $attr_type {
-                if let Ok(SdpType::Attribute($attr_kind(attr))) = parse_attribute(attr_str) {
-                    attr
-                } else {
-                    unreachable!();
+                match parse_attribute(attr_str) {
+                    Ok(SdpType::Attribute($attr_kind(attr))) => attr,
+                    Err(e) => panic!(e),
+                    _ => unreachable!(),
                 }
             }
         };
 
         ($attr_kind:path) => {
             |attr_str: &str| -> SdpAttribute {
-                if let Ok(SdpType::Attribute($attr_kind)) = parse_attribute(attr_str) {
-                    $attr_kind
-                } else {
-                    unreachable!();
+                match parse_attribute(attr_str) {
+                    Ok(SdpType::Attribute($attr_kind)) => $attr_kind,
+                    Err(e) => panic!(e),
+                    _ => unreachable!(),
                 }
             }
         };
