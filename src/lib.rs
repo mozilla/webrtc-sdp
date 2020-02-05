@@ -188,7 +188,7 @@ pub struct SdpLine {
 pub struct SdpSession {
     pub version: u64,
     pub origin: SdpOrigin,
-    pub session: String,
+    pub session: Option<String>,
     pub connection: Option<SdpConnection>,
     pub bandwidth: Vec<SdpBandwidth>,
     pub timing: Option<SdpTiming>,
@@ -218,7 +218,7 @@ impl fmt::Display for SdpSession {
              {media_sections}",
             version = self.version,
             origin = self.origin,
-            session = self.session,
+            session = self.get_session_text(),
             timing = option_to_string!("t={}\r\n", self.timing),
             bandwidth = maybe_vector_to_string!("b={}\r\n", self.bandwidth, "\r\nb="),
             connection = option_to_string!("c={}\r\n", self.connection),
@@ -230,6 +230,10 @@ impl fmt::Display for SdpSession {
 
 impl SdpSession {
     pub fn new(version: u64, origin: SdpOrigin, session: String) -> SdpSession {
+        let session = match session.trim() {
+            s if !s.is_empty() => Some(s.to_owned()),
+            _ => None,
+        };
         SdpSession {
             version,
             origin,
@@ -251,10 +255,17 @@ impl SdpSession {
         &self.origin
     }
 
-    pub fn get_session(&self) -> &str {
+    pub fn get_session(&self) -> &Option<String> {
         &self.session
     }
 
+    pub fn get_session_text(&self) -> &str {
+        if let Some(text) = &self.session {
+            text.as_str()
+        } else {
+            " "
+        }
+    }
     pub fn get_connection(&self) -> &Option<SdpConnection> {
         &self.connection
     }
@@ -555,10 +566,10 @@ fn parse_sdp_line(line: &str, line_number: usize) -> Result<SdpLine, SdpParserEr
                     line_number,
                 });
             }
-            trimmed
+            trimmed.to_lowercase()
         }
     };
-    let line_value = match splitted_line.next() {
+    let (line_value, untrimmed_line_value) = match splitted_line.next() {
         None => {
             return Err(SdpParserError::Line {
                 error: SdpParserInternalError::Generic("missing value".to_string()),
@@ -568,17 +579,17 @@ fn parse_sdp_line(line: &str, line_number: usize) -> Result<SdpLine, SdpParserEr
         }
         Some(v) => {
             let trimmed = v.trim();
-            if trimmed.is_empty() {
+            if trimmed.is_empty() && line_type.as_str() != "s" {
                 return Err(SdpParserError::Line {
                     error: SdpParserInternalError::Generic("value is empty".to_string()),
                     line: line.to_string(),
                     line_number,
                 });
             }
-            trimmed
+            (trimmed, v)
         }
     };
-    match line_type.to_lowercase().as_ref() {
+    match line_type.as_ref() {
         "a" => parse_attribute(line_value),
         "b" => parse_bandwidth(line_value),
         "c" => parse_connection(line_value),
@@ -604,7 +615,7 @@ fn parse_sdp_line(line: &str, line_number: usize) -> Result<SdpLine, SdpParserEr
             "unsupported type repeat: {}",
             line_value
         ))),
-        "s" => parse_session(line_value),
+        "s" => parse_session(untrimmed_line_value),
         "t" => parse_timing(line_value),
         "u" => Err(SdpParserInternalError::Generic(format!(
             "unsupported type uri: {}",
@@ -855,7 +866,7 @@ pub fn parse_sdp(sdp: &str, fail_on_warning: bool) -> Result<SdpSession, SdpPars
         if stripped_line.is_empty() {
             continue;
         }
-        match parse_sdp_line(stripped_line, line_number) {
+        match parse_sdp_line(line, line_number) {
             Ok(n) => {
                 sdp_lines.push(n);
             }
