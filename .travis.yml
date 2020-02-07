@@ -72,7 +72,7 @@ script:
   - cargo run --example file_parser examples/sdps/07.sdp --expect-failure
   - cargo run --example file_parser examples/sdps/08.sdp --expect-failure
   - cargo run --example file_parser examples/sdps/09.sdp
-  - cargo run --example file_parser examples/sdps/10.sdp --expect-failure
+  - cargo run --example file_parser examples/sdps/10.sdp
   - cargo run --example file_parser examples/sdps/11.sdp --expect-failure
   - cargo run --example file_parser examples/sdps/12.sdp --expect-failure
   - cargo run --example file_parser examples/sdps/13.sdp
