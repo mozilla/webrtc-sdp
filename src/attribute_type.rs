@@ -2918,8 +2918,7 @@ fn parse_rtcp_fb(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError>
                 ));
             }
         },
-        SdpAttributeRtcpFbType::Remb |
-        SdpAttributeRtcpFbType::TransCC => match tokens.get(2) {
+        SdpAttributeRtcpFbType::Remb | SdpAttributeRtcpFbType::TransCC => match tokens.get(2) {
             Some(x) => match x {
                 _ => {
                     return Err(SdpParserInternalError::Unsupported(format!(
