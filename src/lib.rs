@@ -1154,7 +1154,6 @@ mod tests {
     fn test_parse_sdp_line_empty_value() {
         assert!(parse_sdp_line("v=", 0).is_err());
         assert!(parse_sdp_line("o=", 0).is_err());
-        assert!(parse_sdp_line("s=", 0).is_err());
     }
 
     #[test]
