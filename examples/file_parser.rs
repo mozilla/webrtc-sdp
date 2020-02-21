@@ -55,7 +55,7 @@ fn main() {
     // Remove comment lines
     let s = s
         .lines()
-        .filter(|&l| !l.trim_start().starts_with(";"))
+        .filter(|&l| !l.trim_start().starts_with(';'))
         .collect::<Vec<&str>>()
         .join("\r\n");
 
