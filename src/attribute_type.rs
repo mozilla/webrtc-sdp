@@ -2918,23 +2918,12 @@ fn parse_rtcp_fb(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError>
                 ));
             }
         },
-        SdpAttributeRtcpFbType::Remb => match tokens.get(2) {
+        SdpAttributeRtcpFbType::Remb | SdpAttributeRtcpFbType::TransCC => match tokens.get(2) {
             Some(x) => match x {
                 _ => {
                     return Err(SdpParserInternalError::Unsupported(format!(
-                        "Unknown rtcpfb remb parameter: {:?}",
-                        x
-                    )));
-                }
-            },
-            None => "".to_string(),
-        },
-        SdpAttributeRtcpFbType::TransCC => match tokens.get(2) {
-            Some(x) => match x {
-                _ => {
-                    return Err(SdpParserInternalError::Unsupported(format!(
-                        "Unknown rtcpfb transport-cc parameter: {:?}",
-                        x
+                        "Unknown rtcpfb {} parameter: {:?}",
+                        feedback_type, x
                     )));
                 }
             },
@@ -3149,20 +3138,20 @@ mod tests {
     macro_rules! make_check_parse {
         ($attr_type:ty, $attr_kind:path) => {
             |attr_str: &str| -> $attr_type {
-                if let Ok(SdpType::Attribute($attr_kind(attr))) = parse_attribute(attr_str) {
-                    attr
-                } else {
-                    unreachable!();
+                match parse_attribute(attr_str) {
+                    Ok(SdpType::Attribute($attr_kind(attr))) => attr,
+                    Err(e) => panic!(e),
+                    _ => unreachable!(),
                 }
             }
         };
 
         ($attr_kind:path) => {
             |attr_str: &str| -> SdpAttribute {
-                if let Ok(SdpType::Attribute($attr_kind)) = parse_attribute(attr_str) {
-                    $attr_kind
-                } else {
-                    unreachable!();
+                match parse_attribute(attr_str) {
+                    Ok(SdpType::Attribute($attr_kind)) => $attr_kind,
+                    Err(e) => panic!(e),
+                    _ => unreachable!(),
                 }
             }
         };
