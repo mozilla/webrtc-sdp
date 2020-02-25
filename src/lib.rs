@@ -579,6 +579,7 @@ fn parse_sdp_line(line: &str, line_number: usize) -> Result<SdpLine, SdpParserEr
         }
         Some(v) => {
             let trimmed = v.trim();
+            // For compatibility with sites that don't adhere to "s=-" for no session ID
             if trimmed.is_empty() && line_type.as_str() != "s" {
                 return Err(SdpParserError::Line {
                     error: SdpParserInternalError::Generic("value is empty".to_string()),
