@@ -665,24 +665,14 @@ fn sanity_check_sdp_session(session: &SdpSession) -> Result<(), SdpParserError> 
     if session.timing.is_none() {
         return Err(make_seq_error("Missing timing type at session level"));
     }
-
-    let mut mconnections = 0;
-    for msection in &session.media {
-        if msection.get_connection().is_some() {
-            mconnections += 1;
-        }
-    }
-
-    if session.get_connection().is_none() {
-        if session.media.is_empty() {
-            return Err(make_seq_error("Missing connection type at session level"));
-        }
-        if mconnections != session.media.len() {
-            return Err(make_seq_error(
-                "Without connection type at session level all media section
-                 must have connection types",
-            ));
-        }
+    // Checks that all media have connections if there is no top level
+    // This explicitly allows for zero connection lines if there are no media
+    // sections for interoperability reasons.
+    let media_cons = &session.media.iter().all(|m| m.get_connection().is_some());
+    if !media_cons && session.get_connection().is_none() {
+        return Err(make_seq_error(
+            "Without connection type at session level all media sections must have connection types",
+        ));
     }
 
     // Check that extmaps are not defined on session and media level
@@ -1223,7 +1213,7 @@ mod tests {
         let t = SdpTiming { start: 0, stop: 0 };
         sdp_session.set_timing(t);
 
-        assert!(sanity_check_sdp_session(&sdp_session).is_err());
+        assert!(sanity_check_sdp_session(&sdp_session).is_ok());
 
         // the dummy media section doesn't contain a connection
         sdp_session.extend_media(vec![create_dummy_media_section()]);
