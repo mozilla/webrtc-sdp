@@ -52,6 +52,13 @@ fn main() {
         false
     };
 
+    // Remove comment lines
+    let s = s
+        .lines()
+        .filter(|&l| !l.trim_start().starts_with(';'))
+        .collect::<Vec<&str>>()
+        .join("\r\n");
+
     if let Err(why) = webrtc_sdp::parse_sdp(&s, true) {
         panic!("Failed to parse SDP with error: {}", why);
     }
