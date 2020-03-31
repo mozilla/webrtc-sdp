@@ -2,7 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-use std::error::Error;
 use std::fs::File;
 use std::io::prelude::*;
 use std::panic;
@@ -27,13 +26,13 @@ fn main() {
     let display = path.display();
 
     let mut file = match File::open(&path) {
-        Err(why) => panic!("Failed to open {}: {}", display, why.description()),
+        Err(why) => panic!("Failed to open {}: {}", display, why),
         Ok(file) => file,
     };
 
     let mut s = String::new();
     match file.read_to_string(&mut s) {
-        Err(why) => panic!("Couldn't read {}: {}", display, why.description()),
+        Err(why) => panic!("Couldn't read {}: {}", display, why),
         Ok(s) => s,
     };
 
