@@ -1090,6 +1090,29 @@ impl AnonymizingClone for SdpAttributeSsrc {
 
 #[derive(Clone)]
 #[cfg_attr(feature = "serialize", derive(Serialize))]
+pub enum SdpSsrcGroupSemantic {
+    Duplication,              // RFC7104
+    FlowIdentification,       // RFC5576
+    ForwardErrorCorrection,   // RFC5576
+    ForwardErrorCorrectionFR, // RFC5956
+    SIM,                      // not registered with IANA, but used in hangouts
+}
+
+impl fmt::Display for SdpSsrcGroupSemantic {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            SdpSsrcGroupSemantic::Duplication => "DUP",
+            SdpSsrcGroupSemantic::FlowIdentification => "FID",
+            SdpSsrcGroupSemantic::ForwardErrorCorrection => "FEC",
+            SdpSsrcGroupSemantic::ForwardErrorCorrectionFR => "FEC-FR",
+            SdpSsrcGroupSemantic::SIM => "SIM",
+        }
+        .fmt(f)
+    }
+}
+
+#[derive(Clone)]
+#[cfg_attr(feature = "serialize", derive(Serialize))]
 pub enum SdpAttribute {
     BundleOnly,
     Candidate(SdpAttributeCandidate),
@@ -1130,7 +1153,7 @@ pub enum SdpAttribute {
     Setup(SdpAttributeSetup),
     Simulcast(SdpAttributeSimulcast),
     Ssrc(SdpAttributeSsrc),
-    SsrcGroup(String),
+    SsrcGroup(SdpSsrcGroupSemantic, Vec<SdpAttributeSsrc>),
 }
 
 impl SdpAttribute {
@@ -1273,7 +1296,7 @@ impl FromStr for SdpAttribute {
             "rtcp-rsize" => Ok(SdpAttribute::RtcpRsize),
             "sendonly" => Ok(SdpAttribute::Sendonly),
             "sendrecv" => Ok(SdpAttribute::Sendrecv),
-            "ssrc-group" => Ok(SdpAttribute::SsrcGroup(string_or_empty(val)?)),
+            "ssrc-group" => parse_ssrc_group(val),
             "sctp-port" => parse_sctp_port(val),
             "candidate" => parse_candidate(val),
             "extmap" => parse_extmap(val),
@@ -1342,7 +1365,11 @@ impl fmt::Display for SdpAttribute {
             SdpAttribute::Setup(ref a) => attr_to_string(a.to_string()),
             SdpAttribute::Simulcast(ref a) => attr_to_string(a.to_string()),
             SdpAttribute::Ssrc(ref a) => attr_to_string(a.to_string()),
-            SdpAttribute::SsrcGroup(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::SsrcGroup(ref a, ref ssrcs) => {
+                let stringified_ssrcs: Vec<String> =
+                    ssrcs.iter().map(|ssrc| ssrc.to_string()).collect();
+                attr_to_string(a.to_string()) + " " + &stringified_ssrcs.join(" ")
+            }
         }
         .fmt(f)
     }
@@ -1527,6 +1554,55 @@ fn parse_single_direction(to_parse: &str) -> Result<SdpSingleDirection, SdpParse
             x
         ))),
     }
+}
+
+///////////////////////////////////////////////////////////////////////////
+// a=ssrc-group, RFC5576
+//-------------------------------------------------------------------------
+// a=ssrc-group:<semantics> <ssrc-id> ...
+fn parse_ssrc_group(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
+    let mut tokens = to_parse.split_whitespace();
+    let semantics = match tokens.next() {
+        None => {
+            return Err(SdpParserInternalError::Generic(
+                "Ssrc group attribute is missing semantics".to_string(),
+            ));
+        }
+        Some(x) => match x.to_uppercase().as_ref() {
+            "DUP" => SdpSsrcGroupSemantic::Duplication,
+            "FID" => SdpSsrcGroupSemantic::FlowIdentification,
+            "FEC" => SdpSsrcGroupSemantic::ForwardErrorCorrection,
+            "FEC-FR" => SdpSsrcGroupSemantic::ForwardErrorCorrectionFR,
+            "SIM" => SdpSsrcGroupSemantic::SIM,
+            unknown => {
+                return Err(SdpParserInternalError::Unsupported(format!(
+                    "Unknown ssrc semantic '{:?}' found",
+                    unknown
+                )));
+            }
+        },
+    };
+
+    let mut ssrcs = Vec::new();
+    for token in tokens {
+        match parse_ssrc(token) {
+            Ok(SdpAttribute::Ssrc(ssrc)) => {
+                ssrcs.push(ssrc);
+            }
+            Err(err) => {
+                return Err(err);
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    if ssrcs.is_empty() {
+        return Err(SdpParserInternalError::Generic(
+            "Ssrc group must contain at least one ssrc".to_string(),
+        ));
+    }
+
+    Ok(SdpAttribute::SsrcGroup(semantics, ssrcs))
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -4193,13 +4269,30 @@ mod tests {
 
     #[test]
     fn test_parse_attribute_ssrc_group() {
-        let check_parse = make_check_parse!(String, SdpAttribute::SsrcGroup);
-        let check_parse_and_serialize =
-            make_check_parse_and_serialize!(check_parse, SdpAttribute::SsrcGroup);
-
-        check_parse_and_serialize("ssrc-group:FID 3156517279 2673335628");
+        let parsed = parse_attribute("ssrc-group:FID 3156517279 2673335628");
+        match parsed {
+            Ok(SdpType::Attribute(attr)) => {
+                assert_eq!(attr.to_string(), "ssrc-group:FID 3156517279 2673335628");
+                let (semantic, ssrcs) = match attr {
+                    SdpAttribute::SsrcGroup(semantic, ssrcs) => {
+                        let stringified_ssrcs: Vec<String> =
+                            ssrcs.iter().map(|ssrc| ssrc.to_string()).collect();
+                        (semantic.to_string(), stringified_ssrcs)
+                    }
+                    _ => unreachable!(),
+                };
+                assert_eq!(semantic, "FID");
+                assert_eq!(ssrcs.len(), 2);
+                assert_eq!(ssrcs[0], "3156517279");
+                assert_eq!(ssrcs[1], "2673335628");
+            }
+            Err(e) => panic!(e),
+            _ => unreachable!(),
+        }
 
         assert!(parse_attribute("ssrc-group:").is_err());
+        assert!(parse_attribute("ssrc-group:BLAH").is_err());
+        assert!(parse_attribute("ssrc-group:FID").is_err());
     }
 
     #[test]
