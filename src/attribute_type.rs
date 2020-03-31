@@ -577,6 +577,10 @@ pub struct SdpAttributeFmtpParameters {
     // telephone-event
     pub dtmf_tones: String,
 
+    // Rtx
+    pub apt: u8,
+    pub rtx_time: u32,
+
     // Unknown
     pub unknown_tokens: Vec<String>,
 }
@@ -1978,6 +1982,8 @@ fn parse_fmtp(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
         maxplaybackrate: 48000,
         encodings: Vec::new(),
         dtmf_tones: "".to_string(),
+        apt: 0,
+        rtx_time: 0,
         unknown_tokens: Vec::new(),
     };
 
@@ -2058,6 +2064,8 @@ fn parse_fmtp(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
                         parameters.useinbandfec = parse_bool(parameter_val, "useinbandfec")?
                     }
                     "CBR" => parameters.cbr = parse_bool(parameter_val, "cbr")?,
+                    "APT" => parameters.apt = parameter_val.parse::<u8>()?,
+                    "RTX-TIME" => parameters.rtx_time = parameter_val.parse::<u32>()?,
                     _ => parameters
                         .unknown_tokens
                         .push((*parameter_token).to_string()),
@@ -3583,6 +3591,8 @@ mod tests {
         assert!(
             parse_attribute("fmtp:8 x-google-start-bitrate=800; maxplaybackrate=48000;").is_ok()
         );
+        assert!(parse_attribute("fmtp:97 apt=96").is_ok());
+        assert!(parse_attribute("fmtp:97 apt=96;rtx-time=3000").is_ok());
     }
 
     #[test]
