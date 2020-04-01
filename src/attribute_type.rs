@@ -2076,10 +2076,12 @@ fn parse_fmtp(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
                         parameters.useinbandfec = parse_bool(parameter_val, "useinbandfec")?
                     }
                     "CBR" => parameters.cbr = parse_bool(parameter_val, "cbr")?,
-                    "APT" => parameters.apt = {
-                        parameters.use_rtx = true;
-                        parameter_val.parse::<u8>()?
-                    },
+                    "APT" => {
+                        parameters.apt = {
+                            parameters.use_rtx = true;
+                            parameter_val.parse::<u8>()?
+                        }
+                    }
                     "RTX-TIME" => parameters.rtx_time = Some(parameter_val.parse::<u32>()?),
                     _ => parameters
                         .unknown_tokens
