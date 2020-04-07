@@ -544,7 +544,6 @@ impl fmt::Display for SdpAttributeExtmap {
     }
 }
 
-#[repr(C)]
 #[derive(Clone, Copy)]
 #[cfg_attr(feature = "serialize", derive(Serialize))]
 pub struct RtxFmtpParameters {
