@@ -544,6 +544,23 @@ impl fmt::Display for SdpAttributeExtmap {
     }
 }
 
+#[derive(Clone, Copy)]
+#[cfg_attr(feature = "serialize", derive(Serialize))]
+pub struct RtxFmtpParameters {
+    pub apt: u8,
+    pub rtx_time: Option<u32>,
+}
+
+impl fmt::Display for RtxFmtpParameters {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if let Some(rtx_time) = self.rtx_time {
+            write!(f, "apt={};rtx-time={}", self.apt, rtx_time)
+        } else {
+            write!(f, "apt={}", self.apt)
+        }
+    }
+}
+
 #[derive(Clone)]
 #[cfg_attr(feature = "serialize", derive(Serialize))]
 pub struct SdpAttributeFmtpParameters {
@@ -578,9 +595,7 @@ pub struct SdpAttributeFmtpParameters {
     pub dtmf_tones: String,
 
     // RTX
-    pub use_rtx: bool,
-    pub apt: u8,
-    pub rtx_time: Option<u32>,
+    pub rtx: Option<RtxFmtpParameters>,
 
     // Unknown
     pub unknown_tokens: Vec<String>,
@@ -588,18 +603,12 @@ pub struct SdpAttributeFmtpParameters {
 
 impl fmt::Display for SdpAttributeFmtpParameters {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let rtx = if self.use_rtx {
-            if let Some(rtx_time) = self.rtx_time {
-                format!("apt={};rtx-time={}", self.apt, rtx_time)
-            } else {
-                format!("apt={}", self.apt)
-            }
-        } else {
-            String::new()
-        };
+        if let Some(ref rtx) = self.rtx {
+            return write!(f, "{}", rtx);
+        }
         write!(
             f,
-            "{parameters}{red}{dtmf}{rtx}{unknown}",
+            "{parameters}{red}{dtmf}{unknown}",
             parameters = non_empty_string_vec![
                 maybe_print_param("packetization-mode=", self.packetization_mode, 0),
                 maybe_print_bool_param(
@@ -623,7 +632,6 @@ impl fmt::Display for SdpAttributeFmtpParameters {
             .join(";"),
             red = maybe_vector_to_string!("{}", self.encodings, "/"),
             dtmf = maybe_print_param("", self.dtmf_tones.clone(), "".to_string()),
-            rtx = rtx,
             unknown = maybe_vector_to_string!("{}", self.unknown_tokens, ",")
         )
     }
@@ -1993,9 +2001,7 @@ fn parse_fmtp(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
         maxplaybackrate: 48000,
         encodings: Vec::new(),
         dtmf_tones: "".to_string(),
-        use_rtx: false,
-        apt: 0,
-        rtx_time: None,
+        rtx: None,
         unknown_tokens: Vec::new(),
     };
 
@@ -2077,12 +2083,20 @@ fn parse_fmtp(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
                     }
                     "CBR" => parameters.cbr = parse_bool(parameter_val, "cbr")?,
                     "APT" => {
-                        parameters.apt = {
-                            parameters.use_rtx = true;
-                            parameter_val.parse::<u8>()?
+                        parameters.rtx = Some(RtxFmtpParameters {
+                            apt: parameter_val.parse::<u8>()?,
+                            rtx_time: None,
+                        })
+                    }
+                    "RTX-TIME" => {
+                        if let Some(ref mut rtx) = parameters.rtx {
+                            rtx.rtx_time = Some(parameter_val.parse::<u32>()?)
+                        } else {
+                            return Err(SdpParserInternalError::Generic(
+                                "RTX codec must have an APT field".to_string(),
+                            ));
                         }
                     }
-                    "RTX-TIME" => parameters.rtx_time = Some(parameter_val.parse::<u32>()?),
                     _ => parameters
                         .unknown_tokens
                         .push((*parameter_token).to_string()),

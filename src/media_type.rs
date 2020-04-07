@@ -542,9 +542,7 @@ mod tests {
                     maxplaybackrate: 48000,
                     encodings: Vec::new(),
                     dtmf_tones: "".to_string(),
-                    use_rtx: false,
-                    apt: 0,
-                    rtx_time: None,
+                    rtx: None,
                     unknown_tokens: Vec::new()
                 }
             },))
