@@ -581,7 +581,7 @@ pub struct SdpAttributeFmtpParameters {
     // max_fs, already defined in H264
     pub max_fr: u32,
 
-    // Opus
+    // Opus https://tools.ietf.org/html/rfc7587
     pub maxplaybackrate: u32,
     pub maxaveragebitrate: u32,
     pub usedtx: bool,
@@ -2075,7 +2075,7 @@ fn parse_fmtp(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
                     // VP8 and VP9
                     "MAX-FR" => parameters.max_fr = parameter_val.parse::<u32>()?,
 
-                    //Opus
+                    //Opus https://tools.ietf.org/html/rfc7587
                     "MAXPLAYBACKRATE" => {
                         parameters.maxplaybackrate = parameter_val.parse::<u32>()?
                     }
