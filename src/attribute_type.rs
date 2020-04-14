@@ -583,6 +583,7 @@ pub struct SdpAttributeFmtpParameters {
 
     // Opus
     pub maxplaybackrate: u32,
+    pub maxaveragebitrate: u32,
     pub usedtx: bool,
     pub stereo: bool,
     pub useinbandfec: bool,
@@ -624,6 +625,7 @@ impl fmt::Display for SdpAttributeFmtpParameters {
                 maybe_print_param("max-mbps=", self.max_mbps, 0),
                 maybe_print_param("max-fr=", self.max_fr, 0),
                 maybe_print_param("maxplaybackrate=", self.maxplaybackrate, 48000),
+                maybe_print_param("maxaveragebitrate=", self.maxaveragebitrate, 0),
                 maybe_print_bool_param("usedtx", self.usedtx, false),
                 maybe_print_bool_param("stereo", self.stereo, false),
                 maybe_print_bool_param("useinbandfec", self.useinbandfec, false),
@@ -1999,6 +2001,7 @@ fn parse_fmtp(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
         cbr: false,
         max_fr: 0,
         maxplaybackrate: 48000,
+        maxaveragebitrate: 0,
         encodings: Vec::new(),
         dtmf_tones: "".to_string(),
         rtx: None,
@@ -2075,6 +2078,9 @@ fn parse_fmtp(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
                     //Opus
                     "MAXPLAYBACKRATE" => {
                         parameters.maxplaybackrate = parameter_val.parse::<u32>()?
+                    }
+                    "MAXAVERAGEBITRATE" => {
+                        parameters.maxaveragebitrate = parameter_val.parse::<u32>()?
                     }
                     "USEDTX" => parameters.usedtx = parse_bool(parameter_val, "usedtx")?,
                     "STEREO" => parameters.stereo = parse_bool(parameter_val, "stereo")?,
@@ -3607,6 +3613,7 @@ mod tests {
         );
         assert!(parse_attribute("fmtp:109 maxplaybackrate=48000; stereo=1;useinbandfec=1").is_ok());
         check_parse_and_serialize("fmtp:8 maxplaybackrate=46000");
+        check_parse_and_serialize("fmtp:8 maxaveragebitrate=46000");
         check_parse_and_serialize(
             "fmtp:8 max-cpb=1234;max-dpb=32000;max-br=3;max-mbps=46000;usedtx=1;cbr=1",
         );
