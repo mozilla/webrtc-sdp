@@ -3052,14 +3052,12 @@ fn parse_rtcp_fb(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError>
             }
         },
         SdpAttributeRtcpFbType::Remb | SdpAttributeRtcpFbType::TransCC => match tokens.get(2) {
-            Some(x) => match x {
-                _ => {
-                    return Err(SdpParserInternalError::Unsupported(format!(
-                        "Unknown rtcpfb {} parameter: {:?}",
-                        feedback_type, x
-                    )));
-                }
-            },
+            Some(x) => {
+                return Err(SdpParserInternalError::Unsupported(format!(
+                    "Unknown rtcpfb {} parameter: {:?}",
+                    feedback_type, x
+                )));
+            }
             None => "".to_string(),
         },
     };
