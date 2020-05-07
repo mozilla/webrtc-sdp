@@ -1,5 +1,5 @@
 # Changelog
-## [0.3.6] - 2020-04-07
+## [0.3.6] - 2020-05-07
 - Added support for Opus FMTP parameters ptime, maxptime, minptime, and maxaveragebitrate
 ## [0.3.5] - 2020-04-07
 ### Fixed
