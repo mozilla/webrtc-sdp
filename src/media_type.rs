@@ -261,9 +261,11 @@ impl SdpMedia {
                 "connection type already exists at this media level".to_string(),
             ));
         }
-        self.connection = Some(c);
+        self.set_connection_force(c);
         Ok(())
     }
+
+    pub fn set_connection_force(&mut self, c: SdpConnection) { self.connection = Some(c) }
 
     pub fn add_datachannel(
         &mut self,
