@@ -265,7 +265,9 @@ impl SdpMedia {
         Ok(())
     }
 
-    pub fn set_connection_force(&mut self, c: SdpConnection) { self.connection = Some(c) }
+    pub fn set_connection_force(&mut self, c: SdpConnection) {
+        self.connection = Some(c)
+    }
 
     pub fn add_datachannel(
         &mut self,
