@@ -359,7 +359,7 @@ impl SdpSession {
             address: addr,
             ttl: None,
             amount: None,
-        })?;
+        });
 
         self.media.push(media);
 
@@ -1232,7 +1232,7 @@ mod tests {
         let mut second_media = create_dummy_media_section();
         let mconnection = parse_connection("IN IP4 0.0.0.0")?;
         if let SdpType::Connection(c) = mconnection {
-            second_media.set_connection(c)?;
+            second_media.set_connection(c);
         } else {
             unreachable!();
         }
