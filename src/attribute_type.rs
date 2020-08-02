@@ -614,7 +614,11 @@ impl fmt::Display for SdpAttributeFmtpParameters {
             f,
             "{parameters}{red}{dtmf}{unknown}",
             parameters = non_empty_string_vec![
-                maybe_print_param("profile-level-id=", format!("{:06x}", self.profile_level_id), "420010".to_string()),
+                maybe_print_param(
+                    "profile-level-id=",
+                    format!("{:06x}", self.profile_level_id),
+                    "420010".to_string()
+                ),
                 maybe_print_bool_param(
                     "level-asymmetry-allowed",
                     self.level_asymmetry_allowed,
@@ -3614,7 +3618,9 @@ mod tests {
             make_check_parse_and_serialize!(check_parse, SdpAttribute::Fmtp);
 
         check_parse_and_serialize("fmtp:109 maxplaybackrate=46000;stereo=1;useinbandfec=1");
-        check_parse_and_serialize("fmtp:126 profile-level-id=42e01f;level-asymmetry-allowed=1;packetization-mode=1");
+        check_parse_and_serialize(
+            "fmtp:126 profile-level-id=42e01f;level-asymmetry-allowed=1;packetization-mode=1",
+        );
         check_parse_and_serialize("fmtp:66 0-15");
         check_parse_and_serialize("fmtp:109 0-15,66");
         check_parse_and_serialize("fmtp:66 111/115");
