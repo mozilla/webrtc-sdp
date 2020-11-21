@@ -17,6 +17,7 @@ use {SdpBandwidth, SdpConnection, SdpLine, SdpType};
  */
 #[derive(Clone)]
 #[cfg_attr(feature = "serialize", derive(Serialize))]
+#[cfg_attr(feature = "enhanced_debug", derive(Debug))]
 pub struct SdpMediaLine {
     pub media: SdpMediaValue,
     pub port: u32,
@@ -95,6 +96,7 @@ impl fmt::Display for SdpProtocolValue {
 
 #[derive(Clone)]
 #[cfg_attr(feature = "serialize", derive(Serialize))]
+#[cfg_attr(feature = "enhanced_debug", derive(Debug))]
 pub enum SdpFormatList {
     Integers(Vec<u32>),
     Strings(Vec<String>),
@@ -121,6 +123,7 @@ impl fmt::Display for SdpFormatList {
  */
 #[derive(Clone)]
 #[cfg_attr(feature = "serialize", derive(Serialize))]
+#[cfg_attr(feature = "enhanced_debug", derive(Debug))]
 pub struct SdpMedia {
     media: SdpMediaLine,
     connection: Option<SdpConnection>,
@@ -223,12 +226,14 @@ impl SdpMedia {
         }
 
         self.attribute.retain({
-            |x| !matches!(*x,
+            |x| {
+                !matches!(*x,
                 SdpAttribute::Rtpmap(_)
                 | SdpAttribute::Fmtp(_)
                 | SdpAttribute::Rtcpfb(_)
                 | SdpAttribute::Sctpmap(_)
                 | SdpAttribute::SctpPort(_))
+            }
         });
     }
 
