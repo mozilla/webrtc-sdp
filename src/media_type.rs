@@ -223,14 +223,12 @@ impl SdpMedia {
         }
 
         self.attribute.retain({
-            |x| match *x {
+            |x| !matches!(*x,
                 SdpAttribute::Rtpmap(_)
                 | SdpAttribute::Fmtp(_)
                 | SdpAttribute::Rtcpfb(_)
                 | SdpAttribute::Sctpmap(_)
-                | SdpAttribute::SctpPort(_) => false,
-                _ => true,
-            }
+                | SdpAttribute::SctpPort(_))
         });
     }
 
