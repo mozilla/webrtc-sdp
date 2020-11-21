@@ -353,9 +353,9 @@ pub struct SdpAttributeSimulcastId {
 
 impl SdpAttributeSimulcastId {
     pub fn new(idstr: &str) -> SdpAttributeSimulcastId {
-        if idstr.starts_with('~') {
+        if let Some(idstr) = idstr.strip_prefix('~') {
             SdpAttributeSimulcastId {
-                id: idstr[1..].to_string(),
+                id: idstr.to_string(),
                 paused: true,
             }
         } else {
@@ -2409,8 +2409,7 @@ fn parse_image_attr_set(
     };
 
     for current_token in tokens {
-        if current_token.starts_with("sar=") {
-            let value_token = &current_token[4..];
+        if let Some(value_token) = current_token.strip_prefix("sar=") {
             if value_token.starts_with('[') {
                 let sar_values = parse_imagettr_braced_token(value_token).ok_or_else(|| {
                     SdpParserInternalError::Generic(
@@ -2454,8 +2453,7 @@ fn parse_image_attr_set(
                     value_token.parse::<f32>()?,
                 ]))
             }
-        } else if current_token.starts_with("par=") {
-            let braced_value_token = &current_token[4..];
+        } else if let Some(braced_value_token) = current_token.strip_prefix("par=") {
             if !braced_value_token.starts_with('[') {
                 return Err(SdpParserInternalError::Generic(
                     "imageattr's par value must start with '['".to_string(),
@@ -2472,8 +2470,8 @@ fn parse_image_attr_set(
                 min: range.0,
                 max: range.1,
             })
-        } else if current_token.starts_with("q=") {
-            q = Some(current_token[2..].parse::<f32>()?);
+        } else if let Some(qval) = current_token.strip_prefix("q=") {
+            q = Some(qval.parse::<f32>()?);
         }
     }
 
@@ -2754,12 +2752,10 @@ fn parse_rid(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
         // The 'pt' parameter must be the first parameter if present, so it
         // cannot be checked along with the other parameters below
         if let Some(maybe_fmt_parameter) = parameters.clone().peek() {
-            if maybe_fmt_parameter.starts_with("pt=") {
-                let fmt_list = maybe_fmt_parameter[3..].split(',');
-                for fmt in fmt_list {
+            if let Some(fmt_list) = maybe_fmt_parameter.strip_prefix("pt=") {
+                for fmt in fmt_list.split(',') {
                     formats.push(fmt.trim().parse::<u16>()?);
                 }
-
                 parameters.next();
             }
         }
@@ -3682,10 +3678,8 @@ mod tests {
         check_parse_and_serialize("group:BUNDLE sdparta_0 sdparta_1 sdparta_2");
 
         assert!(parse_attribute("group:").is_err());
-        assert!(match parse_attribute("group:NEVER_SUPPORTED_SEMANTICS") {
-            Err(SdpParserInternalError::Unsupported(_)) => true,
-            _ => false,
-        })
+        assert!(matches!(parse_attribute("group:NEVER_SUPPORTED_SEMANTICS"),
+                         Err(SdpParserInternalError::Unsupported(_))));
     }
 
     #[test]
