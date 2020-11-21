@@ -14,7 +14,9 @@ travis-ci = { repository = "mozilla/webrtc-sdp", branch = "master" }
 codecov = { repository = "mozilla/webrtc-sdp", branch = "master", service = "github" }
 
 [features]
-default = []
+default = ["enhanced_debug"]
+# debugging output
+enhanced_debug = []
 # serializability
 serialize = ["serde", "serde_derive"]
 
