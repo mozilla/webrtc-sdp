@@ -1,5 +1,7 @@
 # Changelog
-## [upcoming] - 2020-05-19
+## [0.3.7] - 2020-11-23
+- Minimum Rust version >= 1.45
+- Added feature for parse object tree wide debug formatting, defaulted to on for now
 - Moved check for multiple c lines within an m section out of the setter and into the parsing logic, credit Mnwa
 ## [0.3.6] - 2020-05-07
 - Added support for Opus FMTP parameters ptime, maxptime, minptime, and maxaveragebitrate
