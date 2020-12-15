@@ -80,7 +80,7 @@ where
 
 pub fn maybe_print_bool_param(name: &str, param: bool, default_value: bool) -> String {
     if param != default_value {
-        name.to_owned() + "=" + &(if param { "1" } else { "0" }).to_string()
+        name.to_owned() + "=" + &(param as i32).to_string()
     } else {
         "".to_string()
     }
