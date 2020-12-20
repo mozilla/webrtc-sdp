@@ -5,3 +5,4 @@ jobs:
     steps:
       - checkout
       - run: cargo --version
+      - run: cargo build --release
