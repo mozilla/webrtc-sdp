@@ -1328,8 +1328,9 @@ impl FromStr for SdpAttribute {
         };
         if tokens.len() > 1 {
             match name.as_str() {
-                "bundle-only" | "end-of-candidates" | "ice-lite" | "ice-mismatch" | "inactive"
-                | "recvonly" | "rtcp-mux" | "rtcp-rsize" | "sendonly" | "sendrecv" | "extmap-allow-mixed" => {
+                "bundle-only" | "end-of-candidates" | "extmap-allow-mixed" | "ice-lite"
+                | "ice-mismatch" | "inactive" | "recvonly" | "rtcp-mux" | "rtcp-rsize"
+                | "sendonly" | "sendrecv" => {
                     return Err(SdpParserInternalError::Generic(format!(
                         "{} attribute is not allowed to have a value",
                         name
