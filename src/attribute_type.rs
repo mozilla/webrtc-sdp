@@ -1182,6 +1182,7 @@ pub enum SdpAttribute {
     DtlsMessage(SdpAttributeDtlsMessage),
     EndOfCandidates,
     Extmap(SdpAttributeExtmap),
+    ExtmapAllowMixed,
     Fingerprint(SdpAttributeFingerprint),
     Fmtp(SdpAttributeFmtp),
     Group(SdpAttributeGroup),
@@ -1249,6 +1250,7 @@ impl SdpAttribute {
             SdpAttribute::DtlsMessage { .. }
             | SdpAttribute::EndOfCandidates
             | SdpAttribute::Extmap(..)
+            | SdpAttribute::ExtmapAllowMixed
             | SdpAttribute::Fingerprint(..)
             | SdpAttribute::Group(..)
             | SdpAttribute::IceLite
@@ -1279,6 +1281,7 @@ impl SdpAttribute {
             | SdpAttribute::Candidate(..)
             | SdpAttribute::EndOfCandidates
             | SdpAttribute::Extmap(..)
+            | SdpAttribute::ExtmapAllowMixed
             | SdpAttribute::Fingerprint(..)
             | SdpAttribute::Fmtp(..)
             | SdpAttribute::IceMismatch
@@ -1326,7 +1329,7 @@ impl FromStr for SdpAttribute {
         if tokens.len() > 1 {
             match name.as_str() {
                 "bundle-only" | "end-of-candidates" | "ice-lite" | "ice-mismatch" | "inactive"
-                | "recvonly" | "rtcp-mux" | "rtcp-rsize" | "sendonly" | "sendrecv" => {
+                | "recvonly" | "rtcp-mux" | "rtcp-rsize" | "sendonly" | "sendrecv" | "extmap-allow-mixed" => {
                     return Err(SdpParserInternalError::Generic(format!(
                         "{} attribute is not allowed to have a value",
                         name
@@ -1341,6 +1344,7 @@ impl FromStr for SdpAttribute {
             "end-of-candidates" => Ok(SdpAttribute::EndOfCandidates),
             "ice-lite" => Ok(SdpAttribute::IceLite),
             "ice-mismatch" => Ok(SdpAttribute::IceMismatch),
+            "extmap-allow-mixed" => Ok(SdpAttribute::ExtmapAllowMixed),
             "ice-pwd" => Ok(SdpAttribute::IcePwd(string_or_empty(val)?)),
             "ice-ufrag" => Ok(SdpAttribute::IceUfrag(string_or_empty(val)?)),
             "identity" => Ok(SdpAttribute::Identity(string_or_empty(val)?)),
@@ -1394,6 +1398,7 @@ impl fmt::Display for SdpAttribute {
             SdpAttribute::DtlsMessage(ref a) => attr_to_string(a.to_string()),
             SdpAttribute::EndOfCandidates => SdpAttributeType::EndOfCandidates.to_string(),
             SdpAttribute::Extmap(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::ExtmapAllowMixed => SdpAttributeType::ExtmapAllowMixed.to_string(),
             SdpAttribute::Fingerprint(ref a) => attr_to_string(a.to_string()),
             SdpAttribute::Fmtp(ref a) => attr_to_string(a.to_string()),
             SdpAttribute::Group(ref a) => attr_to_string(a.to_string()),
@@ -1459,6 +1464,7 @@ pub enum SdpAttributeType {
     DtlsMessage,
     EndOfCandidates,
     Extmap,
+    ExtmapAllowMixed,
     Fingerprint,
     Fmtp,
     Group,
@@ -1504,6 +1510,7 @@ impl<'a> From<&'a SdpAttribute> for SdpAttributeType {
             SdpAttribute::DtlsMessage { .. } => SdpAttributeType::DtlsMessage,
             SdpAttribute::EndOfCandidates { .. } => SdpAttributeType::EndOfCandidates,
             SdpAttribute::Extmap { .. } => SdpAttributeType::Extmap,
+            SdpAttribute::ExtmapAllowMixed { .. } => SdpAttributeType::ExtmapAllowMixed,
             SdpAttribute::Fingerprint { .. } => SdpAttributeType::Fingerprint,
             SdpAttribute::Fmtp { .. } => SdpAttributeType::Fmtp,
             SdpAttribute::Group { .. } => SdpAttributeType::Group,
@@ -1551,6 +1558,7 @@ impl fmt::Display for SdpAttributeType {
             SdpAttributeType::DtlsMessage => "dtls-message",
             SdpAttributeType::EndOfCandidates => "end-of-candidates",
             SdpAttributeType::Extmap => "extmap",
+            SdpAttributeType::ExtmapAllowMixed => "extmap-allow-mixed",
             SdpAttributeType::Fingerprint => "fingerprint",
             SdpAttributeType::Fmtp => "fmtp",
             SdpAttributeType::Group => "group",
@@ -3730,6 +3738,16 @@ mod tests {
         check_parse_and_serialize("ice-lite");
 
         assert!(parse_attribute("ice-lite foobar").is_err());
+    }
+
+    #[test]
+    fn test_parse_attribute_extmap_allow_mixed() {
+        let check_parse = make_check_parse!(SdpAttribute::ExtmapAllowMixed);
+        let check_parse_and_serialize = make_check_parse_and_serialize!(check_parse);
+
+        check_parse_and_serialize("extmap-allow-mixed");
+
+        assert!(parse_attribute("extmap-allow-mixed 100").is_err());
     }
 
     #[test]
