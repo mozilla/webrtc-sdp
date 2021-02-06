@@ -230,7 +230,7 @@ impl fmt::Display for SdpSession {
             bandwidth = maybe_vector_to_string!("b={}\r\n", self.bandwidth, "\r\nb="),
             connection = option_to_string!("c={}\r\n", self.connection),
             session_attributes = maybe_vector_to_string!("a={}\r\n", self.attribute, "\r\na="),
-            media_sections = maybe_vector_to_string!("{}", self.media, "\r\n")
+            media_sections = self.media.iter().map(|s| s.to_string()).collect::<String>(),
         )
     }
 }
