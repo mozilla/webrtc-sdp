@@ -779,5 +779,4 @@ a=ssrc:2673335628 mslabel:HWpbmTmXleVSnlssQd80bPuw9cxQFroDkkBP\r\n
 a=ssrc:2673335628 label:b6ec5178-c611-403f-bbec-3833ed547c09\r\n";
     let parsed_sdp = webrtc_sdp::parse_sdp(sdp, true).unwrap();
     assert!(!parsed_sdp.to_string().contains("\r\n\r\n"));
-   
 }
