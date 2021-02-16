@@ -625,8 +625,8 @@ impl fmt::Display for SdpAttributeFmtpParameters {
         }
         write!(
             f,
-            "{parameters}{red}{dtmf}{unknown}",
-            parameters = non_empty_string_vec![
+            "{}",
+            non_empty_string_vec![
                 maybe_print_param(
                     "profile-level-id=",
                     format!("{:06x}", self.profile_level_id),
@@ -652,12 +652,12 @@ impl fmt::Display for SdpAttributeFmtpParameters {
                 maybe_print_bool_param("usedtx", self.usedtx, false),
                 maybe_print_bool_param("stereo", self.stereo, false),
                 maybe_print_bool_param("useinbandfec", self.useinbandfec, false),
-                maybe_print_bool_param("cbr", self.cbr, false)
+                maybe_print_bool_param("cbr", self.cbr, false),
+                maybe_vector_to_string!("{}", self.encodings, "/"),
+                maybe_print_param("", self.dtmf_tones.clone(), "".to_string()),
+                maybe_vector_to_string!("{}", self.unknown_tokens, ",")
             ]
-            .join(";"),
-            red = maybe_vector_to_string!("{}", self.encodings, "/"),
-            dtmf = maybe_print_param("", self.dtmf_tones.clone(), "".to_string()),
-            unknown = maybe_vector_to_string!("{}", self.unknown_tokens, ",")
+            .join(";")
         )
     }
 }
@@ -4409,5 +4409,37 @@ mod tests {
     #[test]
     fn test_parse_unknown_attribute() {
         assert!(parse_attribute("unknown").is_err())
+    }
+
+    #[test]
+    fn test_serialize_fmtp_parameters_unknown_tokens() {
+        let att = SdpAttributeFmtpParameters {
+            packetization_mode: 1,
+            level_asymmetry_allowed: false,
+            profile_level_id: 0x0042_0010,
+            max_fs: 0,
+            max_cpb: 0,
+            max_dpb: 0,
+            max_br: 0,
+            max_mbps: 0,
+            usedtx: false,
+            stereo: false,
+            useinbandfec: false,
+            cbr: false,
+            max_fr: 0,
+            maxplaybackrate: 48000,
+            maxaveragebitrate: 0,
+            ptime: 0,
+            minptime: 0,
+            maxptime: 0,
+            encodings: Vec::new(),
+            dtmf_tones: "".to_string(),
+            rtx: None,
+            unknown_tokens: vec!["sprop-parameter-sets=Z0LAFYyNQKD5APCIRqA=,aM48gA==".to_string()],
+        };
+        assert_eq!(
+            format!("{}", att),
+            "packetization-mode=1;sprop-parameter-sets=Z0LAFYyNQKD5APCIRqA=,aM48gA=="
+        );
     }
 }
