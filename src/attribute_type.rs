@@ -621,12 +621,26 @@ pub struct SdpAttributeFmtpParameters {
 impl fmt::Display for SdpAttributeFmtpParameters {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if let Some(ref rtx) = self.rtx {
+            // rtx
             return write!(f, "{}", rtx);
         }
+        if !self.dtmf_tones.is_empty() {
+            // telephone-event
+            return write!(f, "{}", self.dtmf_tones);
+        } else if !self.encodings.is_empty() {
+            // red encodings
+            return self
+                .encodings
+                .iter()
+                .map(ToString::to_string)
+                .collect::<Vec<String>>()
+                .join("/")
+                .fmt(f);
+        };
         write!(
             f,
-            "{parameters}{red}{dtmf}{unknown}",
-            parameters = non_empty_string_vec![
+            "{}",
+            non_empty_string_vec![
                 maybe_print_param(
                     "profile-level-id=",
                     format!("{:06x}", self.profile_level_id),
@@ -652,12 +666,10 @@ impl fmt::Display for SdpAttributeFmtpParameters {
                 maybe_print_bool_param("usedtx", self.usedtx, false),
                 maybe_print_bool_param("stereo", self.stereo, false),
                 maybe_print_bool_param("useinbandfec", self.useinbandfec, false),
-                maybe_print_bool_param("cbr", self.cbr, false)
+                maybe_print_bool_param("cbr", self.cbr, false),
+                maybe_vector_to_string!("{}", self.unknown_tokens, ",")
             ]
-            .join(";"),
-            red = maybe_vector_to_string!("{}", self.encodings, "/"),
-            dtmf = maybe_print_param("", self.dtmf_tones.clone(), "".to_string()),
-            unknown = maybe_vector_to_string!("{}", self.unknown_tokens, ",")
+            .join(";")
         )
     }
 }
@@ -3684,6 +3696,9 @@ mod tests {
         );
         check_parse_and_serialize("fmtp:97 apt=96");
         check_parse_and_serialize("fmtp:97 apt=96;rtx-time=3000");
+        check_parse_and_serialize(
+            "fmtp:102 packetization-mode=1;sprop-parameter-sets=Z0LAFYyNQKD5APCIRqA=,aM48gA==",
+        );
     }
 
     #[test]
