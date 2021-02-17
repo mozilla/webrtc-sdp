@@ -88,6 +88,6 @@ workflows:
           matrix:
             parameters:
               features: ["", "serialize"]
-              rustversion: ["1.45.0", "1.49.0"]
-              latestrustversion: ["1.49.0"]
+              rustversion: ["1.45.0", "1.50.0"]
+              latestrustversion: ["1.50.0"]
 
