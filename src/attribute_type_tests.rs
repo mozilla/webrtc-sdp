@@ -372,8 +372,8 @@ fn test_parse_attribute_fmtp() {
     check_parse_and_serialize("fmtp:97 apt=96");
     check_parse_and_serialize("fmtp:97 apt=96;rtx-time=3000");
     check_parse_and_serialize(
-            "fmtp:102 packetization-mode=1;sprop-parameter-sets=Z0LAFYyNQKD5APCIRqA=,aM48gA==",
-        );
+        "fmtp:102 packetization-mode=1;sprop-parameter-sets=Z0LAFYyNQKD5APCIRqA=,aM48gA==",
+    );
 }
 
 #[test]
