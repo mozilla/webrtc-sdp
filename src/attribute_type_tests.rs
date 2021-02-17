@@ -371,6 +371,9 @@ fn test_parse_attribute_fmtp() {
     assert!(parse_attribute("fmtp:8 x-google-start-bitrate=800; maxplaybackrate=48000;").is_ok());
     check_parse_and_serialize("fmtp:97 apt=96");
     check_parse_and_serialize("fmtp:97 apt=96;rtx-time=3000");
+    check_parse_and_serialize(
+            "fmtp:102 packetization-mode=1;sprop-parameter-sets=Z0LAFYyNQKD5APCIRqA=,aM48gA==",
+        );
 }
 
 #[test]
