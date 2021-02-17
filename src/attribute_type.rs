@@ -621,8 +621,22 @@ pub struct SdpAttributeFmtpParameters {
 impl fmt::Display for SdpAttributeFmtpParameters {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if let Some(ref rtx) = self.rtx {
+            // rtx
             return write!(f, "{}", rtx);
         }
+        if self.dtmf_tones.len() > 0 {
+            // telephone-event
+            return write!(f, "{}", self.dtmf_tones);
+        } else if self.encodings.len() > 0 {
+            // red encodings
+            return self
+                .encodings
+                .iter()
+                .map(ToString::to_string)
+                .collect::<Vec<String>>()
+                .join("/")
+                .fmt(f);
+        };
         write!(
             f,
             "{}",
@@ -653,8 +667,6 @@ impl fmt::Display for SdpAttributeFmtpParameters {
                 maybe_print_bool_param("stereo", self.stereo, false),
                 maybe_print_bool_param("useinbandfec", self.useinbandfec, false),
                 maybe_print_bool_param("cbr", self.cbr, false),
-                maybe_vector_to_string!("{}", self.encodings, "/"),
-                maybe_print_param("", self.dtmf_tones.clone(), "".to_string()),
                 maybe_vector_to_string!("{}", self.unknown_tokens, ",")
             ]
             .join(";")
