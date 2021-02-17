@@ -732,7 +732,7 @@ fn test_parse_sdp_vector_missing_session() -> Result<(), SdpParserError> {
 }
 
 #[test]
-fn test_session_add_media_works() -> Result<(), SdpParserError> {
+fn test_session_add_media_works() -> () {
     let mut sdp_session = create_dummy_sdp_session();
     assert!(sdp_session
         .add_media(
@@ -750,7 +750,6 @@ fn test_session_add_media_works() -> Result<(), SdpParserError> {
     assert!(sdp_session.media[0]
         .get_attribute(SdpAttributeType::Sendrecv)
         .is_some());
-    Ok(())
 }
 
 #[test]
