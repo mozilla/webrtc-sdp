@@ -624,10 +624,10 @@ impl fmt::Display for SdpAttributeFmtpParameters {
             // rtx
             return write!(f, "{}", rtx);
         }
-        if self.dtmf_tones.len() > 0 {
+        if !self.dtmf_tones.is_empty() {
             // telephone-event
             return write!(f, "{}", self.dtmf_tones);
-        } else if self.encodings.len() > 0 {
+        } else if !self.encodings.is_empty() {
             // red encodings
             return self
                 .encodings
