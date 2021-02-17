@@ -927,7 +927,6 @@ mod tests {
     use super::*;
     use address::{Address, AddressType};
     use anonymizer::ToBytesVec;
-    use media_type::create_dummy_media_section;
     use std::net::IpAddr;
     use std::net::Ipv4Addr;
 
@@ -949,6 +948,17 @@ mod tests {
             unreachable!();
         }
         sdp_session
+    }
+
+    pub fn create_dummy_media_section() -> SdpMedia {
+        let media_line = SdpMediaLine {
+            media: SdpMediaValue::Audio,
+            port: 9,
+            port_count: 0,
+            proto: SdpProtocolValue::RtpSavpf,
+            formats: SdpFormatList::Integers(Vec::new()),
+        };
+        SdpMedia::new(media_line)
     }
 
     #[test]
