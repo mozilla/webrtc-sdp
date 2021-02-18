@@ -396,6 +396,9 @@ impl AnonymizingClone for SdpSession {
     }
 }
 
+/* removing this wrap would not allow us to call this from the match statement inside
+ * parse_sdp_line() */
+#[allow(clippy::unnecessary_wraps)]
 fn parse_session(value: &str) -> Result<SdpType, SdpParserInternalError> {
     trace!("session: {}", value);
     Ok(SdpType::Session(String::from(value)))
