@@ -732,7 +732,7 @@ fn test_parse_sdp_vector_missing_session() -> Result<(), SdpParserError> {
 }
 
 #[test]
-fn test_session_add_media_works() -> () {
+fn test_session_add_media_works() {
     let mut sdp_session = create_dummy_sdp_session();
     assert!(sdp_session
         .add_media(
