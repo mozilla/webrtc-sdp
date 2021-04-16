@@ -686,7 +686,10 @@ fn test_parse_sdp_vector_too_short() -> Result<(), SdpParserError> {
 
 #[test]
 fn test_parse_sdp_vector_missing_version() -> Result<(), SdpParserError> {
-    let mut lines: Vec<SdpLine> = vec![parse_sdp_line( "o=ausername 4294967296 2 IN IP4 127.0.0.1", 1,)?];
+    let mut lines: Vec<SdpLine> = vec![parse_sdp_line(
+        "o=ausername 4294967296 2 IN IP4 127.0.0.1",
+        1,
+    )?];
     for _ in 0..3 {
         lines.push(parse_sdp_line("a=sendrecv", 1)?);
     }
