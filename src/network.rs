@@ -29,7 +29,7 @@ pub fn parse_address_type(value: &str) -> Result<AddressType, SdpParserInternalE
 }
 
 pub fn parse_unicast_address(value: &str) -> Result<Address, SdpParserInternalError> {
-    Ok(Address::from_str(value)?)
+    Address::from_str(value)
 }
 
 #[cfg(test)]
