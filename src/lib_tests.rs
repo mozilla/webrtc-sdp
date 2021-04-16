@@ -617,8 +617,7 @@ fn test_mask_sdp() {
 #[test]
 fn test_parse_session_vector() -> Result<(), SdpParserError> {
     let mut sdp_session = create_dummy_sdp_session();
-    let mut lines: Vec<SdpLine> = Vec::new();
-    lines.push(parse_sdp_line("a=sendrecv", 1)?);
+    let mut lines: Vec<SdpLine> = vec![parse_sdp_line("a=sendrecv", 1)?];
     sdp_session.parse_session_vector(&mut lines)?;
     assert_eq!(sdp_session.attribute.len(), 1);
     Ok(())
@@ -627,8 +626,7 @@ fn test_parse_session_vector() -> Result<(), SdpParserError> {
 #[test]
 fn test_parse_session_vector_non_session_attribute() -> Result<(), SdpParserError> {
     let mut sdp_session = create_dummy_sdp_session();
-    let mut lines: Vec<SdpLine> = Vec::new();
-    lines.push(parse_sdp_line("a=bundle-only", 2)?);
+    let mut lines: Vec<SdpLine> = vec![parse_sdp_line("a=bundle-only", 2)?];
     assert!(sdp_session.parse_session_vector(&mut lines).is_err());
     assert_eq!(sdp_session.attribute.len(), 0);
     Ok(())
@@ -637,8 +635,7 @@ fn test_parse_session_vector_non_session_attribute() -> Result<(), SdpParserErro
 #[test]
 fn test_parse_session_vector_version_repeated() -> Result<(), SdpParserError> {
     let mut sdp_session = create_dummy_sdp_session();
-    let mut lines: Vec<SdpLine> = Vec::new();
-    lines.push(parse_sdp_line("v=0", 3)?);
+    let mut lines: Vec<SdpLine> = vec![parse_sdp_line("v=0", 3)?];
     assert!(sdp_session.parse_session_vector(&mut lines).is_err());
     Ok(())
 }
@@ -646,16 +643,14 @@ fn test_parse_session_vector_version_repeated() -> Result<(), SdpParserError> {
 #[test]
 fn test_parse_session_vector_contains_media_type() -> Result<(), SdpParserError> {
     let mut sdp_session = create_dummy_sdp_session();
-    let mut lines: Vec<SdpLine> = Vec::new();
-    lines.push(parse_sdp_line("m=audio 0 UDP/TLS/RTP/SAVPF 0", 4)?);
+    let mut lines: Vec<SdpLine> = vec![parse_sdp_line("m=audio 0 UDP/TLS/RTP/SAVPF 0", 4)?];
     assert!(sdp_session.parse_session_vector(&mut lines).is_err());
     Ok(())
 }
 
 #[test]
 fn test_parse_sdp_vector_no_media_section() -> Result<(), SdpParserError> {
-    let mut lines: Vec<SdpLine> = Vec::new();
-    lines.push(parse_sdp_line("v=0", 1)?);
+    let mut lines: Vec<SdpLine> = vec![parse_sdp_line("v=0", 1)?];
     lines.push(parse_sdp_line(
         "o=ausername 4294967296 2 IN IP4 127.0.0.1",
         1,
@@ -669,8 +664,7 @@ fn test_parse_sdp_vector_no_media_section() -> Result<(), SdpParserError> {
 
 #[test]
 fn test_parse_sdp_vector_with_media_section() -> Result<(), SdpParserError> {
-    let mut lines: Vec<SdpLine> = Vec::new();
-    lines.push(parse_sdp_line("v=0", 1)?);
+    let mut lines: Vec<SdpLine> = vec![parse_sdp_line("v=0", 1)?];
     lines.push(parse_sdp_line(
         "o=ausername 4294967296 2 IN IP4 127.0.0.1",
         1,
@@ -685,19 +679,14 @@ fn test_parse_sdp_vector_with_media_section() -> Result<(), SdpParserError> {
 
 #[test]
 fn test_parse_sdp_vector_too_short() -> Result<(), SdpParserError> {
-    let mut lines: Vec<SdpLine> = Vec::new();
-    lines.push(parse_sdp_line("v=0", 1)?);
+    let mut lines: Vec<SdpLine> = vec![parse_sdp_line("v=0", 1)?];
     assert!(parse_sdp_vector(&mut lines).is_err());
     Ok(())
 }
 
 #[test]
 fn test_parse_sdp_vector_missing_version() -> Result<(), SdpParserError> {
-    let mut lines: Vec<SdpLine> = Vec::new();
-    lines.push(parse_sdp_line(
-        "o=ausername 4294967296 2 IN IP4 127.0.0.1",
-        1,
-    )?);
+    let mut lines: Vec<SdpLine> = vec![parse_sdp_line( "o=ausername 4294967296 2 IN IP4 127.0.0.1", 1,)?];
     for _ in 0..3 {
         lines.push(parse_sdp_line("a=sendrecv", 1)?);
     }
@@ -707,8 +696,7 @@ fn test_parse_sdp_vector_missing_version() -> Result<(), SdpParserError> {
 
 #[test]
 fn test_parse_sdp_vector_missing_origin() -> Result<(), SdpParserError> {
-    let mut lines: Vec<SdpLine> = Vec::new();
-    lines.push(parse_sdp_line("v=0", 1)?);
+    let mut lines: Vec<SdpLine> = vec![parse_sdp_line("v=0", 1)?];
     for _ in 0..3 {
         lines.push(parse_sdp_line("a=sendrecv", 1)?);
     }
@@ -718,8 +706,7 @@ fn test_parse_sdp_vector_missing_origin() -> Result<(), SdpParserError> {
 
 #[test]
 fn test_parse_sdp_vector_missing_session() -> Result<(), SdpParserError> {
-    let mut lines: Vec<SdpLine> = Vec::new();
-    lines.push(parse_sdp_line("v=0", 1)?);
+    let mut lines: Vec<SdpLine> = vec![parse_sdp_line("v=0", 1)?];
     lines.push(parse_sdp_line(
         "o=ausername 4294967296 2 IN IP4 127.0.0.1",
         1,
