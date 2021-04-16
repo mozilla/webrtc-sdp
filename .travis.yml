@@ -105,10 +105,3 @@ script:
   - cargo run --example file_parser examples/sdps/40.sdp
   - cargo run --example file_parser examples/sdps/41.sdp --expect-failure
 
-
-after_success: |
-  - |
-    if [[ "$TRAVIS_OS_NAME" == "linux" && "$TRAVIS_RUST_VERSION" == "nightly" && "$FEATURES" == "serialize" ]]; then
-      cargo tarpaulin --out Xml &&
-      bash <(curl -s https://codecov.io/bash)
-    fi
