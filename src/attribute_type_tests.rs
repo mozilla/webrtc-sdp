@@ -11,7 +11,7 @@ macro_rules! make_check_parse {
         |attr_str: &str| -> $attr_type {
             match parse_attribute(attr_str) {
                 Ok(SdpType::Attribute($attr_kind(attr))) => attr,
-                Err(e) => panic!(e),
+                Err(e) => panic!("{}", e),
                 _ => unreachable!(),
             }
         }
@@ -21,7 +21,7 @@ macro_rules! make_check_parse {
         |attr_str: &str| -> SdpAttribute {
             match parse_attribute(attr_str) {
                 Ok(SdpType::Attribute($attr_kind)) => $attr_kind,
-                Err(e) => panic!(e),
+                Err(e) => panic!("{}", e),
                 _ => unreachable!(),
             }
         }
@@ -553,11 +553,11 @@ fn test_parse_attribute_imageattr_recv_and_verify() {
             let set = &sets[0];
             assert_eq!(
                 set.x,
-                SdpAttributeImageAttrXYRange::DiscreteValues(vec![800])
+                SdpAttributeImageAttrXyRange::DiscreteValues(vec![800])
             );
             assert_eq!(
                 set.y,
-                SdpAttributeImageAttrXYRange::DiscreteValues(vec![50, 80, 30])
+                SdpAttributeImageAttrXyRange::DiscreteValues(vec![50, 80, 30])
             );
             assert_eq!(set.par, None);
             assert_eq!(
@@ -577,11 +577,11 @@ fn test_parse_attribute_imageattr_recv_and_verify() {
             let set = &sets[0];
             assert_eq!(
                 set.x,
-                SdpAttributeImageAttrXYRange::DiscreteValues(vec![330])
+                SdpAttributeImageAttrXyRange::DiscreteValues(vec![330])
             );
             assert_eq!(
                 set.y,
-                SdpAttributeImageAttrXYRange::DiscreteValues(vec![250])
+                SdpAttributeImageAttrXyRange::DiscreteValues(vec![250])
             );
             assert_eq!(set.par, None);
             assert_eq!(
@@ -613,11 +613,11 @@ fn test_parse_attribute_imageattr_send_and_verify() {
             let first_set = &sets[0];
             assert_eq!(
                 first_set.x,
-                SdpAttributeImageAttrXYRange::Range(480, 800, Some(16))
+                SdpAttributeImageAttrXyRange::Range(480, 800, Some(16))
             );
             assert_eq!(
                 first_set.y,
-                SdpAttributeImageAttrXYRange::DiscreteValues(vec![100, 200, 300])
+                SdpAttributeImageAttrXyRange::DiscreteValues(vec![100, 200, 300])
             );
             assert_eq!(
                 first_set.par,
@@ -629,11 +629,11 @@ fn test_parse_attribute_imageattr_send_and_verify() {
             let second_set = &sets[1];
             assert_eq!(
                 second_set.x,
-                SdpAttributeImageAttrXYRange::DiscreteValues(vec![1080])
+                SdpAttributeImageAttrXyRange::DiscreteValues(vec![1080])
             );
             assert_eq!(
                 second_set.y,
-                SdpAttributeImageAttrXYRange::Range(144, 176, None)
+                SdpAttributeImageAttrXyRange::Range(144, 176, None)
             );
             assert_eq!(second_set.par, None);
             assert_eq!(
@@ -1078,7 +1078,7 @@ fn test_parse_attribute_ssrc_group() {
             assert_eq!(ssrcs[0], "3156517279");
             assert_eq!(ssrcs[1], "2673335628");
         }
-        Err(e) => panic!(e),
+        Err(e) => panic!("{}", e),
         _ => unreachable!(),
     }
 

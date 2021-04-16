@@ -470,7 +470,7 @@ pub enum SdpAttributeRtcpFbType {
     Nack,
     TrrInt,
     Remb,
-    TransCC,
+    TransCc,
 }
 
 impl fmt::Display for SdpAttributeRtcpFbType {
@@ -481,7 +481,7 @@ impl fmt::Display for SdpAttributeRtcpFbType {
             SdpAttributeRtcpFbType::Nack => "nack",
             SdpAttributeRtcpFbType::TrrInt => "trr-int",
             SdpAttributeRtcpFbType::Remb => "goog-remb",
-            SdpAttributeRtcpFbType::TransCC => "transport-cc",
+            SdpAttributeRtcpFbType::TransCc => "transport-cc",
         }
         .fmt(f)
     }
@@ -769,22 +769,22 @@ where
 
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(feature = "serialize", derive(Serialize))]
-pub enum SdpAttributeImageAttrXYRange {
+pub enum SdpAttributeImageAttrXyRange {
     Range(u32, u32, Option<u32>), // min, max, step
     DiscreteValues(Vec<u32>),
 }
 
-impl fmt::Display for SdpAttributeImageAttrXYRange {
+impl fmt::Display for SdpAttributeImageAttrXyRange {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            SdpAttributeImageAttrXYRange::Range(ref min, ref max, ref step_opt) => {
+            SdpAttributeImageAttrXyRange::Range(ref min, ref max, ref step_opt) => {
                 write!(f, "[{}:", min)?;
                 if step_opt.is_some() {
                     write!(f, "{}:", step_opt.unwrap())?;
                 }
                 write!(f, "{}]", max)
             }
-            SdpAttributeImageAttrXYRange::DiscreteValues(ref values) => {
+            SdpAttributeImageAttrXyRange::DiscreteValues(ref values) => {
                 write!(f, "{}", imageattr_discrete_value_list_to_string(values))
             }
         }
@@ -825,8 +825,8 @@ impl fmt::Display for SdpAttributeImageAttrPRange {
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(feature = "serialize", derive(Serialize))]
 pub struct SdpAttributeImageAttrSet {
-    pub x: SdpAttributeImageAttrXYRange,
-    pub y: SdpAttributeImageAttrXYRange,
+    pub x: SdpAttributeImageAttrXyRange,
+    pub y: SdpAttributeImageAttrXyRange,
     pub sar: Option<SdpAttributeImageAttrSRange>,
     pub par: Option<SdpAttributeImageAttrPRange>,
     pub q: Option<f32>,
@@ -1168,8 +1168,8 @@ pub enum SdpSsrcGroupSemantic {
     Duplication,              // RFC7104
     FlowIdentification,       // RFC5576
     ForwardErrorCorrection,   // RFC5576
-    ForwardErrorCorrectionFR, // RFC5956
-    SIM,                      // not registered with IANA, but used in hangouts
+    ForwardErrorCorrectionFr, // RFC5956
+    Sim,                      // not registered with IANA, but used in hangouts
 }
 
 impl fmt::Display for SdpSsrcGroupSemantic {
@@ -1178,8 +1178,8 @@ impl fmt::Display for SdpSsrcGroupSemantic {
             SdpSsrcGroupSemantic::Duplication => "DUP",
             SdpSsrcGroupSemantic::FlowIdentification => "FID",
             SdpSsrcGroupSemantic::ForwardErrorCorrection => "FEC",
-            SdpSsrcGroupSemantic::ForwardErrorCorrectionFR => "FEC-FR",
-            SdpSsrcGroupSemantic::SIM => "SIM",
+            SdpSsrcGroupSemantic::ForwardErrorCorrectionFr => "FEC-FR",
+            SdpSsrcGroupSemantic::Sim => "SIM",
         }
         .fmt(f)
     }
@@ -1656,8 +1656,8 @@ fn parse_ssrc_group(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalErr
             "DUP" => SdpSsrcGroupSemantic::Duplication,
             "FID" => SdpSsrcGroupSemantic::FlowIdentification,
             "FEC" => SdpSsrcGroupSemantic::ForwardErrorCorrection,
-            "FEC-FR" => SdpSsrcGroupSemantic::ForwardErrorCorrectionFR,
-            "SIM" => SdpSsrcGroupSemantic::SIM,
+            "FEC-FR" => SdpSsrcGroupSemantic::ForwardErrorCorrectionFr,
+            "SIM" => SdpSsrcGroupSemantic::Sim,
             unknown => {
                 return Err(SdpParserInternalError::Unsupported(format!(
                     "Unknown ssrc semantic '{:?}' found",
@@ -2356,7 +2356,7 @@ fn parse_imagettr_braced_token(to_parse: &str) -> Option<&str> {
 
 fn parse_image_attr_xyrange(
     to_parse: &str,
-) -> Result<SdpAttributeImageAttrXYRange, SdpParserInternalError> {
+) -> Result<SdpAttributeImageAttrXyRange, SdpParserInternalError> {
     if to_parse.starts_with('[') {
         let value_tokens = parse_imagettr_braced_token(to_parse).ok_or_else(|| {
             SdpParserInternalError::Generic(
@@ -2369,13 +2369,13 @@ fn parse_image_attr_xyrange(
             let range_tokens: Vec<&str> = value_tokens.split(':').collect();
 
             if range_tokens.len() == 3 {
-                Ok(SdpAttributeImageAttrXYRange::Range(
+                Ok(SdpAttributeImageAttrXyRange::Range(
                     range_tokens[0].parse::<u32>()?,
                     range_tokens[2].parse::<u32>()?,
                     Some(range_tokens[1].parse::<u32>()?),
                 ))
             } else if range_tokens.len() == 2 {
-                Ok(SdpAttributeImageAttrXYRange::Range(
+                Ok(SdpAttributeImageAttrXyRange::Range(
                     range_tokens[0].parse::<u32>()?,
                     range_tokens[1].parse::<u32>()?,
                     None,
@@ -2398,10 +2398,10 @@ fn parse_image_attr_xyrange(
                 ));
             }
 
-            Ok(SdpAttributeImageAttrXYRange::DiscreteValues(values))
+            Ok(SdpAttributeImageAttrXyRange::DiscreteValues(values))
         }
     } else {
-        Ok(SdpAttributeImageAttrXYRange::DiscreteValues(vec![
+        Ok(SdpAttributeImageAttrXyRange::DiscreteValues(vec![
             to_parse.parse::<u32>()?
         ]))
     }
@@ -2534,13 +2534,9 @@ where
     I: Iterator<Item = String> + Clone,
 {
     let parse_set = |set_token: &str| -> Result<SdpAttributeImageAttrSet, SdpParserInternalError> {
-        Ok(parse_image_attr_set(
-            parse_imagettr_braced_token(set_token).ok_or_else(|| {
-                SdpParserInternalError::Generic(
-                    "imageattr sets must be enclosed by ']'".to_string(),
-                )
-            })?,
-        )?)
+        parse_image_attr_set(parse_imagettr_braced_token(set_token).ok_or_else(|| {
+            SdpParserInternalError::Generic("imageattr sets must be enclosed by ']'".to_string())
+        })?)
     };
 
     match tokens
@@ -3027,7 +3023,7 @@ fn parse_rtcp_fb(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError>
             "nack" => SdpAttributeRtcpFbType::Nack,
             "trr-int" => SdpAttributeRtcpFbType::TrrInt,
             "goog-remb" => SdpAttributeRtcpFbType::Remb,
-            "transport-cc" => SdpAttributeRtcpFbType::TransCC,
+            "transport-cc" => SdpAttributeRtcpFbType::TransCc,
             _ => {
                 return Err(SdpParserInternalError::Unsupported(format!(
                     "Unknown rtcpfb feedback type: {:?}",
@@ -3100,7 +3096,7 @@ fn parse_rtcp_fb(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError>
                 ));
             }
         },
-        SdpAttributeRtcpFbType::Remb | SdpAttributeRtcpFbType::TransCC => match tokens.get(2) {
+        SdpAttributeRtcpFbType::Remb | SdpAttributeRtcpFbType::TransCc => match tokens.get(2) {
             Some(x) => {
                 return Err(SdpParserInternalError::Unsupported(format!(
                     "Unknown rtcpfb {} parameter: {:?}",
