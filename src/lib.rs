@@ -720,6 +720,16 @@ fn sanity_check_sdp_session(session: &SdpSession) -> Result<(), SdpParserError> 
             }
         }
 
+        if msection
+            .get_attribute(SdpAttributeType::RtcpMuxOnly)
+            .is_some()
+            && msection.get_attribute(SdpAttributeType::RtcpMux).is_none()
+        {
+            return Err(make_seq_error(
+                "rtcp-mux-only requires to have a rtcp-mux attribute as well",
+            ));
+        }
+
         let rids: Vec<&SdpAttributeRid> = msection
             .get_attributes()
             .iter()
