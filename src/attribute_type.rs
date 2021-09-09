@@ -2714,10 +2714,7 @@ fn parse_msid(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
         }
         Some(x) => x.to_string(),
     };
-    let appdata = match tokens.next() {
-        None => None,
-        Some(x) => Some(x.to_string()),
-    };
+    let appdata = tokens.next().map(|x| x.to_string());
     Ok(SdpAttribute::Msid(SdpAttributeMsid { id, appdata }))
 }
 

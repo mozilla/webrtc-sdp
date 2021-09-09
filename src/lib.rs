@@ -836,7 +836,7 @@ fn parse_sdp_vector(lines: &mut Vec<SdpLine>) -> Result<SdpSession, SdpParserErr
 
     let _media_pos = lines
         .iter()
-        .position(|ref l| matches!(l.sdp_type, SdpType::Media(_)));
+        .position(|l| matches!(l.sdp_type, SdpType::Media(_)));
 
     match _media_pos {
         Some(p) => {
