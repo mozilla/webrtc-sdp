@@ -726,7 +726,7 @@ fn sanity_check_sdp_session(session: &SdpSession) -> Result<(), SdpParserError> 
             && msection.get_attribute(SdpAttributeType::RtcpMux).is_none()
         {
             return Err(make_seq_error(
-                "rtcp-mux-only requires to have a rtcp-mux attribute as well",
+                "rtcp-mux-only media sections must also contain the rtcp-mux attribute",
             ));
         }
 

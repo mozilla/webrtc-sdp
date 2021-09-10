@@ -707,6 +707,7 @@ a=mid:audio\r\n
 a=extmap:1 urn:ietf:params:rtp-hdrext:ssrc-audio-level\r\n
 a=sendrecv\r\n
 a=rtcp-mux\r\n
+a=rtcp-mux-only\r\n
 a=rtpmap:111 opus/48000/2\r\n
 a=rtcp-fb:111 transport-cc\r\n
 a=fmtp:111 minptime=10;useinbandfec=1\r\n
