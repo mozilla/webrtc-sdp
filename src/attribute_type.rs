@@ -1221,7 +1221,7 @@ pub enum SdpAttribute {
     Rtcp(SdpAttributeRtcp),
     Rtcpfb(SdpAttributeRtcpFb),
     RtcpMux,
-    RtcpMuxOnly,                    // RFC8858
+    RtcpMuxOnly, // RFC8858
     RtcpRsize,
     Sctpmap(SdpAttributeSctpmap),
     SctpPort(u64),
