@@ -926,6 +926,15 @@ fn test_parse_attribute_rtcp_mux() {
 }
 
 #[test]
+fn test_parse_attribute_rtcp_mux_only() {
+    let check_parse = make_check_parse!(SdpAttribute::RtcpMuxOnly);
+    let check_parse_and_serialize = make_check_parse_and_serialize!(check_parse);
+
+    check_parse_and_serialize("rtcp-mux-only");
+    assert!(parse_attribute("rtcp-mux-only bar").is_err());
+}
+
+#[test]
 fn test_parse_attribute_rtcp_rsize() {
     let check_parse = make_check_parse!(SdpAttribute::RtcpRsize);
     let check_parse_and_serialize = make_check_parse_and_serialize!(check_parse);

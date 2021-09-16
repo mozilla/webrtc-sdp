@@ -720,6 +720,16 @@ fn sanity_check_sdp_session(session: &SdpSession) -> Result<(), SdpParserError> 
             }
         }
 
+        if msection
+            .get_attribute(SdpAttributeType::RtcpMuxOnly)
+            .is_some()
+            && msection.get_attribute(SdpAttributeType::RtcpMux).is_none()
+        {
+            return Err(make_seq_error(
+                "rtcp-mux-only media sections must also contain the rtcp-mux attribute",
+            ));
+        }
+
         let rids: Vec<&SdpAttributeRid> = msection
             .get_attributes()
             .iter()
@@ -826,7 +836,7 @@ fn parse_sdp_vector(lines: &mut Vec<SdpLine>) -> Result<SdpSession, SdpParserErr
 
     let _media_pos = lines
         .iter()
-        .position(|ref l| matches!(l.sdp_type, SdpType::Media(_)));
+        .position(|l| matches!(l.sdp_type, SdpType::Media(_)));
 
     match _media_pos {
         Some(p) => {

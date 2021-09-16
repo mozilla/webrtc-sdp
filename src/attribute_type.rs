@@ -1221,6 +1221,7 @@ pub enum SdpAttribute {
     Rtcp(SdpAttributeRtcp),
     Rtcpfb(SdpAttributeRtcpFb),
     RtcpMux,
+    RtcpMuxOnly, // RFC8858
     RtcpRsize,
     Sctpmap(SdpAttributeSctpmap),
     SctpPort(u64),
@@ -1252,6 +1253,7 @@ impl SdpAttribute {
             | SdpAttribute::Rtcp(..)
             | SdpAttribute::Rtcpfb(..)
             | SdpAttribute::RtcpMux
+            | SdpAttribute::RtcpMuxOnly
             | SdpAttribute::RtcpRsize
             | SdpAttribute::Sctpmap(..)
             | SdpAttribute::SctpPort(..)
@@ -1315,6 +1317,7 @@ impl SdpAttribute {
             | SdpAttribute::Rtcp(..)
             | SdpAttribute::Rtcpfb(..)
             | SdpAttribute::RtcpMux
+            | SdpAttribute::RtcpMuxOnly
             | SdpAttribute::RtcpRsize
             | SdpAttribute::Sctpmap(..)
             | SdpAttribute::SctpPort(..)
@@ -1341,8 +1344,8 @@ impl FromStr for SdpAttribute {
         if tokens.len() > 1 {
             match name.as_str() {
                 "bundle-only" | "end-of-candidates" | "extmap-allow-mixed" | "ice-lite"
-                | "ice-mismatch" | "inactive" | "recvonly" | "rtcp-mux" | "rtcp-rsize"
-                | "sendonly" | "sendrecv" => {
+                | "ice-mismatch" | "inactive" | "recvonly" | "rtcp-mux" | "rtcp-mux-only"
+                | "rtcp-rsize" | "sendonly" | "sendrecv" => {
                     return Err(SdpParserInternalError::Generic(format!(
                         "{} attribute is not allowed to have a value",
                         name
@@ -1373,6 +1376,7 @@ impl FromStr for SdpAttribute {
             "rid" => parse_rid(val),
             "recvonly" => Ok(SdpAttribute::Recvonly),
             "rtcp-mux" => Ok(SdpAttribute::RtcpMux),
+            "rtcp-mux-only" => Ok(SdpAttribute::RtcpMuxOnly),
             "rtcp-rsize" => Ok(SdpAttribute::RtcpRsize),
             "sendonly" => Ok(SdpAttribute::Sendonly),
             "sendrecv" => Ok(SdpAttribute::Sendrecv),
@@ -1438,6 +1442,7 @@ impl fmt::Display for SdpAttribute {
             SdpAttribute::Rtcp(ref a) => attr_to_string(a.to_string()),
             SdpAttribute::Rtcpfb(ref a) => attr_to_string(a.to_string()),
             SdpAttribute::RtcpMux => SdpAttributeType::RtcpMux.to_string(),
+            SdpAttribute::RtcpMuxOnly => SdpAttributeType::RtcpMuxOnly.to_string(),
             SdpAttribute::RtcpRsize => SdpAttributeType::RtcpRsize.to_string(),
             SdpAttribute::Sctpmap(ref a) => attr_to_string(a.to_string()),
             SdpAttribute::SctpPort(ref a) => attr_to_string(a.to_string()),
@@ -1504,6 +1509,7 @@ pub enum SdpAttributeType {
     Rtcp,
     Rtcpfb,
     RtcpMux,
+    RtcpMuxOnly,
     RtcpRsize,
     Sctpmap,
     SctpPort,
@@ -1549,6 +1555,7 @@ impl<'a> From<&'a SdpAttribute> for SdpAttributeType {
             SdpAttribute::Rtcp { .. } => SdpAttributeType::Rtcp,
             SdpAttribute::Rtcpfb { .. } => SdpAttributeType::Rtcpfb,
             SdpAttribute::RtcpMux { .. } => SdpAttributeType::RtcpMux,
+            SdpAttribute::RtcpMuxOnly { .. } => SdpAttributeType::RtcpMuxOnly,
             SdpAttribute::RtcpRsize { .. } => SdpAttributeType::RtcpRsize,
             SdpAttribute::Rtpmap { .. } => SdpAttributeType::Rtpmap,
             SdpAttribute::Sctpmap { .. } => SdpAttributeType::Sctpmap,
@@ -1598,6 +1605,7 @@ impl fmt::Display for SdpAttributeType {
             SdpAttributeType::Rtcp => "rtcp",
             SdpAttributeType::Rtcpfb => "rtcp-fb",
             SdpAttributeType::RtcpMux => "rtcp-mux",
+            SdpAttributeType::RtcpMuxOnly => "rtcp-mux-only",
             SdpAttributeType::RtcpRsize => "rtcp-rsize",
             SdpAttributeType::Sctpmap => "sctpmap",
             SdpAttributeType::SctpPort => "sctp-port",
@@ -2706,10 +2714,7 @@ fn parse_msid(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
         }
         Some(x) => x.to_string(),
     };
-    let appdata = match tokens.next() {
-        None => None,
-        Some(x) => Some(x.to_string()),
-    };
+    let appdata = tokens.next().map(|x| x.to_string());
     Ok(SdpAttribute::Msid(SdpAttributeMsid { id, appdata }))
 }
 

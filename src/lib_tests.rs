@@ -678,6 +678,22 @@ fn test_parse_sdp_vector_with_media_section() -> Result<(), SdpParserError> {
 }
 
 #[test]
+fn test_parse_sdp_vector_with_missing_rtcp_mux() -> Result<(), SdpParserError> {
+    let mut lines: Vec<SdpLine> = vec![parse_sdp_line("v=0", 1)?];
+    lines.push(parse_sdp_line(
+        "o=ausername 4294967296 2 IN IP4 127.0.0.1",
+        1,
+    )?);
+    lines.push(parse_sdp_line("s=SIP Call", 1)?);
+    lines.push(parse_sdp_line("t=0 0", 1)?);
+    lines.push(parse_sdp_line("m=video 56436 RTP/SAVPF 120", 1)?);
+    lines.push(parse_sdp_line("c=IN IP6 ::1", 1)?);
+    lines.push(parse_sdp_line("a=rtcp-mux-only", 1)?);
+    assert!(parse_sdp_vector(&mut lines).is_err());
+    Ok(())
+}
+
+#[test]
 fn test_parse_sdp_vector_too_short() -> Result<(), SdpParserError> {
     let mut lines: Vec<SdpLine> = vec![parse_sdp_line("v=0", 1)?];
     assert!(parse_sdp_vector(&mut lines).is_err());
