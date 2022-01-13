@@ -17,8 +17,8 @@ jobs:
     steps:
       - checkout
       # rustfmt - https://github.com/rust-lang/rustfmt#checking-style-on-a-ci-server
-      - run: rustup component add rustfmt
-      - run: rustup component add clippy
+      - run: "[ $LATEST_RUST != $RUST_VERSION ] && echo Skipping installing rustfmt || rustup component add rustfmt"
+      - run: "[ $LATEST_RUST != $RUST_VERSION ] && echo Skipping installing clippy || rustup component add clippy"
       - run: cargo --version
       # cargo-tarpaulin for code coverage
       # This will be landed in a future update
@@ -26,15 +26,15 @@ jobs:
       # cargo-audit
       - run: sudo apt-get update
       - run: sudo apt-get install pkg-config libssl-dev
-      - run: cargo install --force cargo-audit
       - run: cargo generate-lockfile
-      - run: cargo audit
+      # NOTE: not to be done except with the latest version
+      - run: "[ $LATEST_RUST != $RUST_VERSION ] && echo Skipping cargo audit || (cargo install --force cargo-audit && cargo audit)"
       # NOTE: not to be done in nightly
       - run: "[ $LATEST_RUST != $RUST_VERSION ] && echo Skipping cargo fmt || cargo fmt --all -- --check"
       - run: cargo clean
       - run: cargo build --verbose --all --features=$FEATURES
       # NOTE: not to be done in nightly
-      - run: cargo clippy --all-targets --all-features -- -D warnings
+      - run: "[ $LATEST_RUST != $RUST_VERSION ] && echo Skipping cargo clippy || cargo clippy --all-targets --all-features -- -D warnings"
       - run: cargo test --all-targets --all-features --verbose --all
       # Parser tests
       - run: cargo run --example file_parser examples/sdps/02.sdp
@@ -88,6 +88,6 @@ workflows:
           matrix:
             parameters:
               features: ["", "serialize"]
-              rustversion: ["1.45.0", "1.49.0"]
-              latestrustversion: ["1.49.0"]
+              rustversion: ["1.45.0", "1.57.0"]
+              latestrustversion: ["1.57.0"]
 
