@@ -704,6 +704,55 @@ pub enum SdpAttributeFingerprintHashType {
     Sha512,
 }
 
+impl SdpAttributeFingerprintHashType {
+    fn try_from_name(name: &str) -> Result<Self, SdpParserInternalError> {
+        match name {
+            "sha-1" => Ok(Self::Sha1),
+            "sha-224" => Ok(Self::Sha224),
+            "sha-256" => Ok(Self::Sha256),
+            "sha-384" => Ok(Self::Sha384),
+            "sha-512" => Ok(Self::Sha512),
+            unknown => Err(SdpParserInternalError::Unsupported(format!(
+                "fingerprint contains an unsupported hash algorithm '{}'",
+                unknown
+            ))),
+        }
+    }
+    fn octet_count(&self) -> usize {
+        match self {
+            Self::Sha1 => 20,
+            Self::Sha224 => 28,
+            Self::Sha256 => 32,
+            Self::Sha384 => 48,
+            Self::Sha512 => 64,
+        }
+    }
+
+    fn parse_octets(&self, octets_string: &str) -> Result<Vec<u8>, SdpParserInternalError> {
+        let bytes = octets_string
+            .split(':')
+            .map(|byte_token| {
+                if byte_token.len() != 2 {
+                    return Err(SdpParserInternalError::Generic(
+                        "fingerpint's byte tokens must have 2 hexdigits".to_string(),
+                    ));
+                }
+                Ok(u8::from_str_radix(byte_token, 16)?)
+            })
+            .collect::<Result<Vec<u8>, _>>()?;
+
+        if bytes.len() != self.octet_count() {
+            return Err(SdpParserInternalError::Generic(format!(
+                "fingerprint has {} bytes but should have {} bytes",
+                bytes.len(),
+                self.octet_count(),
+            )));
+        }
+
+        Ok(bytes)
+    }
+}
+
 impl fmt::Display for SdpAttributeFingerprintHashType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
@@ -1983,53 +2032,8 @@ fn parse_fingerprint(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalEr
         ));
     }
 
-    let fingerprint_token = tokens[1].to_string();
-    let parse_tokens = |expected_len| -> Result<Vec<u8>, SdpParserInternalError> {
-        let bytes = fingerprint_token
-            .split(':')
-            .map(|byte_token| {
-                if byte_token.len() != 2 {
-                    return Err(SdpParserInternalError::Generic(
-                        "fingerpint's byte tokens must have 2 hexdigits".to_string(),
-                    ));
-                }
-                Ok(u8::from_str_radix(byte_token, 16)?)
-            })
-            .collect::<Result<Vec<u8>, _>>()?;
-
-        if bytes.len() != expected_len {
-            return Err(SdpParserInternalError::Generic(format!(
-                "fingerprint has {} bytes but should have {} bytes",
-                bytes.len(),
-                expected_len
-            )));
-        }
-
-        Ok(bytes)
-    };
-
-    let hash_algorithm = match tokens[0] {
-        "sha-1" => SdpAttributeFingerprintHashType::Sha1,
-        "sha-224" => SdpAttributeFingerprintHashType::Sha224,
-        "sha-256" => SdpAttributeFingerprintHashType::Sha256,
-        "sha-384" => SdpAttributeFingerprintHashType::Sha384,
-        "sha-512" => SdpAttributeFingerprintHashType::Sha512,
-        unknown => {
-            return Err(SdpParserInternalError::Unsupported(format!(
-                "fingerprint contains an unsupported hash algorithm '{}'",
-                unknown
-            )));
-        }
-    };
-
-    let fingerprint = match hash_algorithm {
-        SdpAttributeFingerprintHashType::Sha1 => parse_tokens(20)?,
-        SdpAttributeFingerprintHashType::Sha224 => parse_tokens(28)?,
-        SdpAttributeFingerprintHashType::Sha256 => parse_tokens(32)?,
-        SdpAttributeFingerprintHashType::Sha384 => parse_tokens(48)?,
-        SdpAttributeFingerprintHashType::Sha512 => parse_tokens(64)?,
-    };
-
+    let hash_algorithm = SdpAttributeFingerprintHashType::try_from_name(tokens[0])?;
+    let fingerprint = hash_algorithm.parse_octets(tokens[1])?;
     Ok(SdpAttribute::Fingerprint(SdpAttributeFingerprint {
         hash_algorithm,
         fingerprint,
