@@ -693,7 +693,7 @@ impl fmt::Display for SdpAttributeFmtp {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serialize", derive(Serialize))]
 #[cfg_attr(feature = "enhanced_debug", derive(Debug))]
 pub enum SdpAttributeFingerprintHashType {
@@ -766,12 +766,31 @@ impl fmt::Display for SdpAttributeFingerprintHashType {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serialize", derive(Serialize))]
 #[cfg_attr(feature = "enhanced_debug", derive(Debug))]
 pub struct SdpAttributeFingerprint {
     pub hash_algorithm: SdpAttributeFingerprintHashType,
     pub fingerprint: Vec<u8>,
+}
+
+impl TryFrom<(SdpAttributeFingerprintHashType, Vec<u8>)> for SdpAttributeFingerprint {
+    type Error = SdpParserInternalError;
+    fn try_from(
+        parts: (SdpAttributeFingerprintHashType, Vec<u8>),
+    ) -> Result<Self, SdpParserInternalError> {
+        let (hash_algorithm, fingerprint) = parts;
+        match (hash_algorithm.octet_count(), fingerprint.len()) {
+            (a, b) if a == b => Ok(Self {
+                hash_algorithm,
+                fingerprint,
+            }),
+            (a, b) => Err(SdpParserInternalError::Generic(format!(
+                "Hash algoritm expects {} fingerprint bytes not {}",
+                a, b
+            ))),
+        }
+    }
 }
 
 impl fmt::Display for SdpAttributeFingerprint {
@@ -2033,11 +2052,9 @@ fn parse_fingerprint(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalEr
     }
 
     let hash_algorithm = SdpAttributeFingerprintHashType::try_from_name(tokens[0])?;
-    let fingerprint = hash_algorithm.parse_octets(tokens[1])?;
-    Ok(SdpAttribute::Fingerprint(SdpAttributeFingerprint {
-        hash_algorithm,
-        fingerprint,
-    }))
+    let bytes = hash_algorithm.parse_octets(tokens[1])?;
+    let fingerprint = SdpAttributeFingerprint::try_from((hash_algorithm, bytes))?;
+    Ok(SdpAttribute::Fingerprint(fingerprint))
 }
 
 ///////////////////////////////////////////////////////////////////////////
