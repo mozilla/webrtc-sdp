@@ -705,7 +705,7 @@ pub enum SdpAttributeFingerprintHashType {
 }
 
 impl SdpAttributeFingerprintHashType {
-    fn try_from_name(name: &str) -> Result<Self, SdpParserInternalError> {
+    pub fn try_from_name(name: &str) -> Result<Self, SdpParserInternalError> {
         match name {
             "sha-1" => Ok(Self::Sha1),
             "sha-224" => Ok(Self::Sha224),
@@ -718,7 +718,7 @@ impl SdpAttributeFingerprintHashType {
             ))),
         }
     }
-    fn octet_count(&self) -> usize {
+    pub fn octet_count(&self) -> usize {
         match self {
             Self::Sha1 => 20,
             Self::Sha224 => 28,
@@ -728,7 +728,7 @@ impl SdpAttributeFingerprintHashType {
         }
     }
 
-    fn parse_octets(&self, octets_string: &str) -> Result<Vec<u8>, SdpParserInternalError> {
+    pub fn parse_octets(&self, octets_string: &str) -> Result<Vec<u8>, SdpParserInternalError> {
         let bytes = octets_string
             .split(':')
             .map(|byte_token| {
