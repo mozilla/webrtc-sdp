@@ -543,7 +543,7 @@ fn parse_timing(value: &str) -> Result<SdpType, SdpParserInternalError> {
     Ok(SdpType::Timing(t))
 }
 
-fn parse_sdp_line(line: &str, line_number: usize) -> Result<SdpLine, SdpParserError> {
+pub fn parse_sdp_line(line: &str, line_number: usize) -> Result<SdpLine, SdpParserError> {
     if line.find('=') == None {
         return Err(SdpParserError::Line {
             error: SdpParserInternalError::Generic("missing = character in line".to_string()),
