@@ -60,7 +60,7 @@ fn test_sdp_parser_internal_error_integer() {
         format!("{}", int_err),
         "Integer parsing error: invalid digit found in string"
     );
-    assert!(!int_err.source().is_none());
+    assert!(int_err.source().is_some());
 }
 
 #[test]
@@ -73,7 +73,7 @@ fn test_sdp_parser_internal_error_float() {
         format!("{}", int_err),
         "Float parsing error: invalid float literal"
     );
-    assert!(!int_err.source().is_none());
+    assert!(int_err.source().is_some());
 }
 
 #[test]
@@ -84,7 +84,7 @@ fn test_sdp_parser_internal_error_address() {
         format!("{}", addr_err),
         "Domain name parsing error: invalid IPv4 address"
     );
-    assert!(!addr_err.source().is_none());
+    assert!(addr_err.source().is_some());
 }
 
 #[test]

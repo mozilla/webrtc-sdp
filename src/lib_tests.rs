@@ -299,12 +299,11 @@ fn test_sanity_check_sdp_session_media() -> Result<(), SdpParserError> {
 #[test]
 fn test_sanity_check_sdp_connection() -> Result<(), SdpParserInternalError> {
     let origin = parse_origin("mozilla 506705521068071134 0 IN IP4 0.0.0.0")?;
-    let mut sdp_session;
-    if let SdpType::Origin(o) = origin {
-        sdp_session = SdpSession::new(0, o, "-".to_string());
+    let mut sdp_session = if let SdpType::Origin(o) = origin {
+        SdpSession::new(0, o, "-".to_string())
     } else {
         unreachable!();
-    }
+    };
     let t = SdpTiming { start: 0, stop: 0 };
     sdp_session.set_timing(t);
 
