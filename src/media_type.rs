@@ -382,6 +382,7 @@ pub fn parse_media(value: &str) -> Result<SdpType, SdpParserInternalError> {
                 let fmt_num = num.parse::<u32>()?;
                 match fmt_num {
                     0  |  // PCMU
+                    3  |  // GSM
                     8  |  // PCMA
                     9  |  // G722
                     13 |  // Comfort Noise

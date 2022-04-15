@@ -305,6 +305,11 @@ fn test_media_invalid_transport() {
 }
 
 #[test]
+fn test_media_gsm_payload_type() {
+    assert!(parse_media("audio 9 RTP/AVP 3").is_ok());
+}
+
+#[test]
 fn test_media_invalid_payload() {
     assert!(parse_media("audio 9 UDP/TLS/RTP/SAVPF 300").is_err());
 }
