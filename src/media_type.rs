@@ -385,6 +385,7 @@ pub fn parse_media(value: &str) -> Result<SdpType, SdpParserInternalError> {
                     8  |  // PCMA
                     9  |  // G722
                     13 |  // Comfort Noise
+                    18 |  // G729
                     35 ..= 63 | 96 ..= 127 => (),  // dynamic range
                     _ => return Err(SdpParserInternalError::Generic(
                           "format number in media line is out of range".to_string()))
