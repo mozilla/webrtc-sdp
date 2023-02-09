@@ -36,27 +36,25 @@ impl fmt::Display for SdpParserInternalError {
         match *self {
             SdpParserInternalError::UnknownAddressType(ref unknown) => write!(
                 f,
-                "{}: {}",
-                INTERNAL_ERROR_MESSAGE_UNKNOWN_ADDRESS_TYPE, unknown
+                "{INTERNAL_ERROR_MESSAGE_UNKNOWN_ADDRESS_TYPE}: {unknown}"
             ),
             SdpParserInternalError::AddressTypeMismatch { found, expected } => write!(
                 f,
-                "{}: {}, {}",
-                INTERNAL_ERROR_MESSAGE_ADDRESS_TYPE_MISMATCH, found, expected
+                "{INTERNAL_ERROR_MESSAGE_ADDRESS_TYPE_MISMATCH}: {found}, {expected}"
             ),
-            SdpParserInternalError::Generic(ref message) => write!(f, "Parsing error: {}", message),
+            SdpParserInternalError::Generic(ref message) => write!(f, "Parsing error: {message}"),
             SdpParserInternalError::Unsupported(ref message) => {
-                write!(f, "Unsupported parsing error: {}", message)
+                write!(f, "Unsupported parsing error: {message}")
             }
             SdpParserInternalError::Integer(ref error) => {
-                write!(f, "Integer parsing error: {}", error)
+                write!(f, "Integer parsing error: {error}")
             }
-            SdpParserInternalError::Float(ref error) => write!(f, "Float parsing error: {}", error),
+            SdpParserInternalError::Float(ref error) => write!(f, "Float parsing error: {error}"),
             SdpParserInternalError::Domain(ref error) => {
-                write!(f, "Domain name parsing error: {}", error)
+                write!(f, "Domain name parsing error: {error}")
             }
             SdpParserInternalError::IpAddress(ref error) => {
-                write!(f, "IP address parsing error: {}", error)
+                write!(f, "IP address parsing error: {error}")
             }
         }
     }
@@ -149,24 +147,16 @@ impl fmt::Display for SdpParserError {
                 ref error,
                 ref line,
                 ref line_number,
-            } => write!(
-                f,
-                "Line error: {} in line({}): {}",
-                error, line_number, line
-            ),
+            } => write!(f, "Line error: {error} in line({line_number}): {line}"),
             SdpParserError::Unsupported {
                 ref error,
                 ref line,
                 ref line_number,
-            } => write!(
-                f,
-                "Unsupported: {} in line({}): {}",
-                error, line_number, line
-            ),
+            } => write!(f, "Unsupported: {error} in line({line_number}): {line}",),
             SdpParserError::Sequence {
                 ref message,
                 ref line_number,
-            } => write!(f, "Sequence error in line({}): {}", line_number, message),
+            } => write!(f, "Sequence error in line({line_number}): {message}"),
         }
     }
 }
