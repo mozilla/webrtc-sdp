@@ -105,20 +105,12 @@ impl Serialize for SdpParserError {
             },
         )?;
         match self {
-            SdpParserError::Line {
-                error,
-                line,
-                ..
-            } => {
+            SdpParserError::Line { error, line, .. } => {
                 state.serialize_field("type", "Line")?;
                 state.serialize_field("message", &format!("{error}"))?;
                 state.serialize_field("line", line)?
             }
-            SdpParserError::Unsupported {
-                error,
-                line,
-                ..
-            } => {
+            SdpParserError::Unsupported { error, line, .. } => {
                 state.serialize_field("type", "Unsupported")?;
                 state.serialize_field("message", &format!("{error}"))?;
                 state.serialize_field("line", line)?
@@ -144,18 +136,18 @@ impl fmt::Display for SdpParserError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             SdpParserError::Line {
-                 error,
-                 line,
-                 line_number,
+                error,
+                line,
+                line_number,
             } => write!(f, "Line error: {error} in line({line_number}): {line}"),
             SdpParserError::Unsupported {
-                 error,
-                 line,
-                 line_number,
+                error,
+                line,
+                line_number,
             } => write!(f, "Unsupported: {error} in line({line_number}): {line}",),
             SdpParserError::Sequence {
-                 message,
-                 line_number,
+                message,
+                line_number,
             } => write!(f, "Sequence error in line({line_number}): {message}"),
         }
     }
@@ -164,8 +156,9 @@ impl fmt::Display for SdpParserError {
 impl Error for SdpParserError {
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match self {
-            SdpParserError::Line { error, .. }
-            | SdpParserError::Unsupported { error, .. } => Some(error),
+            SdpParserError::Line { error, .. } | SdpParserError::Unsupported { error, .. } => {
+                Some(error)
+            }
             // Can't tell much more about our internal errors
             _ => None,
         }
