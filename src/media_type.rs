@@ -377,15 +377,11 @@ pub fn parse_media(value: &str) -> Result<SdpType, SdpParserInternalError> {
             let mut fmt_vec: Vec<u32> = vec![];
             for num in fmt_slice {
                 let fmt_num = num.parse::<u32>()?;
-                match fmt_num {
-                    0  |  // PCMU
-                    8  |  // PCMA
-                    9  |  // G722
-                    13 |  // Comfort Noise
-                    35 ..= 63 | 96 ..= 127 => (),  // dynamic range
-                    _ => return Err(SdpParserInternalError::Generic(
-                          "format number in media line is out of range".to_string()))
-                };
+                if matches!(fmt_num, 1 | 2 | 19 | 64..=95 | 128 .. ) {
+                    return Err(SdpParserInternalError::Generic(
+                        "format number in media line is out of range".to_string(),
+                    ));
+                }
                 fmt_vec.push(fmt_num);
             }
             SdpFormatList::Integers(fmt_vec)
