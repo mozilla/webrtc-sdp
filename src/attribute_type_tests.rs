@@ -377,6 +377,22 @@ fn test_parse_attribute_fmtp() {
 }
 
 #[test]
+fn test_parse_attribute_framerate() {
+    let check_parse = make_check_parse!(f64, SdpAttribute::FrameRate);
+    let check_parse_and_serialize =
+        make_check_parse_and_serialize!(check_parse, SdpAttribute::FrameRate);
+
+    check_parse_and_serialize("framerate:1");
+    check_parse_and_serialize("framerate:60");
+    check_parse_and_serialize("framerate:23.5");
+    check_parse_and_serialize("framerate:4294967297");
+
+    assert!(parse_attribute("framerate:").is_err());
+    assert!(parse_attribute("framerate:abc").is_err());
+    assert!(parse_attribute("framerate:0").is_err());
+}
+
+#[test]
 fn test_anonymize_attribute_fingerprint() -> Result<(), SdpParserInternalError> {
     let mut anon = StatefulSdpAnonymizer::new();
     if let SdpType::Attribute(SdpAttribute::Fingerprint(print)) = parse_attribute(
