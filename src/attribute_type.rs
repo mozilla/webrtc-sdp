@@ -1263,6 +1263,7 @@ pub enum SdpAttribute {
     ExtmapAllowMixed,
     Fingerprint(SdpAttributeFingerprint),
     Fmtp(SdpAttributeFmtp),
+    FrameRate(f64),
     Group(SdpAttributeGroup),
     IceLite,
     IceMismatch,
@@ -1305,6 +1306,7 @@ impl SdpAttribute {
             SdpAttribute::BundleOnly
             | SdpAttribute::Candidate(..)
             | SdpAttribute::Fmtp(..)
+            | SdpAttribute::FrameRate(..)
             | SdpAttribute::IceMismatch
             | SdpAttribute::ImageAttr(..)
             | SdpAttribute::Label(..)
@@ -1364,6 +1366,7 @@ impl SdpAttribute {
             | SdpAttribute::ExtmapAllowMixed
             | SdpAttribute::Fingerprint(..)
             | SdpAttribute::Fmtp(..)
+            | SdpAttribute::FrameRate(..)
             | SdpAttribute::IceMismatch
             | SdpAttribute::IceOptions(..)
             | SdpAttribute::IcePwd(..)
@@ -1451,6 +1454,7 @@ impl FromStr for SdpAttribute {
             "extmap" => parse_extmap(val),
             "fingerprint" => parse_fingerprint(val),
             "fmtp" => parse_fmtp(val),
+            "framerate" => parse_framerate(val),
             "group" => parse_group(val),
             "ice-options" => parse_ice_options(val),
             "msid" => parse_msid(val),
@@ -1482,6 +1486,7 @@ impl fmt::Display for SdpAttribute {
             SdpAttribute::ExtmapAllowMixed => SdpAttributeType::ExtmapAllowMixed.to_string(),
             SdpAttribute::Fingerprint(ref a) => attr_to_string(a.to_string()),
             SdpAttribute::Fmtp(ref a) => attr_to_string(a.to_string()),
+            SdpAttribute::FrameRate(ref a) => attr_to_string(a.to_string()),
             SdpAttribute::Group(ref a) => attr_to_string(a.to_string()),
             SdpAttribute::IceLite => SdpAttributeType::IceLite.to_string(),
             SdpAttribute::IceMismatch => SdpAttributeType::IceMismatch.to_string(),
@@ -1549,6 +1554,7 @@ pub enum SdpAttributeType {
     ExtmapAllowMixed,
     Fingerprint,
     Fmtp,
+    FrameRate,
     Group,
     IceLite,
     IceMismatch,
@@ -1596,6 +1602,7 @@ impl<'a> From<&'a SdpAttribute> for SdpAttributeType {
             SdpAttribute::ExtmapAllowMixed { .. } => SdpAttributeType::ExtmapAllowMixed,
             SdpAttribute::Fingerprint { .. } => SdpAttributeType::Fingerprint,
             SdpAttribute::Fmtp { .. } => SdpAttributeType::Fmtp,
+            SdpAttribute::FrameRate { .. } => SdpAttributeType::FrameRate,
             SdpAttribute::Group { .. } => SdpAttributeType::Group,
             SdpAttribute::IceLite { .. } => SdpAttributeType::IceLite,
             SdpAttribute::IceMismatch { .. } => SdpAttributeType::IceMismatch,
@@ -1645,6 +1652,7 @@ impl fmt::Display for SdpAttributeType {
             SdpAttributeType::ExtmapAllowMixed => "extmap-allow-mixed",
             SdpAttributeType::Fingerprint => "fingerprint",
             SdpAttributeType::Fmtp => "fmtp",
+            SdpAttributeType::FrameRate => "framerate",
             SdpAttributeType::Group => "group",
             SdpAttributeType::IceLite => "ice-lite",
             SdpAttributeType::IceMismatch => "ice-mismatch",
@@ -2263,6 +2271,34 @@ fn parse_fmtp(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
         payload_type: payload_token.parse::<u8>()?,
         parameters,
     }))
+}
+
+///////////////////////////////////////////////////////////////////////////
+// a=framerate, RFC4566, RFC8866
+//-------------------------------------------------------------------------
+//       a=framerate:<framerate-value>
+fn parse_framerate(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
+    let framerate: f64 = to_parse.parse()?;
+
+    if framerate.is_nan() {
+        return Err(SdpParserInternalError::Generic(
+            "FrameRate attribute must be a number".to_string(),
+        ));
+    }
+
+    if framerate.is_infinite() {
+        return Err(SdpParserInternalError::Generic(
+            "FrameRate attribute cannot be finite".to_string(),
+        ));
+    }
+
+    if framerate == 0.0 {
+        return Err(SdpParserInternalError::Generic(
+            "FrameRate attribute cannot be zero".to_string(),
+        ));
+    }
+
+    Ok(SdpAttribute::FrameRate(framerate))
 }
 
 ///////////////////////////////////////////////////////////////////////////
