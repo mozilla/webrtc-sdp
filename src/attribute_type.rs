@@ -594,6 +594,23 @@ pub struct SdpAttributeFmtpParameters {
     // max_fs, already defined in H264
     pub max_fr: u32,
 
+    // AV1
+    // Defined in https://aomediacodec.github.io/av1-rtp-spec/#72-sdp-parameters
+    // f(3) a 3 bit value that specifies the profile of the AV1 codec which is
+    // equivalent to the seq_profile field in the AV1 General Sequence Header
+    // OBU
+    // Defaults to 0 when not present
+    // Value must not be greater than 2 as values 3 to 7 are reserved
+    pub profile: Option<u8>,
+    // f(5) a 5 bit value that specifies the level maps to a table in A.3. of
+    // https://aomediacodec.github.io/av1-spec/av1-spec.pdf
+    // Defaults to 5 when not present
+    pub level_idx: Option<u8>,
+    // f(1) a 1 that specifies the tier 5.5.1 of
+    // https://aomediacodec.github.io/av1-spec/av1-spec.pdf
+    // Defaults to 0 when not present
+    pub tier: Option<u8>,
+
     // Opus https://tools.ietf.org/html/rfc7587
     pub maxplaybackrate: u32,
     pub maxaveragebitrate: u32,
@@ -658,6 +675,18 @@ impl fmt::Display for SdpAttributeFmtpParameters {
                 maybe_print_param("max-br=", self.max_br, 0),
                 maybe_print_param("max-mbps=", self.max_mbps, 0),
                 maybe_print_param("max-fr=", self.max_fr, 0),
+                match self.profile {
+                    Some(profile) => format!("profile={}", profile),
+                    None => "".to_string(),
+                },
+                match self.level_idx {
+                    Some(level_idx) => format!("level-idx={}", level_idx),
+                    None => "".to_string(),
+                },
+                match self.tier {
+                    Some(tier) => format!("tier={}", tier),
+                    None => "".to_string(),
+                },
                 maybe_print_param("maxplaybackrate=", self.maxplaybackrate, 48000),
                 maybe_print_param("maxaveragebitrate=", self.maxaveragebitrate, 0),
                 maybe_print_param("ptime=", self.ptime, 0),
@@ -2065,9 +2094,9 @@ fn parse_fmtp(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
     let tokens: Vec<&str> = to_parse.splitn(2, ' ').collect();
 
     // Support space seperated parameter blocks
-    if tokens.len() < 2 {
+    if tokens.len() == 0 {
         return Err(SdpParserInternalError::Unsupported(
-            "Fmtp attributes require a payload type and a parameter block.".to_string(),
+            "Fmtp attributes require a payload type and an optional parameter block.".to_string(),
         ));
     }
 
@@ -2088,6 +2117,9 @@ fn parse_fmtp(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
         useinbandfec: false,
         cbr: false,
         max_fr: 0,
+        profile: None,
+        level_idx: None,
+        tier: None,
         maxplaybackrate: 48000,
         maxaveragebitrate: 0,
         ptime: 0,
@@ -2165,6 +2197,40 @@ fn parse_fmtp(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
                     // VP8 and VP9
                     "MAX-FR" => parameters.max_fr = parameter_val.parse::<u32>()?,
 
+                    // AV1
+                    "PROFILE" => {
+                        parameters.profile = match parameter_val.parse::<u8>()? {
+                            x @ 0..=2 => Some(x),
+                            _ => {
+                                return Err(SdpParserInternalError::Generic(
+                                    "The fmtp parameter 'profile' must be in the range [0,2]"
+                                        .to_string(),
+                                ));
+                            }
+                        }
+                    }
+                    "LEVEL-IDX" => {
+                        parameters.level_idx = match parameter_val.parse::<u8>()? {
+                            x @ 0..=31 => Some(x),
+                            _ => {
+                                return Err(SdpParserInternalError::Generic(
+                                    "The fmtp parameter 'level-idx' must be in the range [0,31]"
+                                        .to_string(),
+                                ));
+                            }
+                        }
+                    }
+                    "TIER" => {
+                        parameters.tier = match parameter_val.parse::<u8>()? {
+                            x @ 0..=1 => Some(x),
+                            _ => {
+                                return Err(SdpParserInternalError::Generic(
+                                    "The fmtp parameter 'tier' must be in the range [0,1]"
+                                        .to_string(),
+                                ));
+                            }
+                        }
+                    }
                     //Opus https://tools.ietf.org/html/rfc7587
                     "MAXPLAYBACKRATE" => {
                         parameters.maxplaybackrate = parameter_val.parse::<u32>()?
