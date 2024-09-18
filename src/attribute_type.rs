@@ -5,6 +5,7 @@
 extern crate url;
 use std::convert::TryFrom;
 use std::fmt;
+use std::fmt::Write;
 use std::iter;
 use std::str::FromStr;
 
@@ -218,11 +219,13 @@ impl fmt::Display for SdpAttributeCandidate {
             generation = option_to_string!(" generation {}", self.generation),
             ufrag = option_to_string!(" ufrag {}", self.ufrag),
             cost = option_to_string!(" network-cost {}", self.networkcost),
-            unknown = self
-                .unknown_extensions
-                .iter()
-                .map(|(name, value)| format!(" {name} {value}"))
-                .collect::<String>()
+            unknown =
+                self.unknown_extensions
+                    .iter()
+                    .fold(String::new(), |mut output, (name, value)| {
+                        let _ = write!(output, " {name} {value}");
+                        output
+                    })
         )
     }
 }
