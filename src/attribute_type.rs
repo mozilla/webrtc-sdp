@@ -2097,9 +2097,9 @@ fn parse_fmtp(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
     let tokens: Vec<&str> = to_parse.splitn(2, ' ').collect();
 
     // Support space seperated parameter blocks
-    if tokens.is_empty() {
+    if tokens.len() != 2 {
         return Err(SdpParserInternalError::Unsupported(
-            "Fmtp attributes require a payload type and an optional parameter block.".to_string(),
+            "Fmtp attributes require a payload type and a parameter block.".to_string(),
         ));
     }
 

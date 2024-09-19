@@ -359,7 +359,7 @@ fn test_parse_attribute_fmtp() {
     check_parse_and_serialize(
         "fmtp:8 max-cpb=1234;max-dpb=32000;max-br=3;max-mbps=46000;usedtx=1;cbr=1",
     );
-    assert!(parse_attribute("fmtp:77 ").is_ok());
+    assert!(parse_attribute("fmtp:77 ").is_err());
     assert!(parse_attribute("fmtp:109 stereo=2;").is_err());
     assert!(parse_attribute("fmtp:109 111/129;").is_err());
     assert!(parse_attribute("fmtp:109 packetization-mode=3;").is_err());
