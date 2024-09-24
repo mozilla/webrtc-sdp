@@ -1,4 +1,8 @@
 # Changelog
+## [0.3.13] - 2024-09-24
+
+- Add support for AV1
+- Minimum Rust version >= 1.70
 
 ## [0.3.12] - 2024-06-18
 
