@@ -46,6 +46,7 @@ macro_rules! maybe_vector_to_string {
                 $fmt_str,
                 $vec.iter()
                     .map(ToString::to_string)
+                    .filter(|s| !s.is_empty())
                     .collect::<Vec<String>>()
                     .join($sep)
             ),
@@ -716,11 +717,15 @@ pub struct SdpAttributeFmtp {
 
 impl fmt::Display for SdpAttributeFmtp {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let parameters = self.parameters.to_string();
+        if parameters.is_empty() {
+            return Ok(());
+        }
         write!(
             f,
             "{pt} {parameter}",
             pt = self.payload_type,
-            parameter = self.parameters
+            parameter = parameters
         )
     }
 }
@@ -1508,7 +1513,13 @@ impl FromStr for SdpAttribute {
 impl fmt::Display for SdpAttribute {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let attr_type_name = SdpAttributeType::from(self).to_string();
-        let attr_to_string = |attr_str: String| attr_type_name + ":" + &attr_str;
+        let attr_to_string = |attr_str: String| {
+            if attr_str.is_empty() {
+                "".to_string()
+            } else {
+                attr_type_name + ":" + &attr_str
+            }
+        };
         match *self {
             SdpAttribute::BundleOnly => SdpAttributeType::BundleOnly.to_string(),
             SdpAttribute::Candidate(ref a) => attr_to_string(a.to_string()),
