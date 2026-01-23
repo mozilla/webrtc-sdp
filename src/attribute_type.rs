@@ -1634,28 +1634,28 @@ pub enum SdpAttributeType {
     SsrcGroup,
 }
 
-impl<'a> From<&'a SdpAttribute> for SdpAttributeType {
+impl From<&SdpAttribute> for SdpAttributeType {
     fn from(other: &SdpAttribute) -> Self {
         match *other {
-            SdpAttribute::BundleOnly { .. } => SdpAttributeType::BundleOnly,
+            SdpAttribute::BundleOnly => SdpAttributeType::BundleOnly,
             SdpAttribute::Candidate { .. } => SdpAttributeType::Candidate,
             SdpAttribute::DtlsMessage { .. } => SdpAttributeType::DtlsMessage,
-            SdpAttribute::EndOfCandidates { .. } => SdpAttributeType::EndOfCandidates,
+            SdpAttribute::EndOfCandidates => SdpAttributeType::EndOfCandidates,
             SdpAttribute::Extmap { .. } => SdpAttributeType::Extmap,
-            SdpAttribute::ExtmapAllowMixed { .. } => SdpAttributeType::ExtmapAllowMixed,
+            SdpAttribute::ExtmapAllowMixed => SdpAttributeType::ExtmapAllowMixed,
             SdpAttribute::Fingerprint { .. } => SdpAttributeType::Fingerprint,
             SdpAttribute::Fmtp { .. } => SdpAttributeType::Fmtp,
             SdpAttribute::FrameRate { .. } => SdpAttributeType::FrameRate,
             SdpAttribute::Group { .. } => SdpAttributeType::Group,
-            SdpAttribute::IceLite { .. } => SdpAttributeType::IceLite,
-            SdpAttribute::IceMismatch { .. } => SdpAttributeType::IceMismatch,
+            SdpAttribute::IceLite => SdpAttributeType::IceLite,
+            SdpAttribute::IceMismatch => SdpAttributeType::IceMismatch,
             SdpAttribute::IceOptions { .. } => SdpAttributeType::IceOptions,
             SdpAttribute::IcePacing { .. } => SdpAttributeType::IcePacing,
             SdpAttribute::IcePwd { .. } => SdpAttributeType::IcePwd,
             SdpAttribute::IceUfrag { .. } => SdpAttributeType::IceUfrag,
             SdpAttribute::Identity { .. } => SdpAttributeType::Identity,
             SdpAttribute::ImageAttr { .. } => SdpAttributeType::ImageAttr,
-            SdpAttribute::Inactive { .. } => SdpAttributeType::Inactive,
+            SdpAttribute::Inactive => SdpAttributeType::Inactive,
             SdpAttribute::Label { .. } => SdpAttributeType::Label,
             SdpAttribute::MaxMessageSize { .. } => SdpAttributeType::MaxMessageSize,
             SdpAttribute::MaxPtime { .. } => SdpAttributeType::MaxPtime,
@@ -1664,18 +1664,18 @@ impl<'a> From<&'a SdpAttribute> for SdpAttributeType {
             SdpAttribute::MsidSemantic { .. } => SdpAttributeType::MsidSemantic,
             SdpAttribute::Ptime { .. } => SdpAttributeType::Ptime,
             SdpAttribute::Rid { .. } => SdpAttributeType::Rid,
-            SdpAttribute::Recvonly { .. } => SdpAttributeType::Recvonly,
+            SdpAttribute::Recvonly => SdpAttributeType::Recvonly,
             SdpAttribute::RemoteCandidate { .. } => SdpAttributeType::RemoteCandidate,
             SdpAttribute::Rtcp { .. } => SdpAttributeType::Rtcp,
             SdpAttribute::Rtcpfb { .. } => SdpAttributeType::Rtcpfb,
-            SdpAttribute::RtcpMux { .. } => SdpAttributeType::RtcpMux,
-            SdpAttribute::RtcpMuxOnly { .. } => SdpAttributeType::RtcpMuxOnly,
-            SdpAttribute::RtcpRsize { .. } => SdpAttributeType::RtcpRsize,
+            SdpAttribute::RtcpMux => SdpAttributeType::RtcpMux,
+            SdpAttribute::RtcpMuxOnly => SdpAttributeType::RtcpMuxOnly,
+            SdpAttribute::RtcpRsize => SdpAttributeType::RtcpRsize,
             SdpAttribute::Rtpmap { .. } => SdpAttributeType::Rtpmap,
             SdpAttribute::Sctpmap { .. } => SdpAttributeType::Sctpmap,
             SdpAttribute::SctpPort { .. } => SdpAttributeType::SctpPort,
-            SdpAttribute::Sendonly { .. } => SdpAttributeType::Sendonly,
-            SdpAttribute::Sendrecv { .. } => SdpAttributeType::Sendrecv,
+            SdpAttribute::Sendonly => SdpAttributeType::Sendonly,
+            SdpAttribute::Sendrecv => SdpAttributeType::Sendrecv,
             SdpAttribute::Setup { .. } => SdpAttributeType::Setup,
             SdpAttribute::Simulcast { .. } => SdpAttributeType::Simulcast,
             SdpAttribute::Ssrc { .. } => SdpAttributeType::Ssrc,
@@ -3101,10 +3101,7 @@ fn parse_rtcp(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
                                 "Rtcp attribute is missing ip address token".to_string(),
                             ));
                         }
-                        Some(x) => match ExplicitlyTypedAddress::try_from((addrtype, x)) {
-                            Ok(address) => address,
-                            Err(e) => return Err(e),
-                        },
+                        Some(x) => ExplicitlyTypedAddress::try_from((addrtype, x))?,
                     };
                     rtcp.set_addr(addr);
                 }
