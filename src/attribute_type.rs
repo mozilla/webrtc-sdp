@@ -665,7 +665,7 @@ impl fmt::Display for SdpAttributeFmtpParameters {
                 maybe_print_param(
                     "profile-level-id=",
                     format!("{:06x}", self.profile_level_id),
-                    "420010".to_string()
+                    "42000a".to_string()
                 ),
                 maybe_print_bool_param(
                     "level-asymmetry-allowed",
@@ -2120,7 +2120,7 @@ fn parse_fmtp(to_parse: &str) -> Result<SdpAttribute, SdpParserInternalError> {
     let mut parameters = SdpAttributeFmtpParameters {
         packetization_mode: 0,
         level_asymmetry_allowed: false,
-        profile_level_id: 0x0042_0010,
+        profile_level_id: 0x0042_000A,
         max_fs: 0,
         max_cpb: 0,
         max_dpb: 0,
