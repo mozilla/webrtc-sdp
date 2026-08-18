@@ -8,6 +8,7 @@ readme = "README.md"
 keywords = ["webrtc", "sdp", "jsep"]
 categories = ["parsing", "network-programming"]
 license = "MPL-2.0"
+rust-version = "1.88.0"
 
 [badges]
 travis-ci = { repository = "mozilla/webrtc-sdp", branch = "master" }
