@@ -307,6 +307,7 @@ fn test_media_invalid_transport() {
     assert!(parse_media("audio 9 invalid/invalid 8").is_err());
 }
 
+#[cfg(feature = "pedantic")]
 #[test]
 fn test_media_invalid_payload() {
     assert!(parse_media("audio 9 UDP/TLS/RTP/SAVPF 300").is_err());

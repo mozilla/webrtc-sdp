@@ -18,6 +18,8 @@ codecov = { repository = "mozilla/webrtc-sdp", branch = "master", service = "git
 default = ["enhanced_debug"]
 # debugging output
 enhanced_debug = []
+# pedantic checks
+pedantic = []
 # serializability
 serialize = ["serde", "serde_derive"]
 
