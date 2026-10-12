@@ -1,4 +1,8 @@
 # Changelog
+## [0.3.16] - 2026-10-16
+
+- Turn AV1 FMTP value checks into pedantic checks
+
 ## [0.3.15] - 2026-09-16
 
 - Allow for unknown media types
