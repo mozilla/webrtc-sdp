@@ -164,7 +164,7 @@ impl fmt::Display for SdpMedia {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "m={mline}\r\n{bw}{connection}{attributes}",
+            "m={mline}\r\n{connection}{bw}{attributes}",
             mline = self.media,
             bw = maybe_vector_to_string!("b={}\r\n", self.bandwidth, "\r\nb="),
             connection = option_to_string!("c={}\r\n", self.connection),

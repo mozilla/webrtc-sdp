@@ -218,9 +218,9 @@ impl fmt::Display for SdpSession {
             "v={version}\r\n\
              o={origin}\r\n\
              s={session}\r\n\
-             {timing}\
-             {bandwidth}\
              {connection}\
+             {bandwidth}\
+             {timing}\
              {session_attributes}\
              {media_sections}",
             version = self.version,
