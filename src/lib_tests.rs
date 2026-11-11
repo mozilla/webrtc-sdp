@@ -674,6 +674,44 @@ fn test_parse_session_vector_contains_media_type() -> Result<(), SdpParserError>
     Ok(())
 }
 
+/// A session with many bandwidth lines used to take quadratic time, because
+/// the parser consumed its line vector with `Vec::remove(0)`. Every line is
+/// individually valid and RFC 8839 puts no bound on their number, so a large
+/// input must parse in one pass over the lines.
+#[test]
+fn test_parse_sdp_many_session_bandwidth_lines() -> Result<(), SdpParserError> {
+    const LINE_COUNT: usize = 20_000;
+
+    let mut sdp =
+        String::from("v=0\r\no=ausername 4294967296 2 IN IP4 127.0.0.1\r\ns=SIP Call\r\nt=0 0\r\n");
+    for _ in 0..LINE_COUNT {
+        sdp.push_str("b=AS:1\r\n");
+    }
+
+    let session = parse_sdp(&sdp, true)?;
+    assert_eq!(session.bandwidth.len(), LINE_COUNT);
+    Ok(())
+}
+
+/// The same regression, for the media-level loop in `parse_media_vector`.
+#[test]
+fn test_parse_sdp_many_media_bandwidth_lines() -> Result<(), SdpParserError> {
+    const LINE_COUNT: usize = 20_000;
+
+    let mut sdp = String::from(
+        "v=0\r\no=ausername 4294967296 2 IN IP4 127.0.0.1\r\ns=SIP Call\r\nc=IN IP4 127.0.0.1\r\n\
+         t=0 0\r\nm=audio 0 UDP/TLS/RTP/SAVPF 0\r\n",
+    );
+    for _ in 0..LINE_COUNT {
+        sdp.push_str("b=AS:1\r\n");
+    }
+
+    let session = parse_sdp(&sdp, true)?;
+    assert_eq!(session.media.len(), 1);
+    assert_eq!(session.media[0].get_bandwidth().len(), LINE_COUNT);
+    Ok(())
+}
+
 #[test]
 fn test_parse_sdp_vector_no_media_section() -> Result<(), SdpParserError> {
     let mut lines: Vec<SdpLine> = vec![parse_sdp_line("v=0", 1)?];
