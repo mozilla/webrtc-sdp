@@ -2678,7 +2678,7 @@ fn parse_image_attr_set_list<I>(
     tokens: &mut iter::Peekable<I>,
 ) -> Result<SdpAttributeImageAttrSetList, SdpParserInternalError>
 where
-    I: Iterator<Item = String> + Clone,
+    I: Iterator<Item = String>,
 {
     let parse_set = |set_token: &str| -> Result<SdpAttributeImageAttrSet, SdpParserInternalError> {
         parse_image_attr_set(parse_imagettr_braced_token(set_token).ok_or_else(|| {
@@ -2698,12 +2698,8 @@ where
         "*" => Ok(SdpAttributeImageAttrSetList::Wildcard),
         x => {
             let mut sets = vec![parse_set(x)?];
-            while let Some(set_str) = tokens.clone().peek() {
-                if set_str.starts_with('[') {
-                    sets.push(parse_set(&tokens.next().unwrap())?);
-                } else {
-                    break;
-                }
+            while tokens.peek().is_some_and(|set| set.starts_with('[')) {
+                sets.push(parse_set(&tokens.next().unwrap())?);
             }
 
             Ok(SdpAttributeImageAttrSetList::Sets(sets))
