@@ -317,8 +317,10 @@ impl SdpSession {
     }
 
     pub fn parse_session_vector(&mut self, lines: &mut Vec<SdpLine>) -> Result<(), SdpParserError> {
-        while !lines.is_empty() {
-            let line = lines.remove(0);
+        // Consume the vector instead of shifting it: `remove(0)` in a loop moves
+        // every remaining line on each iteration, making this quadratic in the
+        // number of lines.
+        for line in std::mem::take(lines) {
             match line.sdp_type {
                 SdpType::Information(i) => self.set_information(Some(i)),
                 SdpType::Attribute(a) => {

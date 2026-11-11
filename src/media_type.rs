@@ -491,8 +491,10 @@ pub fn parse_media_vector(lines: &mut Vec<SdpLine>) -> Result<Vec<SdpMedia>, Sdp
         }
     };
 
-    while !lines.is_empty() {
-        let line = lines.remove(0);
+    // Consume the vector instead of shifting it: `remove(0)` in a loop moves
+    // every remaining line on each iteration, making this quadratic in the
+    // number of lines.
+    for line in std::mem::take(lines) {
         let _line_number = line.line_number;
         match line.sdp_type {
             SdpType::Information(i) => {
