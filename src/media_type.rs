@@ -480,7 +480,16 @@ pub fn parse_media(value: &str) -> Result<SdpType, SdpParserInternalError> {
 pub fn parse_media_vector(lines: &mut Vec<SdpLine>) -> Result<Vec<SdpMedia>, SdpParserError> {
     let mut media_sections: Vec<SdpMedia> = Vec::new();
 
-    let media_line = lines.remove(0);
+    let mut lines = lines.drain(..);
+    let media_line = match lines.next() {
+        Some(line) => line,
+        None => {
+            return Err(SdpParserError::Sequence {
+                message: "first line in media section needs to be a media line".to_string(),
+                line_number: 0,
+            });
+        }
+    };
     let mut sdp_media = match media_line.sdp_type {
         SdpType::Media(v) => SdpMedia::new(v),
         _ => {
@@ -491,8 +500,7 @@ pub fn parse_media_vector(lines: &mut Vec<SdpLine>) -> Result<Vec<SdpMedia>, Sdp
         }
     };
 
-    while !lines.is_empty() {
-        let line = lines.remove(0);
+    for line in lines {
         let _line_number = line.line_number;
         match line.sdp_type {
             SdpType::Information(i) => {

@@ -317,8 +317,7 @@ impl SdpSession {
     }
 
     pub fn parse_session_vector(&mut self, lines: &mut Vec<SdpLine>) -> Result<(), SdpParserError> {
-        while !lines.is_empty() {
-            let line = lines.remove(0);
+        for line in lines.drain(..) {
             match line.sdp_type {
                 SdpType::Information(i) => self.set_information(Some(i)),
                 SdpType::Attribute(a) => {
