@@ -341,6 +341,14 @@ fn test_media_invalid_transport() {
     assert!(parse_media("audio 9 invalid/invalid 8").is_err());
 }
 
+#[test]
+fn test_media_with_extra_intra_token_whitespace() {
+    assert!(parse_media("video  9 UDP/TLS/RTP/SAVPF 8 0").is_ok());
+    assert!(parse_media("video 9  UDP/TLS/RTP/SAVPF 8 0").is_ok());
+    assert!(parse_media("video 9 UDP/TLS/RTP/SAVPF  8 0").is_ok());
+    assert!(parse_media("video 9 UDP/TLS/RTP/SAVPF 8  0").is_ok());
+}
+
 #[cfg(feature = "pedantic")]
 #[test]
 fn test_media_invalid_payload() {
