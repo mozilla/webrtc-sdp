@@ -384,10 +384,48 @@ fn parse_protocol_token(value: &str) -> Result<SdpProtocolValue, SdpParserIntern
     })
 }
 
+// Splits a string by runs of whitespace, returning at most `n` tokens with the final token
+// being the remainder of the string.
+fn split_whitespace_n(value: &str, n: usize) -> Vec<&str> {
+    let mut result = Vec::<&str>::new();
+    let mut value = value;
+    while !value.is_empty() {
+        match (
+            n - result.len(),
+            value
+                .splitn(2, char::is_whitespace)
+                .collect::<Vec<&str>>()
+                .as_slice(),
+        ) {
+            (1, _) => {
+                result.push(value.trim_start());
+                break;
+            }
+            (_, [token]) => {
+                value = "";
+                if !token.trim_start().is_empty() {
+                    result.push(token);
+                }
+            }
+            (_, [token, rest]) => {
+                value = rest.trim_start();
+                result.push(token);
+            }
+            _ => {
+                if !value.trim_start().is_empty() {
+                    result.push(value);
+                }
+                break;
+            }
+        }
+    }
+    result
+}
+
 pub fn parse_media(value: &str) -> Result<SdpType, SdpParserInternalError> {
     // Split out the media type, port, and protocol tokens, with the remainder
     // being the format list in single string.
-    let mv: Vec<&str> = value.splitn(4, char::is_whitespace).collect();
+    let mv: Vec<&str> = split_whitespace_n(value, 4);
     if mv.is_empty() {
         return Err(SdpParserInternalError::Generic(
             "media attribute must have a media type".to_string(),

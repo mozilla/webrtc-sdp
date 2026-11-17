@@ -77,6 +77,7 @@ jobs:
       - run: cargo run --example file_parser examples/sdps/39.sdp
       - run: cargo run --example file_parser examples/sdps/40.sdp
       - run: cargo run --example file_parser examples/sdps/41.sdp --expect-failure
+      - run: cargo run --example file_parser examples/sdps/42.sdp
       #TODO run code coverage
 
 #TODO split into build and test
